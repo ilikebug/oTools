@@ -1,0 +1,47 @@
+{
+  "name": "otools",
+  "productName": "oTools",
+  "version": "1.0.0",
+  "description": "应用管理中心 - 功能强大的桌面应用管理中心，支持全局快捷键呼出、OCR识别、截图、剪贴板管理等功能",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "electron-forge start",
+    "package": "electron-forge package",
+    "make": "electron-forge make",
+    "publish": "electron-forge publish",
+    "lint": "echo \"No linting configured\""
+  },
+  "keywords": [
+    "electron",
+    "desktop",
+    "tools",
+    "ocr",
+    "screenshot",
+    "clipboard"
+  ],
+  "author": {
+    "name": "ILikeBug",
+    "email": "ye351016@gmail.com"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "chokidar": "^3.5.3",
+    "electron-squirrel-startup": "^1.0.1",
+    "electron-store": "^8.2.0",
+    "node-global-key-listener": "^0.1.1",
+    "robotjs": "^0.6.0",
+    "screenshot-desktop": "^1.12.7",
+    "tesseract.js": "^5.0.4"
+  },
+  "devDependencies": {
+    "@electron-forge/cli": "^7.8.1",
+    "@electron-forge/maker-deb": "^7.8.1",
+    "@electron-forge/maker-rpm": "^7.8.1",
+    "@electron-forge/maker-squirrel": "^7.8.1",
+    "@electron-forge/maker-zip": "^7.8.1",
+    "@electron-forge/plugin-auto-unpack-natives": "^7.8.1",
+    "@electron-forge/plugin-fuses": "^7.8.1",
+    "@electron/fuses": "^1.8.0",
+    "electron": "37.1.0"
+  }
+}
