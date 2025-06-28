@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>oTools</title>
+    <link rel="stylesheet" href="index.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  </head>
+  <body>
+    <div class="app-container">
+      <!-- Top bar: left logo+text, right status indicator and settings button -->
+      <div class="topbar">
+        <div class="topbar-left">
+          <i class="fas fa-wrench"></i>
+          <span class="topbar-title">oTools</span>
+          <div class="status-indicator" id="statusIndicator" title="App Status">
+            <i class="fas fa-circle"></i>
+          </div>
+        </div>
+        <div class="topbar-right">
+          <button class="status-btn" id="statusBtn" title="Application Status">
+            <i class="fas fa-chart-line"></i>
+          </button>
+          <button class="plugins-btn" id="pluginsBtn" title="Plugins">
+            <span class="material-icons" style="font-size:20px;">extension</span>
+          </button>
+
+          <button class="settings-btn" id="settingsBtn" title="Settings">
+            <i class="fas fa-cog"></i>
+          </button>
+          
+          <button class="quit-btn-top" id="quitBtnTop" title="Quit APP" style="background: none; border: none; color: #ff4757; padding: 8px; cursor: pointer; border-radius: 4px; transition: background-color 0.2s;">
+            <i class="fas fa-power-off"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Search section -->
+      <div class="search-section">
+        <div class="search-container">
+          <i class="fas fa-search search-icon"></i>
+          <input type="text" id="searchInput" placeholder="Search features or plugins..." class="search-input" />
+          <button class="search-btn" id="searchBtn">
+            <i class="fas fa-arrow-right"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Quick actions section - dynamically generated -->
+      <div class="quick-actions">
+        <div class="action-grid" id="actionGrid">
+          <!-- Quick action buttons will be generated here dynamically -->
+        </div>
+      </div>
+
+      <!-- App status panel -->
+      <div class="panel" id="statusPanel" style="display: none;">
+        <div class="panel-header">
+          <h3>App Status</h3>
+          <button class="close-panel-btn" data-panel="statusPanel">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        <div class="panel-content">
+          <!-- Status content will be generated here dynamically -->
+        </div>
+      </div>
+
+      <!-- Settings panel -->
+      <div class="panel" id="settingsPanel" style="display: none;">
+        <div class="panel-header">
+          <h3>Settings</h3>
+          <button class="close-panel-btn" data-panel="settingsPanel">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        <div class="panel-content">
+          <div class="settings-section">
+            <h4>App Settings</h4>
+            <div class="setting-item">
+              <label>Auto Start:</label>
+              <input type="checkbox" id="autoStart" checked />
+            </div>
+            <div class="setting-item">
+              <label>Show/Hide:</label>
+              <input type="text" id="toggleShortcut" readonly />
+            </div>
+          </div>
+          <div class="settings-section">
+            <h4>Plugin Settings</h4>
+            <div class="setting-item">
+              <label>Auto Load Plugins:</label>
+              <input type="checkbox" id="autoLoadPlugins" checked />
+            </div>
+ 
+          </div>
+          <div class="settings-section">
+            <h4>GitHub Settings</h4>
+            <div class="setting-item">
+              <label>GitHub Token:</label>
+              <input type="text" id="githubTokenInput" placeholder="speed up plugin market access" />
+              <button id="saveGithubTokenBtn">Save</button>
+            </div>
+          </div>
+
+          <div class="settings-section">
+            <h4>Custom Plugin Shortcuts</h4>
+            <div class="custom-shortcuts-container">
+              <div class="shortcuts-list" id="customShortcutsList">
+                <!-- Custom shortcuts will be generated here -->
+              </div>
+              <button class="add-shortcut-btn" id="addShortcutBtn">
+                <i class="fas fa-plus"></i> Add Shortcut
+              </button>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <script src="index.js"></script>
+  </body>
+</html>

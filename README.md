@@ -1,0 +1,268 @@
+# oTools - 桌面工具管理中心
+# oTools - Desktop Tool Management Center
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Platform](https://img.shields.io/badge/Platform-macOS-blue.svg)](https://www.apple.com/macos/)
+[![Electron](https://img.shields.io/badge/Electron-37.1.0-green.svg)](https://electronjs.org/)
+
+## 📖 项目简介 / Project Introduction
+
+### 中文
+oTools 是一个基于 Electron 的桌面工具管理中心，采用插件化架构设计。它提供了一个统一的界面来管理、配置和运行各种工具插件，让用户能够轻松扩展和定制自己的桌面工具集。
+
+### English
+oTools is an Electron-based desktop tool management center with a plugin architecture. It provides a unified interface for managing, configuring, and running various tool plugins, allowing users to easily extend and customize their desktop toolset.
+
+## ✨ 主要功能 / Key Features
+
+### 🔧 插件管理 / Plugin Management
+- **插件安装与卸载** / Plugin Installation & Uninstallation
+- **插件启用/禁用** / Plugin Enable/Disable
+- **插件配置管理** / Plugin Configuration Management
+- **插件市场集成** / Plugin Market Integration
+- **插件窗口管理** / Plugin Window Management
+
+### ⌨️ 快捷键系统 / Shortcut System
+- **全局快捷键** / Global Shortcuts
+- **自定义快捷键** / Custom Shortcuts
+- **快捷键冲突检测** / Shortcut Conflict Detection
+- **快捷键热重载** / Hot Reload Shortcuts
+
+### 📊 状态监控 / Status Monitoring
+- **应用运行状态** / Application Running Status
+- **插件运行统计** / Plugin Running Statistics
+- **系统资源监控** / System Resource Monitoring
+- **实时状态更新** / Real-time Status Updates
+
+### 🔐 配置管理 / Configuration Management
+- **GitHub Token 管理** / GitHub Token Management
+- **应用设置** / Application Settings
+- **插件配置** / Plugin Configuration
+- **自动启动设置** / Auto-start Settings
+
+### 🛠️ 系统工具 / System Tools
+- **截图功能** / Screenshot Functionality
+- **OCR 文字识别** / OCR Text Recognition
+- **剪贴板管理** / Clipboard Management
+- **文件操作** / File Operations
+- **系统通知** / System Notifications
+
+## 🚀 快速开始 / Quick Start
+
+### 安装 / Installation
+
+```bash
+# 克隆项目 / Clone the project
+git clone https://github.com/your-username/oTools.git
+cd oTools
+
+# 安装依赖 / Install dependencies
+npm install
+
+# 启动开发模式 / Start development mode
+npm start
+```
+
+### 构建 / Build
+
+```bash
+# 打包应用 / Package the application
+npm run package
+
+# 制作安装包 / Make installer
+npm run make
+```
+
+## 📦 插件开发 / Plugin Development
+
+
+
+## 🏗️ 技术架构 / Technical Architecture
+
+### 核心技术 / Core Technologies
+- **Electron** - 跨平台桌面应用框架
+- **Node.js** - JavaScript 运行时
+- **Chokidar** - 文件系统监控
+- **Tesseract.js** - OCR 文字识别
+- **RobotJS** - 自动化操作
+
+### 项目结构 / Project Structure
+
+```
+oTools/
+├── src/
+│   ├── main/           # 主进程 / Main process
+│   │   ├── core/       # 核心模块 / Core modules
+│   │   ├── utils/      # 工具函数 / Utility functions
+│   │   └── ipc.js      # IPC 通信 / IPC communication
+│   └── renderer/       # 渲染进程 / Renderer process
+│       ├── index.html  # 主界面 / Main interface
+│       ├── index.js    # 渲染逻辑 / Renderer logic
+│       └── preload.js  # 预加载脚本 / Preload script
+├── assets/             # 资源文件 / Assets
+```
+
+## 🔧 配置说明 / Configuration
+
+### 主配置结构 / Main Configuration Structure
+
+```json
+{
+  "app": {
+    "name": "oTools",                // 应用名称 / Application name
+    "version": "1.0.0",              // 版本号 / Version
+    "debug": false,                  // 调试模式 / Debug mode
+    "autoStart": true                // 是否开机自启 / Auto start on system boot
+  },
+  "window": {
+    "width": 400,                    // 主窗口宽度 / Main window width
+    "height": 360,                   // 主窗口高度 / Main window height
+    "alwaysOnTop": true,             // 窗口是否置顶 / Always on top
+    "skipTaskbar": true              // 是否在任务栏隐藏 / Skip taskbar
+  },
+  "plugins": {
+    "autoLoad": true,                // 启动时自动加载插件 / Auto load plugins on startup
+    "maxProcesses": 10,              // 最大插件进程数 / Max plugin processes
+    "timeout": 30000,                // 插件超时时间（毫秒）/ Plugin timeout (ms)
+    "debug": false                   // 插件调试模式 / Plugin debug mode
+  },
+  "logger": {
+    "level": "info",                 // 日志级别 / Log level (e.g. info, debug, error)
+    "enableFile": true,              // 是否写入日志文件 / Enable file logging
+    "logFile": "otools.log",         // 日志文件名 / Log file name
+    "enableConsole": false           // 是否控制台输出日志 / Enable console logging
+  },
+  "shortcuts": {
+    "toggle": "ALT+SPACE"            // 主界面显示/隐藏快捷键 / Main window toggle shortcut
+  },
+  "pluginMarket": {
+    "debug": false                   // 插件市场调试模式 / Plugin market debug mode
+  },
+  "githubToken": "",                 // GitHub Token（用于插件访问 GitHub API）/ GitHub Token (for plugin GitHub API access)
+  "customShortcuts": []              // 自定义插件快捷键列表 / Custom plugin shortcuts list
+}
+```
+
+---
+
+### 字段说明 / Field Descriptions
+
+| 字段 / Field         | 说明 / Description |
+|----------------------|-------------------|
+| `app`                | 应用基础信息和启动设置 / Basic app info and startup settings |
+| `window`             | 主窗口相关设置 / Main window settings |
+| `plugins`            | 插件系统相关设置 / Plugin system settings |
+| `logger`             | 日志系统相关设置 / Logger settings |
+| `shortcuts`          | 全局快捷键设置 / Global shortcut settings |
+| `pluginMarket`       | 插件市场相关设置 / Plugin market settings |
+| `githubToken`        | GitHub 访问令牌 / GitHub access token |
+| `customShortcuts`    | 自定义插件快捷键数组 / Custom plugin shortcut array |
+
+---
+
+### GitHub Token 说明 / GitHub Token Description
+
+#### 中文
+GitHub Token 用于插件访问 GitHub API，特别是从插件市场下载插件时。添加 GitHub Token 后，插件市场下载将不受 GitHub API 的速率限制（每小时 60 次请求限制）。
+
+**如何获取 GitHub Token：**
+1. 访问 [GitHub Settings > Developer settings > Personal access tokens](https://github.com/settings/tokens)
+2. 点击 "Generate new token (classic)"
+3. 设置 Token 描述（如：oTools Plugin Market）
+4. 选择权限范围：
+   - `public_repo` - 访问公共仓库
+   - `read:packages` - 读取包信息
+   - `repo` - 完整仓库访问（如果需要私有仓库）
+5. 点击 "Generate token"
+6. 复制生成的 Token 并粘贴到配置中
+
+#### English
+GitHub Token is used for plugins to access GitHub API, especially when downloading plugins from the plugin market. After adding a GitHub Token, plugin market downloads will not be subject to GitHub API rate limits (60 requests per hour limit).
+
+**How to get GitHub Token:**
+1. Visit [GitHub Settings > Developer settings > Personal access tokens](https://github.com/settings/tokens)
+2. Click "Generate new token (classic)"
+3. Set Token description (e.g., oTools Plugin Market)
+4. Select scopes:
+   - `public_repo` - Access public repositories
+   - `read:packages` - Read package information
+   - `repo` - Full repository access (if private repos needed)
+5. Click "Generate token"
+6. Copy the generated Token and paste it into the configuration
+
+---
+
+### 自定义快捷键结构 / Custom Shortcut Structure
+
+```json
+{
+  "pluginName": "YourPluginName",    // 插件名称 / Plugin name
+  "accelerator": "Ctrl+Alt+P"        // 快捷键组合 / Shortcut key combination
+}
+```
+
+## 📋 开发计划 / Development Roadmap
+
+### 已完成 / Completed
+- ✅ 基础框架搭建 / Basic framework setup
+- ✅ 插件管理系统 / Plugin management system
+- ✅ 快捷键系统 / Shortcut system
+- ✅ 配置管理 / Configuration management
+- ✅ 截图和 OCR 功能 / Screenshot and OCR functionality
+
+### 进行中 / In Progress
+- 🔄 插件市场 / Plugin marketplace
+- 🔄 更多系统工具 / More system tools
+- 🔄 性能优化 / Performance optimization
+
+### 计划中 / Planned
+- 📅 插件开发 SDK / Plugin development SDK
+- 📅 主题系统 / Theme system
+- 📅 多语言支持 / Multi-language support
+- 📅 云端同步 / Cloud synchronization
+
+## 🤝 贡献指南 / Contributing
+
+### 中文
+我们欢迎所有形式的贡献！请查看我们的贡献指南：
+1. Fork 项目
+2. 创建功能分支
+3. 提交更改
+4. 推送到分支
+5. 创建 Pull Request
+
+### English
+We welcome all forms of contributions! Please check our contributing guidelines:
+1. Fork the project
+2. Create a feature branch
+3. Commit your changes
+4. Push to the branch
+5. Create a Pull Request
+
+## 📄 许可证 / License
+
+本项目采用 MIT 许可证 - 查看 [LICENSE](LICENSE) 文件了解详情。
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 👥 作者 / Authors
+
+- **ILikeBug** - *Initial work* - [GitHub](https://github.com/ILikeBug)
+
+## 🙏 致谢 / Acknowledgments
+
+### 中文
+- Electron 团队提供的优秀框架
+- 所有贡献者的支持
+- 开源社区的力量
+
+### English
+- Excellent framework provided by the Electron team
+- Support from all contributors
+- The power of the open source community
+
+---
+
+**⭐ 如果这个项目对你有帮助，请给我们一个星标！**
+
+**⭐ If this project helps you, please give us a star!** 
