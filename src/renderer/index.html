@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>oTools</title>
+    <link rel="stylesheet" href="index.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
+  </head>
+  <body>
+    <div class="app-container">
+      <!-- 顶部栏：左侧logo+文字，右侧设置按钮 -->
+      <div class="topbar">
+        <div class="topbar-left">
+          <i class="fas fa-wrench"></i>
+          <span class="topbar-title">oTools</span>
+        </div>
+        <button class="settings-btn" id="settingsBtn" title="设置">
+          <i class="fas fa-cog"></i>
+        </button>
+      </div>
+
+      <!-- 搜索区域 -->
+      <div class="search-section">
+        <div class="search-container">
+          <i class="fas fa-search search-icon"></i>
+          <input type="text" id="searchInput" placeholder="搜索功能或插件..." class="search-input" />
+          <button class="search-btn" id="searchBtn">
+            <i class="fas fa-arrow-right"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- 快捷功能区域 - 动态生成 -->
+      <div class="quick-actions">
+        <div class="action-grid" id="actionGrid">
+          <!-- 快捷功能按钮将在这里动态生成 -->
+        </div>
+      </div>
+
+      <!-- 插件管理区域 -->
+      <div class="plugins-section" id="pluginsSection" style="display: none;">
+        <div class="plugins-header">
+          <h3>插件管理</h3>
+          <button class="close-panel-btn" data-panel="pluginsSection">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        <div class="plugins-grid" id="pluginsGrid">
+          <!-- 插件列表将在这里动态生成 -->
+        </div>
+      </div>
+
+      <!-- 剪贴板面板 -->
+      <div class="panel" id="clipboardPanel" style="display: none;">
+        <div class="panel-header">
+          <h3>剪贴板管理</h3>
+          <button class="close-panel-btn" data-panel="clipboardPanel">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        <div class="panel-content">
+          <div class="clipboard-controls">
+            <button id="readClipboardBtn">读取剪贴板</button>
+            <button id="clearClipboardBtn">清空剪贴板</button>
+          </div>
+          <div class="clipboard-content">
+            <textarea id="clipboardText" placeholder="剪贴板内容将显示在这里..." readonly></textarea>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 加载遮罩 -->
+    <div class="loading-overlay" id="loadingOverlay" style="display: none;">
+      <div class="loading-content">
+        <i class="fas fa-spinner fa-spin"></i>
+        <p id="loadingText">处理中...</p>
+      </div>
+    </div>
+
+    <!-- 通知容器 -->
+    <div class="notification-container" id="notificationContainer"></div>
+
+    <script src="index.js"></script>
+    <script>
+      document.getElementById('settingsBtn').onclick = function() {
+        // TODO: 打开设置面板
+        alert('这里可以打开设置面板');
+      };
+    </script>
+  </body>
+</html>

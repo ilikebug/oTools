@@ -1,0 +1,10 @@
+{
+  "name": "OCR文字识别",
+  "description": "图片文字识别功能，支持中英文识别",
+  "version": "1.0.0",
+  "author": "oTools",
+  "main": "main.js",
+  "type": "builtin",
+  "icon": "fas fa-eye",
+  "shortName": "OCR识别"
+} 

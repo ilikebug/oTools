@@ -1,0 +1,10 @@
+{
+  "name": "剪贴板管理",
+  "description": "剪贴板管理功能，支持读取、写入和清空剪贴板",
+  "version": "1.0.0",
+  "author": "oTools",
+  "main": "main.js",
+  "type": "builtin",
+  "icon": "fas fa-clipboard",
+  "shortName": "剪贴板"
+} 

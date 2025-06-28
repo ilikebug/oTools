@@ -1,0 +1,10 @@
+{
+  "name": "屏幕截图",
+  "description": "屏幕截图功能，支持全屏截图",
+  "version": "1.0.0",
+  "author": "oTools",
+  "main": "main.js",
+  "type": "builtin",
+  "icon": "fas fa-camera",
+  "shortName": "截图"
+} 
