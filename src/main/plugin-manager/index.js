@@ -4,17 +4,51 @@ const fs = require('fs');
 const chokidar = require('chokidar');
 
 class PluginManager {
-  constructor(mainWindow) {
+  constructor(mainWindow, pluginProcessManager) {
     this.plugins = new Map();
     this.pluginsDir = path.join(__dirname, '..', '..', '..', 'plugins');
     this.watcher = null;
     this.mainWindow = mainWindow;
+    this.pluginProcessManager = pluginProcessManager;
+    this.resultWindowManager = null;
     this.init();
   }
 
   init() {
     this.loadPlugins();
     this.watchPlugins();
+  }
+
+  // 设置结果窗口管理器
+  setResultWindowManager(resultWindowManager) {
+    this.resultWindowManager = resultWindowManager;
+    console.log('[插件管理器] 结果窗口管理器已设置');
+  }
+
+  // 显示结果窗口
+  showResultWindow(imageData, text, pluginName = null) {
+    if (this.resultWindowManager && this.resultWindowManager.showResultWindow) {
+      // 获取插件配置
+      let pluginConfig = null;
+      if (pluginName && this.plugins.has(pluginName)) {
+        pluginConfig = this.plugins.get(pluginName);
+      }
+      
+      this.resultWindowManager.showResultWindow(imageData, text, pluginName, pluginConfig);
+      return true;
+    }
+    console.warn('[插件管理器] 结果窗口管理器未设置或不可用');
+    return false;
+  }
+
+  // 通用显示HTML窗口
+  showHtmlWindow(htmlPath, data = {}, windowOptions = {}) {
+    if (this.resultWindowManager && this.resultWindowManager.showHtmlWindow) {
+      this.resultWindowManager.showHtmlWindow(htmlPath, data, windowOptions);
+      return true;
+    }
+    console.warn('[插件管理器] 结果窗口管理器未设置或不可用');
+    return false;
   }
 
   loadPlugins() {
@@ -97,18 +131,43 @@ class PluginManager {
     }));
   }
 
-  async executePlugin(pluginName, ...args) {
+  async executePlugin(pluginName, action = 'default', ...args) {
     const plugin = this.plugins.get(pluginName);
     if (!plugin) {
       throw new Error(`插件不存在: ${pluginName}`);
     }
-    // 这里应该通过插件进程管理器执行插件
-    // 暂时返回一个模拟结果
-    return {
-      success: true,
-      message: `插件 ${pluginName} 执行成功`,
-      result: `执行了插件: ${pluginName}`
-    };
+
+    // 在执行插件前隐藏主窗口
+    if (this.mainWindow && !this.mainWindow.isDestroyed()) {
+      this.mainWindow.hide();
+      console.log(`[插件管理器] 执行插件 ${pluginName} 前隐藏主窗口`);
+    }
+
+    // 通过插件进程管理器执行插件
+    if (this.pluginProcessManager) {
+      try {
+        const result = await this.pluginProcessManager.executePlugin(pluginName, action, ...args);
+        return {
+          success: true,
+          message: `插件 ${pluginName} 执行成功`,
+          result: result
+        };
+      } catch (error) {
+        console.error(`插件 ${pluginName} 执行失败:`, error);
+        return {
+          success: false,
+          message: error.message,
+          result: null
+        };
+      }
+    } else {
+      // 如果没有插件进程管理器，返回模拟结果
+      return {
+        success: true,
+        message: `插件 ${pluginName} 执行成功（模拟）`,
+        result: `执行了插件: ${pluginName}, 动作: ${action}`
+      };
+    }
   }
 }
 

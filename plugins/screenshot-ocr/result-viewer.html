@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>截图OCR结果 - oTools</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f5f5;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .container {
+            display: flex;
+            height: 100vh;
+            background: white;
+        }
+
+        .image-section {
+            flex: 1;
+            border-right: 1px solid #e0e0e0;
+            display: flex;
+            flex-direction: column;
+            background: #fafafa;
+        }
+
+        .text-section {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: white;
+        }
+
+        .section-header {
+            padding: 15px 20px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #e0e0e0;
+            font-weight: 600;
+            color: #333;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .section-content {
+            flex: 1;
+            padding: 20px;
+            overflow: auto;
+        }
+
+        .image-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100%;
+            padding: 20px;
+        }
+
+        .screenshot-image {
+            max-width: 100%;
+            max-height: 100%;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        .text-content {
+            background: #f8f9fa;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 20px;
+            min-height: 200px;
+            font-size: 14px;
+            line-height: 1.6;
+            color: #333;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        .text-content.empty {
+            color: #999;
+            font-style: italic;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: #007AFF;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #0056CC;
+        }
+
+        .btn-secondary {
+            background: #f8f9fa;
+            color: #333;
+            border: 1px solid #ddd;
+        }
+
+        .btn-secondary:hover {
+            background: #e9ecef;
+        }
+
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #c82333;
+        }
+
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: #666;
+        }
+
+        .spinner {
+            width: 20px;
+            height: 20px;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #007AFF;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .status-bar {
+            padding: 10px 20px;
+            background: #f8f9fa;
+            border-top: 1px solid #e0e0e0;
+            font-size: 12px;
+            color: #666;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .copy-success {
+            color: #28a745;
+            font-weight: 500;
+        }
+
+        .error-message {
+            color: #dc3545;
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            border-radius: 4px;
+            padding: 10px;
+            margin-bottom: 15px;
+        }
+
+        /* 插件特定的样式 */
+        .plugin-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .plugin-header .section-header {
+            background: transparent;
+            border-bottom: 1px solid rgba(255,255,255,0.2);
+            color: white;
+        }
+
+        .plugin-title {
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .plugin-version {
+            font-size: 12px;
+            opacity: 0.8;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 左侧图片区域 -->
+        <div class="image-section">
+            <div class="section-header plugin-header">
+                <div>
+                    <div class="plugin-title">截图预览</div>
+                    <div class="plugin-version">OCR识别插件 v1.0.0</div>
+                </div>
+                <div class="action-buttons">
+                    <button class="btn btn-secondary" onclick="saveImage()">保存图片</button>
+                    <button class="btn btn-secondary" onclick="copyImage()">复制图片</button>
+                </div>
+            </div>
+            <div class="section-content">
+                <div class="image-container" id="imageContainer">
+                    <div class="loading" id="imageLoading">
+                        <div class="spinner"></div>
+                        加载图片中...
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 右侧文字区域 -->
+        <div class="text-section">
+            <div class="section-header">
+                <span>识别内容</span>
+                <div class="action-buttons">
+                    <button class="btn btn-primary" onclick="copyText()">复制文字</button>
+                    <button class="btn btn-secondary" onclick="clearText()">清空</button>
+                </div>
+            </div>
+            <div class="section-content">
+                <div id="errorContainer"></div>
+                <div class="text-content empty" id="textContent">
+                    等待OCR识别结果...
+                </div>
+                <div class="action-buttons">
+                    <button class="btn btn-primary" onclick="newScreenshot()">重新截图</button>
+                    <button class="btn btn-secondary" onclick="closeWindow()">关闭</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 状态栏 -->
+    <div class="status-bar">
+        <span id="statusText">准备就绪</span>
+        <span id="timestamp"></span>
+    </div>
+
+    <script>
+        let currentImageData = null;
+        let currentText = '';
+
+        // 页面加载完成后初始化
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('OCR插件结果展示界面已加载');
+            updateTimestamp();
+            
+            // 监听来自主进程的消息
+            window.electronAPI.onResultData((data) => {
+                console.log('收到结果数据:', data);
+                displayResult(data);
+            });
+        });
+
+        // 显示结果
+        function displayResult(data) {
+            if (data.imageData) {
+                displayImage(data.imageData);
+            }
+            
+            if (data.text) {
+                displayText(data.text);
+            }
+            
+            updateStatus('识别完成');
+        }
+
+        // 显示图片
+        function displayImage(imageBase64) {
+            currentImageData = imageBase64;
+            const container = document.getElementById('imageContainer');
+            const loading = document.getElementById('imageLoading');
+            
+            loading.style.display = 'none';
+            
+            const img = document.createElement('img');
+            img.src = `data:image/png;base64,${imageBase64}`;
+            img.className = 'screenshot-image';
+            img.alt = '截图预览';
+            
+            container.innerHTML = '';
+            container.appendChild(img);
+        }
+
+        // 显示文字
+        function displayText(text) {
+            currentText = text;
+            const textContent = document.getElementById('textContent');
+            
+            if (text && text.trim()) {
+                textContent.textContent = text;
+                textContent.className = 'text-content';
+            } else {
+                textContent.textContent = '未识别到文字内容';
+                textContent.className = 'text-content empty';
+            }
+        }
+
+        // 显示错误信息
+        function displayError(message) {
+            const errorContainer = document.getElementById('errorContainer');
+            errorContainer.innerHTML = `<div class="error-message">${message}</div>`;
+            updateStatus('识别失败');
+        }
+
+        // 复制文字
+        async function copyText() {
+            if (!currentText) {
+                updateStatus('没有可复制的文字');
+                return;
+            }
+            
+            try {
+                await navigator.clipboard.writeText(currentText);
+                updateStatus('文字已复制到剪贴板', 'copy-success');
+                setTimeout(() => updateStatus('准备就绪'), 2000);
+            } catch (error) {
+                console.error('复制失败:', error);
+                updateStatus('复制失败');
+            }
+        }
+
+        // 复制图片
+        async function copyImage() {
+            if (!currentImageData) {
+                updateStatus('没有可复制的图片');
+                return;
+            }
+            
+            try {
+                // 将base64转换为blob
+                const response = await fetch(`data:image/png;base64,${currentImageData}`);
+                const blob = await response.blob();
+                
+                await navigator.clipboard.write([
+                    new ClipboardItem({
+                        'image/png': blob
+                    })
+                ]);
+                
+                updateStatus('图片已复制到剪贴板', 'copy-success');
+                setTimeout(() => updateStatus('准备就绪'), 2000);
+            } catch (error) {
+                console.error('复制图片失败:', error);
+                updateStatus('复制图片失败');
+            }
+        }
+
+        // 保存图片
+        function saveImage() {
+            if (!currentImageData) {
+                updateStatus('没有可保存的图片');
+                return;
+            }
+            
+            // 通过主进程保存图片
+            window.electronAPI.saveImage(currentImageData);
+        }
+
+        // 清空文字
+        function clearText() {
+            currentText = '';
+            const textContent = document.getElementById('textContent');
+            textContent.textContent = '等待OCR识别结果...';
+            textContent.className = 'text-content empty';
+            updateStatus('文字已清空');
+        }
+
+        // 重新截图
+        function newScreenshot() {
+            window.electronAPI.newScreenshot();
+        }
+
+        // 关闭窗口
+        function closeWindow() {
+            window.electronAPI.closeResultWindow();
+        }
+
+        // 更新状态
+        function updateStatus(message, className = '') {
+            const statusText = document.getElementById('statusText');
+            statusText.textContent = message;
+            statusText.className = className;
+        }
+
+        // 更新时间戳
+        function updateTimestamp() {
+            const timestamp = document.getElementById('timestamp');
+            timestamp.textContent = new Date().toLocaleString('zh-CN');
+        }
+
+        // 定期更新时间戳
+        setInterval(updateTimestamp, 1000);
+    </script>
+</body>
+</html> 

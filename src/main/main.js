@@ -1,18 +1,21 @@
-const { app, BrowserWindow, globalShortcut } = require('electron');
+const { app, BrowserWindow, globalShortcut, ipcMain } = require('electron');
 const path = require('node:path');
 const Store = require('electron-store');
 const PluginProcessManager = require('./plugin-manager/process-manager');
 const PluginManager = require('./plugin-manager/index');
 const setupIPC = require('./ipc');
 const { getSavedWindowPosition, saveWindowPosition } = require('./utils/window');
+const MacTools = require('./utils/mac-tools');
 
 if (require('electron-squirrel-startup')) {
   app.quit();
 }
 
 let mainWindow;
-const pluginsDir = path.join(__dirname, '..', 'plugins');
-const pluginProcessManager = new PluginProcessManager(pluginsDir);
+let resultWindowManager;
+const pluginsDir = path.join(__dirname, '..', '..', 'plugins');
+const macTools = new MacTools();
+const pluginProcessManager = new PluginProcessManager(pluginsDir, macTools);
 let pluginManager;
 const store = new Store();
 
@@ -30,7 +33,7 @@ const createWindow = () => {
     alwaysOnTop: true,
     skipTaskbar: true,
     webPreferences: {
-      preload: path.join(__dirname, '../preload/preload.js'),
+      preload: path.join(__dirname, 'preload.js'),
       nodeIntegration: false,
       contextIsolation: true,
       enableRemoteModule: false
@@ -87,9 +90,20 @@ function registerGlobalShortcuts() {
 
 app.whenReady().then(() => {
   createWindow();
-  pluginManager = new PluginManager(mainWindow);
+  pluginManager = new PluginManager(mainWindow, pluginProcessManager);
   registerGlobalShortcuts();
-  setupIPC(mainWindow, pluginManager, pluginProcessManager);
+  
+  // 设置IPC并获取结果窗口管理器
+  resultWindowManager = setupIPC(mainWindow, pluginManager, pluginProcessManager);
+  
+  // 将结果窗口管理器传递给插件管理器和插件进程管理器
+  if (pluginManager && resultWindowManager) {
+    pluginManager.setResultWindowManager(resultWindowManager);
+  }
+  if (pluginProcessManager && resultWindowManager) {
+    pluginProcessManager.setResultWindowManager(resultWindowManager);
+  }
+  
   pluginProcessManager.startAll();
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
@@ -129,4 +143,4 @@ function safeHideMainWindow() {
 
 function safeMinimizeMainWindow() {
   safeWindowOperation(() => mainWindow.minimize());
-} 
+}

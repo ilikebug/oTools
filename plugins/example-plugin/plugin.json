@@ -1,9 +1,0 @@
-{
-  "name": "示例插件",
-  "description": "这是一个插件模板示例，包含元信息、主逻辑、界面和通信桥。",
-  "version": "1.0.0",
-  "author": "YourName",
-  "main": "main.js",
-  "preload": "preload.js",
-  "index": "index.html"
-}
