@@ -1,0 +1,65 @@
+{
+  "app": {
+    "name": "oTools",
+    "version": "1.0.0",
+    "description": "功能丰富的桌面应用管理中心"
+  },
+  "logging": {
+    "level": "info",
+    "enableFile": true,
+    "enableConsole": true,
+    "logFile": "logs/otools.log",
+    "maxFileSize": "10MB",
+    "maxFiles": 5,
+    "format": "json"
+  },
+  "performance": {
+    "enableMonitoring": true,
+    "thresholds": {
+      "pluginExecution": 5000,
+      "apiCall": 1000,
+      "fileOperation": 2000
+    },
+    "enableAlerts": true,
+    "alertThreshold": 10000
+  },
+  "errorHandling": {
+    "maxErrors": 100,
+    "retryAttempts": 3,
+    "retryDelay": 1000,
+    "enableNotifications": true,
+    "logErrors": true
+  },
+  "plugins": {
+    "maxProcesses": 10,
+    "timeout": 30000,
+    "retryAttempts": 2,
+    "retryDelay": 1000,
+    "enableAutoStart": true,
+    "enableHotReload": true
+  },
+  "shortcuts": {
+    "toggle": "Option+Space",
+    "screenshot": "CommandOrControl+Shift+S",
+    "ocr": "CommandOrControl+Shift+O"
+  },
+  "ui": {
+    "theme": "default",
+    "language": "zh-CN",
+    "window": {
+      "width": 480,
+      "height": 420,
+      "minWidth": 400,
+      "minHeight": 300
+    }
+  },
+  "security": {
+    "enableSandbox": true,
+    "allowedAPIs": [
+      "captureScreenRegion",
+      "performOCR",
+      "captureAndOCR",
+      "cleanup"
+    ]
+  }
+} 

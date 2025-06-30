@@ -6,15 +6,21 @@ class oToolsApp {
     console.log('oToolsApp 构造函数被调用');
     this.plugins = [];
     this.currentPanel = null;
+    this.appStatus = null;
+    this.performanceStats = null;
+    this.errorStats = null;
     this.init();
   }
 
   async init() {
     console.log('oToolsApp init 方法被调用');
     this.bindEvents();
+    await this.loadAppStatus();
     await this.loadPlugins();
     this.setupPluginWatcher();
+    this.setupStatusUpdates();
     this.renderPluginButtons();
+    this.updateStatusDisplay();
   }
 
   bindEvents() {
@@ -61,10 +67,38 @@ class oToolsApp {
           this.hideAllPanels();
         }
       });
+
+      // 状态更新按钮
+      const statusBtn = document.getElementById('statusBtn');
+      if (statusBtn) {
+        statusBtn.addEventListener('click', () => {
+          this.showStatusPanel();
+        });
+      }
+
+      // 性能监控按钮
+      const performanceBtn = document.getElementById('performanceBtn');
+      if (performanceBtn) {
+        performanceBtn.addEventListener('click', () => {
+          this.showPerformancePanel();
+        });
+      }
       
       console.log('事件绑定完成');
     } catch (error) {
       console.error('绑定事件时出错:', error);
+    }
+  }
+
+  async loadAppStatus() {
+    try {
+      if (!window.oToolsAPI || !window.oToolsAPI.getAppStatus) {
+        throw new Error('oToolsAPI 未注入或 getAppStatus 不存在');
+      }
+      this.appStatus = await window.oToolsAPI.getAppStatus();
+      console.log("应用状态已加载:", this.appStatus);
+    } catch (error) {
+      console.error('加载应用状态失败:', error);
     }
   }
 
@@ -90,7 +124,20 @@ class oToolsApp {
     window.oToolsAPI.onPluginsChanged((plugins) => {
       this.plugins = plugins;
       this.renderPluginButtons();
+      this.showNotification('插件列表已更新', 'info');
     });
+  }
+
+  setupStatusUpdates() {
+    // 定期更新状态信息
+    setInterval(async () => {
+      try {
+        await this.loadAppStatus();
+        this.updateStatusDisplay();
+      } catch (error) {
+        console.error('更新状态失败:', error);
+      }
+    }, 30000); // 每30秒更新一次
   }
 
   // 渲染所有插件为按钮（不区分类型）
@@ -106,13 +153,25 @@ class oToolsApp {
       actionBtn.className = 'action-btn';
       actionBtn.id = `${plugin.name.replace(/\s+/g, '')}Btn`;
       actionBtn.title = plugin.description;
+      
+      // 根据插件状态设置样式
+      const isEnabled = plugin.enabled !== false;
+      if (!isEnabled) {
+        actionBtn.classList.add('disabled');
+      }
+      
       actionBtn.innerHTML = `
         <i class="${plugin.icon}"></i>
         <span>${plugin.shortName}</span>
+        ${plugin.loadedAt ? `<small>${new Date(plugin.loadedAt).toLocaleTimeString()}</small>` : ''}
       `;
-      actionBtn.addEventListener('click', () => {
-        this.executePlugin(plugin.name);
-      });
+      
+      if (isEnabled) {
+        actionBtn.addEventListener('click', () => {
+          this.executePlugin(plugin.name);
+        });
+      }
+      
       actionGrid.appendChild(actionBtn);
     });
   }
@@ -135,6 +194,124 @@ class oToolsApp {
     } catch (error) {
       this.hideLoading();
       this.showNotification(`插件执行错误: ${error.message}`, 'error');
+    }
+  }
+
+  async showStatusPanel() {
+    try {
+      if (!window.oToolsAPI || !window.oToolsAPI.getPerformanceStats) {
+        throw new Error('oToolsAPI 未注入或 getPerformanceStats 不存在');
+      }
+      
+      this.performanceStats = await window.oToolsAPI.getPerformanceStats();
+      this.errorStats = await window.oToolsAPI.getErrorStats();
+      
+      const statusPanel = document.getElementById('statusPanel');
+      if (statusPanel) {
+        statusPanel.innerHTML = this.renderStatusContent();
+        this.showPanel('statusPanel');
+      }
+    } catch (error) {
+      console.error('显示状态面板失败:', error);
+      this.showNotification('无法加载状态信息', 'error');
+    }
+  }
+
+  renderStatusContent() {
+    return `
+      <div class="status-content">
+        <h3>应用状态</h3>
+        <div class="status-grid">
+          <div class="status-item">
+            <label>状态:</label>
+            <span class="status-value ${this.appStatus?.status || 'unknown'}">${this.appStatus?.status || '未知'}</span>
+          </div>
+          <div class="status-item">
+            <label>运行时间:</label>
+            <span class="status-value">${this.formatUptime(this.appStatus?.uptime || 0)}</span>
+          </div>
+          <div class="status-item">
+            <label>组件数量:</label>
+            <span class="status-value">${this.appStatus?.componentCount || 0}</span>
+          </div>
+          <div class="status-item">
+            <label>插件数量:</label>
+            <span class="status-value">${this.plugins.length}</span>
+          </div>
+        </div>
+        
+        <h4>性能统计</h4>
+        <div class="performance-stats">
+          ${this.renderPerformanceStats()}
+        </div>
+        
+        <h4>错误统计</h4>
+        <div class="error-stats">
+          ${this.renderErrorStats()}
+        </div>
+      </div>
+    `;
+  }
+
+  renderPerformanceStats() {
+    if (!this.performanceStats) return '<p>暂无性能数据</p>';
+    
+    return `
+      <div class="stats-grid">
+        <div class="stat-item">
+          <label>平均响应时间:</label>
+          <span>${this.performanceStats.averageResponseTime || 0}ms</span>
+        </div>
+        <div class="stat-item">
+          <label>总请求数:</label>
+          <span>${this.performanceStats.totalRequests || 0}</span>
+        </div>
+        <div class="stat-item">
+          <label>成功率:</label>
+          <span>${this.performanceStats.successRate || 0}%</span>
+        </div>
+      </div>
+    `;
+  }
+
+  renderErrorStats() {
+    if (!this.errorStats) return '<p>暂无错误数据</p>';
+    
+    return `
+      <div class="stats-grid">
+        <div class="stat-item">
+          <label>总错误数:</label>
+          <span>${this.errorStats.totalErrors || 0}</span>
+        </div>
+        <div class="stat-item">
+          <label>严重错误:</label>
+          <span>${this.errorStats.criticalErrors || 0}</span>
+        </div>
+        <div class="stat-item">
+          <label>最后错误:</label>
+          <span>${this.errorStats.lastErrorTime || '无'}</span>
+        </div>
+      </div>
+    `;
+  }
+
+  formatUptime(ms) {
+    const seconds = Math.floor(ms / 1000);
+    const minutes = Math.floor(seconds / 60);
+    const hours = Math.floor(minutes / 60);
+    const days = Math.floor(hours / 24);
+    
+    if (days > 0) return `${days}天 ${hours % 24}小时`;
+    if (hours > 0) return `${hours}小时 ${minutes % 60}分钟`;
+    if (minutes > 0) return `${minutes}分钟 ${seconds % 60}秒`;
+    return `${seconds}秒`;
+  }
+
+  updateStatusDisplay() {
+    const statusIndicator = document.getElementById('statusIndicator');
+    if (statusIndicator && this.appStatus) {
+      statusIndicator.className = `status-indicator ${this.appStatus.status}`;
+      statusIndicator.title = `应用状态: ${this.appStatus.status}`;
     }
   }
 
@@ -198,52 +375,55 @@ class oToolsApp {
   }
 
   showLoading(text = '处理中...') {
-    const loadingOverlay = document.getElementById('loadingOverlay');
-    const loadingText = document.getElementById('loadingText');
-    if (loadingOverlay && loadingText) {
-      loadingText.textContent = text;
-      loadingOverlay.style.display = 'flex';
+    const loading = document.getElementById('loading');
+    if (loading) {
+      const loadingText = loading.querySelector('.loading-text');
+      if (loadingText) {
+        loadingText.textContent = text;
+      }
+      loading.style.display = 'flex';
     }
   }
 
   hideLoading() {
-    const loadingOverlay = document.getElementById('loadingOverlay');
-    if (loadingOverlay) {
-      loadingOverlay.style.display = 'none';
+    const loading = document.getElementById('loading');
+    if (loading) {
+      loading.style.display = 'none';
     }
   }
 
   showNotification(message, type = 'info') {
-    const container = document.getElementById('notificationContainer');
-    if (!container) return;
     const notification = document.createElement('div');
-    notification.className = `notification ${type}`;
+    notification.className = `notification notification-${type}`;
     notification.innerHTML = `
-      <div style="display: flex; align-items: center; gap: 8px;">
-        <i class="fas fa-${this.getNotificationIcon(type)}"></i>
-        <span>${message}</span>
-      </div>
+      <i class="${this.getNotificationIcon(type)}"></i>
+      <span>${message}</span>
+      <button class="notification-close" onclick="this.parentElement.remove()">×</button>
     `;
-    container.appendChild(notification);
+    
+    document.body.appendChild(notification);
+    
+    // 自动移除通知
     setTimeout(() => {
-      if (notification.parentNode) {
-        notification.parentNode.removeChild(notification);
+      if (notification.parentElement) {
+        notification.remove();
       }
-    }, 3000);
+    }, 5000);
   }
 
   getNotificationIcon(type) {
-    switch (type) {
-      case 'success': return 'check-circle';
-      case 'error': return 'exclamation-circle';
-      case 'warning': return 'exclamation-triangle';
-      default: return 'info-circle';
-    }
+    const icons = {
+      success: 'fas fa-check-circle',
+      error: 'fas fa-exclamation-circle',
+      warning: 'fas fa-exclamation-triangle',
+      info: 'fas fa-info-circle'
+    };
+    return icons[type] || icons.info;
   }
 }
 
-console.log('DOMContentLoaded 事件监听器已设置');
+// 初始化应用
 document.addEventListener('DOMContentLoaded', () => {
-  console.log('DOMContentLoaded 事件触发');
-  new oToolsApp();
+  console.log('DOM加载完成，初始化oTools应用');
+  window.oToolsApp = new oToolsApp();
 }); 
