@@ -165,7 +165,9 @@ body {
 /* 搜索区域 */
 .search-section {
   width: 100%;
-  margin-bottom: 24px;
+  background: #fff;
+  padding: 0 0 12px 0;
+  margin: 0;
 }
 
 .search-container {
@@ -230,32 +232,38 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
+  margin-top: 0;
 }
 
 .action-grid {
-  width: 100%;
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 16px;
-  max-height: 260px;
-  overflow-y: auto;
-  padding-right: 4px;
+  display: grid !important;
+  grid-template-columns: repeat(2, 1fr) !important;
+  gap: 16px !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  max-height: 320px !important;
 }
 
 .action-btn {
+  width: 100% !important;
+  min-width: 0 !important;
+  box-sizing: border-box !important;
+  margin: 0 !important;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 8px;
   padding: 18px 0;
-  border: none;
   border-radius: 14px;
   background: #f7f8fa;
+  border: none;
+  font-size: 15px;
+  font-weight: 500;
   color: #222;
   cursor: pointer;
   transition: all 0.2s ease;
-  font-size: 15px;
-  font-weight: 500;
   box-shadow: 0 1px 4px rgba(102,126,234,0.04);
   -webkit-app-region: no-drag;
   position: relative;
@@ -284,14 +292,30 @@ body {
 }
 
 .action-btn span {
+  font-size: 15px;
   font-weight: 500;
   text-align: center;
 }
 
-.action-btn small {
-  font-size: 11px;
-  color: #6b7280;
-  opacity: 0.7;
+/* 自定义滚动条样式 */
+.action-grid::-webkit-scrollbar {
+  width: 6px;
+}
+
+.action-grid::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 3px;
+  margin: 4px 0;
+}
+
+.action-grid::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 3px;
+  transition: background 0.2s ease;
+}
+
+.action-grid::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
 }
 
 /* 插件管理区域 */
@@ -959,6 +983,8 @@ body {
 @media (max-width: 768px) {
   .action-grid {
     grid-template-columns: 1fr;
+    max-height: 400px;
+    gap: 12px;
   }
   
   .plugins-grid {
@@ -972,6 +998,27 @@ body {
   
   .search-input {
     font-size: 14px;
+  }
+  
+  .action-grid::-webkit-scrollbar {
+    width: 4px;
+  }
+}
+
+/* 小屏幕设备优化 */
+@media (max-width: 480px) {
+  .action-grid {
+    max-height: 350px;
+    padding-right: 4px;
+  }
+  
+  .action-btn {
+    padding: 14px 0;
+    font-size: 14px;
+  }
+  
+  .action-btn i {
+    font-size: 20px;
   }
 }
 

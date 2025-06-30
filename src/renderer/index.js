@@ -147,8 +147,9 @@ class oToolsApp {
       console.error('找不到 action-grid 元素');
       return;
     }
+    
     actionGrid.innerHTML = '';
-    this.plugins.forEach(plugin => {
+    this.plugins.forEach((plugin, index) => {
       const actionBtn = document.createElement('button');
       actionBtn.className = 'action-btn';
       actionBtn.id = `${plugin.name.replace(/\s+/g, '')}Btn`;
@@ -160,17 +161,18 @@ class oToolsApp {
         actionBtn.classList.add('disabled');
       }
       
+      // 设置按钮内容
       actionBtn.innerHTML = `
-        <i class="${plugin.icon}"></i>
-        <span>${plugin.shortName}</span>
-        ${plugin.loadedAt ? `<small>${new Date(plugin.loadedAt).toLocaleTimeString()}</small>` : ''}
+        <i class="${plugin.icon || 'fas fa-puzzle-piece'}"></i>
+        <span>${plugin.shortName || plugin.name}</span>
       `;
       
-      if (isEnabled) {
-        actionBtn.addEventListener('click', () => {
+      // 添加点击事件
+      actionBtn.addEventListener('click', () => {
+        if (isEnabled) {
           this.executePlugin(plugin.name);
-        });
-      }
+        }
+      });
       
       actionGrid.appendChild(actionBtn);
     });

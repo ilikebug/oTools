@@ -1,12 +1,13 @@
+const { app, ipcMain } = require('electron');
 const BaseManager = require('./base-manager');
 const Logger = require('./logger');
 const ConfigManager = require('./config-manager');
 const PerformanceMonitor = require('./performance-monitor');
 const ErrorHandler = require('./error-handler');
-const { MessageBuilder, MessageHandler, MessageRouter } = require('./message-protocol');
+const { MessageBuilder, MessageHandler, MessageRouter } = require('../plugin-manager/message-protocol');
 const PluginProcessPool = require('../plugin-manager/process-pool');
-const PluginManager = require('../plugin-manager/index');
-const PluginProcessManager = require('../plugin-manager/process-manager');
+const PluginManager = require('../plugin-manager/manager');
+const { macTools } = require('../main');
 
 /**
  * 应用管理器 - 统一管理所有核心组件
@@ -27,7 +28,6 @@ class AppManager extends BaseManager {
     // 插件相关组件
     this.pluginProcessPool = null;
     this.pluginManager = null;
-    this.pluginProcessManager = null;
     
     // 应用状态
     this.isInitialized = false;
@@ -39,6 +39,20 @@ class AppManager extends BaseManager {
       componentCount: 0,
       lastError: null
     };
+
+    this.components = new Map(); // 初始化组件Map
+  }
+
+  /**
+   * 注册组件
+   * @param {string} name 组件名称
+   * @param {object} componentInstance 组件实例
+   */
+  registerComponent(name, componentInstance) {
+    if (this.components.has(name)) {
+      this.getComponent('logger')?.log(`组件 ${name} 已被覆盖注册`, 'warn');
+    }
+    this.components.set(name, componentInstance);
   }
 
   /**
@@ -52,7 +66,7 @@ class AppManager extends BaseManager {
       // 1. 初始化日志系统
       this.logger = new Logger();
       await this.logger.initialize(options.logging || {});
-      this.logger.log('应用管理器初始化开始');
+      this.registerComponent('logger', this.logger);
       
       // 2. 初始化配置管理器
       this.configManager = new ConfigManager();
@@ -60,6 +74,7 @@ class AppManager extends BaseManager {
         configDir: options.configDir,
         logger: this.logger
       });
+      this.registerComponent('configManager', this.configManager);
       
       // 3. 初始化性能监控
       this.performanceMonitor = new PerformanceMonitor();
@@ -67,6 +82,7 @@ class AppManager extends BaseManager {
         logger: this.logger,
         configManager: this.configManager
       });
+      this.registerComponent('performanceMonitor', this.performanceMonitor);
       
       // 4. 初始化错误处理器
       this.errorHandler = new ErrorHandler();
@@ -75,11 +91,15 @@ class AppManager extends BaseManager {
         configManager: this.configManager,
         performanceMonitor: this.performanceMonitor
       });
+      this.registerComponent('errorHandler', this.errorHandler);
       
       // 5. 初始化消息协议组件
-      this.messageBuilder = MessageBuilder;
+      this.messageBuilder = new MessageBuilder();
       this.messageHandler = new MessageHandler();
       this.messageRouter = new MessageRouter();
+      this.registerComponent('messageBuilder', this.messageBuilder);
+      this.registerComponent('messageHandler', this.messageHandler);
+      this.registerComponent('messageRouter', this.messageRouter);
       
       // 6. 初始化插件进程池
       this.pluginProcessPool = new PluginProcessPool(this);
@@ -87,21 +107,18 @@ class AppManager extends BaseManager {
         macTools: options.macTools,
         resultWindowManager: options.resultWindowManager
       });
+      this.registerComponent('pluginProcessPool', this.pluginProcessPool);
       
       // 7. 初始化插件管理器
       this.pluginManager = new PluginManager(this);
       await this.pluginManager.initialize({
+        macTools: options.macTools,
         mainWindow: options.mainWindow,
         resultWindowManager: options.resultWindowManager,
         enableWatch: options.enablePluginWatch !== false
       });
+      this.registerComponent('pluginManager', this.pluginManager);
       
-      // 8. 初始化插件进程管理器（兼容旧版本）
-      this.pluginProcessManager = new PluginProcessManager(this);
-      await this.pluginProcessManager.initialize({
-        macTools: options.macTools,
-        resultWindowManager: options.resultWindowManager
-      });
       
       // 更新应用状态
       this.appStatus.status = 'running';
@@ -134,7 +151,6 @@ class AppManager extends BaseManager {
       
       // 按相反顺序销毁组件
       const destroyOrder = [
-        'pluginProcessManager',
         'pluginManager', 
         'pluginProcessPool',
         'messageHandler',
@@ -146,7 +162,7 @@ class AppManager extends BaseManager {
       ];
       
       for (const componentName of destroyOrder) {
-        const component = this[componentName];
+        const component = this.getComponent(componentName);
         if (component && typeof component.destroy === 'function') {
           try {
             await component.destroy();
@@ -172,45 +188,21 @@ class AppManager extends BaseManager {
    * 获取组件
    */
   getComponent(componentName) {
-    const componentMap = {
-      logger: this.logger,
-      configManager: this.configManager,
-      performanceMonitor: this.performanceMonitor,
-      errorHandler: this.errorHandler,
-      messageBuilder: this.messageBuilder,
-      messageHandler: this.messageHandler,
-      messageRouter: this.messageRouter,
-      pluginProcessPool: this.pluginProcessPool,
-      pluginManager: this.pluginManager,
-      pluginProcessManager: this.pluginProcessManager
-    };
-    
-    return componentMap[componentName];
+    return this.components.get(componentName);
   }
 
   /**
    * 获取所有组件
    */
   getAllComponents() {
-    return {
-      logger: this.logger,
-      configManager: this.configManager,
-      performanceMonitor: this.performanceMonitor,
-      errorHandler: this.errorHandler,
-      messageBuilder: this.messageBuilder,
-      messageHandler: this.messageHandler,
-      messageRouter: this.messageRouter,
-      pluginProcessPool: this.pluginProcessPool,
-      pluginManager: this.pluginManager,
-      pluginProcessManager: this.pluginProcessManager
-    };
+    return this.components;
   }
 
   /**
    * 获取组件数量
    */
   getComponentCount() {
-    return Object.keys(this.getAllComponents()).filter(key => this[key] !== null).length;
+    return this.components.size;
   }
 
   /**
@@ -223,9 +215,8 @@ class AppManager extends BaseManager {
     
     return {
       ...this.appStatus,
-      components: Object.keys(this.getAllComponents()).reduce((acc, key) => {
-        const component = this[key];
-        acc[key] = {
+      components: [...this.components.entries()].reduce((acc, [name, component]) => {
+        acc[name] = {
           active: !!component,
           status: component ? 'active' : 'inactive',
           hasDestroy: typeof component?.destroy === 'function',
@@ -363,7 +354,14 @@ class AppManager extends BaseManager {
           break;
           
         case 'pluginManager':
-          this.pluginManager = new PluginManager(this);
+          this.pluginManager = new PluginManager({
+            appManager: this,
+            logger: this.logger,
+            configManager: this.configManager,
+            errorHandler: this.errorHandler,
+            performanceMonitor: this.performanceMonitor
+          });
+          this.registerComponent('pluginManager', this.pluginManager);
           await this.pluginManager.initialize({});
           break;
           

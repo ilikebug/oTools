@@ -1,6 +1,6 @@
-const { ipcMain, dialog, shell, BrowserWindow } = require('electron');
+const { ipcMain, dialog, shell, BrowserWindow, app } = require('electron');
 const path = require('path');
-const { MessageBuilder, MessageType } = require('../core/message-protocol');
+const { MessageBuilder, MessageType } = require('../plugin-manager/message-protocol');
 
 // 全局变量存储结果窗口
 let resultWindow = null;
@@ -16,7 +16,6 @@ function setupIPC(mainWindow, appManager) {
   const configManager = appManager.getComponent('configManager');
   const performanceMonitor = appManager.getComponent('performanceMonitor');
   const errorHandler = appManager.getComponent('errorHandler');
-  const pluginProcessPool = appManager.getComponent('pluginProcessPool');
   
   // 设置插件目录路径
   pluginsDir = path.join(__dirname, '..', '..', '..', 'plugins');
@@ -49,16 +48,16 @@ function setupIPC(mainWindow, appManager) {
  */
 function setupPluginIPC(mainWindow, appManager) {
   const logger = appManager.getComponent('logger');
-  const pluginProcessPool = appManager.getComponent('pluginProcessPool');
   const performanceMonitor = appManager.getComponent('performanceMonitor');
   const errorHandler = appManager.getComponent('errorHandler');
+  const pluginManager = appManager.getComponent('pluginManager')
 
   // 获取插件列表
   ipcMain.handle('get-plugins', async () => {
     try {
       performanceMonitor.startTimer('get_plugins');
       
-      const plugins = await pluginProcessPool.getPluginsList();
+      const plugins = await pluginManager.getPluginsList();
       
       performanceMonitor.endTimer('get_plugins');
       return plugins;
@@ -72,14 +71,13 @@ function setupPluginIPC(mainWindow, appManager) {
   ipcMain.handle('execute-plugin', async (event, pluginName, ...args) => {
     try {
       performanceMonitor.startTimer('execute_plugin', pluginName);
-      
       // 在执行插件前隐藏主窗口
       if (mainWindow && !mainWindow.isDestroyed()) {
         mainWindow.hide();
         logger.log(`执行插件 ${pluginName} 前隐藏主窗口`);
       }
       
-      const result = await pluginProcessPool.executePlugin(pluginName, 'default', ...args);
+      const result = await pluginManager.executePlugin(pluginName, 'default', ...args);
       
       performanceMonitor.endTimer('execute_plugin', pluginName, { success: true });
       
@@ -107,7 +105,7 @@ function setupPluginIPC(mainWindow, appManager) {
   // 插件进程管理
   ipcMain.handle('start-plugin', async (event, pluginName) => {
     try {
-      await pluginProcessPool.startPlugin(pluginName);
+      await pluginManager.startPlugin(pluginName);
       return { success: true, message: `插件 ${pluginName} 启动成功` };
     } catch (error) {
       await errorHandler.handleError(error, { pluginName, operation: 'start_plugin' });
@@ -117,7 +115,7 @@ function setupPluginIPC(mainWindow, appManager) {
 
   ipcMain.handle('stop-plugin', async (event, pluginName) => {
     try {
-      await pluginProcessPool.stopPlugin(pluginName);
+      await pluginManager.stopPlugin(pluginName);
       return { success: true, message: `插件 ${pluginName} 停止成功` };
     } catch (error) {
       await errorHandler.handleError(error, { pluginName, operation: 'stop_plugin' });
@@ -126,7 +124,7 @@ function setupPluginIPC(mainWindow, appManager) {
   });
 
   ipcMain.handle('get-running-plugins', () => {
-    return pluginProcessPool.getPoolStatus();
+    return pluginManager.getPoolStatus();
   });
 }
 
@@ -231,7 +229,6 @@ function setupFileIPC(mainWindow, appManager) {
  * 设置系统功能IPC处理
  */
 function setupSystemIPC(mainWindow, appManager) {
-  const logger = appManager.getComponent('logger');
   const performanceMonitor = appManager.getComponent('performanceMonitor');
   const errorHandler = appManager.getComponent('errorHandler');
   const configManager = appManager.getComponent('configManager');

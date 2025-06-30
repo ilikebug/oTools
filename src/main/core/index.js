@@ -19,7 +19,7 @@ const PerformanceMonitor = require('./performance-monitor');
 const ErrorHandler = require('./error-handler');
 
 // 消息协议
-const MessageProtocol = require('./message-protocol');
+const MessageProtocol = require('../plugin-manager/message-protocol');
 
 // 应用管理器
 const { AppManager } = require('./app-manager');

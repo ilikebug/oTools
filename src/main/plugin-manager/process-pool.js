@@ -2,7 +2,7 @@ const { fork } = require('child_process');
 const path = require('path');
 const fs = require('fs');
 const BaseManager = require('../core/base-manager');
-const { MessageBuilder, MessageType } = require('../core/message-protocol');
+const { MessageBuilder, MessageType, MessageStatus } = require('./message-protocol');
 
 /**
  * 进程状态枚举
@@ -131,23 +131,26 @@ class PluginProcessPool extends BaseManager {
       if (!fs.existsSync(mainPath)) {
         throw new Error(`插件主文件不存在: ${mainPath}`);
       }
-
+      
       const child = fork(mainPath, [], {
         cwd: pluginPath,
         stdio: ['pipe', 'pipe', 'pipe', 'ipc']
       });
-
+      
       processInfo.process = child;
-
+      
       // 设置进程事件监听
       this.setupProcessEventListeners(processInfo);
-
+      
       // 发送初始化消息
-      child.send(MessageBuilder.createSystemMessage(MessageType.SYSTEM.INIT, { meta }));
+      child.send(MessageBuilder.createSystemMessage(MessageType.SYSTEM.INIT, { 
+        meta,
+        messageProtocol: { MessageType, MessageStatus }
+      }));
 
       // 等待进程就绪
       await this.waitForProcessReady(processInfo);
-
+      
       // 更新状态
       processInfo.status = ProcessStatus.IDLE;
       this.processes.set(pluginName, processInfo);
@@ -175,6 +178,14 @@ class PluginProcessPool extends BaseManager {
    */
   setupProcessEventListeners(processInfo) {
     const { process: child, name } = processInfo;
+
+    child.stdout.on('data', (data) => {
+      this.log(`[${name}] ${data.toString().trim()}`);
+    });
+
+    child.stderr.on('data', (data) => {
+      this.log(`[${name}] STDERR: ${data.toString().trim()}`, 'error');
+    });
 
     child.on('message', async (msg) => {
       await this.handleProcessMessage(processInfo, msg);
@@ -209,10 +220,10 @@ class PluginProcessPool extends BaseManager {
             request.resolve(msg.result);
           }
         }
-      } else if (msg.type === 'api_call' && msg.id) {
+      } else if (msg.type === MessageType.REQUEST.API_CALL && msg.id) {
         // 处理API调用
         await this.handleApiCall(processInfo, msg);
-      } else if (msg.type === 'show_html_window' && msg.id) {
+      } else if (msg.type === MessageType.REQUEST.WINDOW_SHOW && msg.id) {
         // 处理HTML窗口显示请求
         await this.handleHtmlWindowRequest(processInfo, msg);
       } else if (msg.type === 'loaded' || msg.type === 'ready') {
@@ -286,17 +297,19 @@ class PluginProcessPool extends BaseManager {
   async waitForProcessReady(processInfo) {
     return new Promise((resolve, reject) => {
       const timeout = setTimeout(() => {
+        processInfo.process.removeListener('message', checkReady);
         reject(new Error(`进程启动超时: ${processInfo.name}`));
       }, this.processTimeout);
 
       const checkReady = (msg) => {
-        if (msg.type === 'ready') {
+        if (msg && msg.type === MessageType.EVENT.PLUGIN_READY) {
           clearTimeout(timeout);
+          processInfo.process.removeListener('message', checkReady);
           resolve();
         }
       };
 
-      processInfo.process.once('message', checkReady);
+      processInfo.process.on('message', checkReady);
     });
   }
 
@@ -539,6 +552,29 @@ class PluginProcessPool extends BaseManager {
       ...baseStatus,
       pool: poolStatus
     };
+  }
+
+  /**
+   * 执行插件
+   * @param {string} pluginName 插件名称
+   * @param {string} action 执行的动作
+   * @param  {...any} args 参数
+   * @returns {Promise<any>}
+   */
+  async executePlugin(pluginName, action, ...args) {
+    const request = {
+      id: ++this.requestId,
+      pluginName,
+      action,
+      args,
+      timestamp: Date.now()
+    };
+
+    return new Promise((resolve, reject) => {
+      this.pendingRequests.set(request.id, { ...request, resolve, reject });
+      this.requestQueue.push(request);
+      this.processQueue();
+    });
   }
 }
 

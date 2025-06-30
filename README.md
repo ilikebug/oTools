@@ -1,171 +1,220 @@
-# oTools - 应用管理中心
+# oTools - Desktop Application Management Center
 
-一个功能强大的桌面应用管理中心，支持全局快捷键呼出、OCR识别、截图、剪贴板管理等功能，并具备可扩展的插件系统。
+oTools is a modern, extensible desktop productivity tool that integrates global hotkey activation, OCR recognition, screenshot, clipboard management, and a powerful plugin system. It is designed for developers and efficiency-focused users.
 
-## ✨ 主要功能
+---
 
-### 🚀 核心特性
-- **全局快捷键呼出**: 使用 `Ctrl+Shift+Space` 快速呼出应用
-- **现代化UI**: 毛玻璃效果、流畅动画、响应式设计
-- **插件系统**: 支持动态加载和管理插件
-- **系统集成**: 深度集成系统功能
+## Table of Contents
 
-### 🔧 内置功能
-- **OCR文字识别**: 支持图片文字识别（中英文）
-- **截图功能**: 快速截取屏幕
-- **剪贴板管理**: 查看、编辑、清空剪贴板内容
-- **搜索功能**: 快速搜索和访问功能
+- [Main Features](#main-features)
+- [Architecture & Module Overview](#architecture--module-overview)
+- [Installation & Usage](#installation--usage)
+- [Plugin Development Guide](#plugin-development-guide)
+- [UI & Interaction](#ui--interaction)
+- [Tech Stack](#tech-stack)
+- [FAQ](#faq)
+- [Contributing](#contributing)
+- [License](#license)
+- [Contact](#contact)
 
-### 🔌 插件系统
-- **动态加载**: 插件热加载，无需重启应用
-- **标准化接口**: 统一的插件开发规范
-- **插件管理**: 可视化插件管理界面
+---
 
-## 🛠️ 安装和运行
+## Main Features
 
-### 环境要求
+### Core Highlights
+
+- **Global Hotkey Activation**: Default `Ctrl+Shift+Space` to instantly bring up the main interface.
+- **Modern UI**: Frosted glass effect, responsive design, smooth animations.
+- **Plugin System**: Supports hot loading, dynamic management, and standard interfaces.
+- **System Integration**: Deep integration with screenshot, OCR, clipboard, and other system features.
+
+### Built-in Functions
+
+- **OCR Recognition**: Supports image text recognition (Chinese & English).
+- **Screenshot**: Quickly capture any area of the screen.
+- **Clipboard Management**: View, edit, and clear clipboard history.
+- **Search**: Global search for plugins and features.
+
+### Plugin System
+
+- **Hot Loading**: Automatic detection and loading of plugin changes, no restart required.
+- **Standard Interface**: Unified plugin development, invocation, and communication protocol.
+- **Plugin Management**: Visual interface for enabling, disabling, and uninstalling plugins.
+
+---
+
+## Architecture & Module Overview
+
+### 1. Main Process (`src/main/`)
+
+- **main.js**: Application entry point, responsible for window creation, global hotkey registration, and main process initialization.
+- **core/**: Core managers
+  - **app-manager.js**: Application orchestrator, coordinates logging, config, performance, plugin, and other subsystems.
+  - **logger.js**: Logging system, supports console, file, and remote outputs.
+  - **config-manager.js**: Configuration manager, supports hot loading and validation of main and plugin configs.
+  - **performance-monitor.js**: Performance monitoring, records timings, memory, and slow operation warnings.
+  - **error-handler.js**: Error handling, with auto-retry, restart, notification, and termination strategies.
+- **plugin-manager/**: Plugin process pool, plugin manager, and process manager for plugin loading, execution, isolation, and communication.
+  - **message-protocol.js**: Unified inter-process message protocol (format, types, events, responses).
+- **utils/**: Utility functions
+  - **mac-tools.js**: macOS system integration tools.
+  - **window.js**: Window position save/restore.
+
+### 2. Renderer Process (`src/renderer/`)
+
+- **index.js**: Frontend logic, UI initialization, event binding, plugin button rendering, status display, plugin invocation, etc.
+- **index.html / index.css**: Main UI structure and styles, supporting responsive layout and modern animations.
+
+### 3. Plugins (`plugins/`)
+
+- **screenshot-ocr/**: Built-in screenshot + OCR plugin
+  - **main.js**: Plugin logic, listens for main process messages, calls screenshot and OCR, displays results in a custom HTML window.
+  - **plugin.json**: Plugin metadata (name, description, version, author, etc.).
+  - **result-viewer.html**: OCR result display window.
+
+### 4. Configuration (`config/`)
+
+- **main.json**: Main configuration file, including hotkeys, window, logging, plugin, and other global settings.
+- **plugins/**: Individual plugin config directory.
+
+### 5. Others
+
+- **logs/**: Log file directory.
+- **README.md**: Usage and development documentation.
+- **forge.config.js**: Electron Forge packaging configuration.
+
+---
+
+## Installation & Usage
+
+### Requirements
+
 - Node.js 16+
-- npm 或 yarn
+- npm or yarn
 
-### 安装依赖
+### Install Dependencies
+
 ```bash
 npm install
 ```
 
-### 开发模式运行
+### Start in Development Mode
+
 ```bash
 npm start
 ```
 
-### 打包应用
+### Build the Application
+
 ```bash
 npm run make
 ```
 
-## 📦 插件开发
+---
 
-### 插件结构
-插件是一个标准的 Node.js 模块，需要导出以下接口：
+## Plugin Development Guide
 
-```javascript
+### Plugin Structure
+
+Each plugin is an independent directory and must include `main.js` (logic) and `plugin.json` (metadata).
+
+#### plugin.json Example
+
+```json
+{
+  "name": "screenshot-ocr",
+  "description": "Screenshot OCR recognition plugin",
+  "version": "1.0.0",
+  "author": "oTools"
+}
+```
+
+#### main.js Example
+
+```js
 module.exports = {
-  name: '插件名称',
-  description: '插件描述',
+  name: 'Plugin Name',
+  description: 'Plugin Description',
   version: '1.0.0',
-  author: '作者名',
-  
-  // 插件执行入口
+  author: 'Author',
   async execute(...args) {
-    // 插件逻辑
+    // Plugin logic
     return {
       success: true,
-      result: '执行结果',
-      message: '执行消息'
+      result: 'Execution result',
+      message: 'Execution message'
     };
   }
 };
 ```
 
-### 插件示例
-查看 `plugins/example-plugin.js` 了解完整的插件开发示例。
+### Plugin Communication & API
 
-### 插件安装
-1. 将插件文件放入应用的插件目录
-2. 应用会自动检测并加载插件
-3. 在插件管理面板中可以看到新安装的插件
+- Plugins communicate with the main process via inter-process messages, supporting main process API calls, custom window display, and result return.
+- Plugins can listen for `init`, `execute`, `api_result`, etc., and actively send `result`, `api_call`, etc. to the main process.
 
-## 🎨 界面预览
+### Plugin Installation & Management
 
-```
-┌─────────────────────────────────────────────────┐
-│                  Main Window                    │
-│  ┌─────────────┐ ┌─────────────┐ ┌───────────┐ │
-│  │  搜索框     │ │  插件面板    │ │ 设置/管理 │ │
-│  └─────────────┘ └─────────────┘ └───────────┘ │
-└─────────────────────────────────────────────────┘
-         ▲
-         │ 全局快捷键触发
-         │
-┌────────┴────────┐  ┌───────────────────────────┐
-│  主进程(Main)   │  │  插件系统(Plugin System)  │
-└────────┬────────┘  └─────────────┬─────────────┘
-         │                         │
-         ▼                         ▼
-┌───────────────────┐ ┌───────────────────────────┐
-│ 系统功能集成      │ │ 插件目录(动态加载)         │
-│ - OCR             │ │ - 插件1                   │
-│ - 截图            │ │ - 插件2                   │
-│ - 剪贴板管理      │ │ - ...                     │
-│ - 文件操作        │ └───────────────────────────┘
-└───────────────────┘
-```
-
-## 🔧 技术栈
-
-- **Electron**: 跨平台桌面应用框架
-- **Node.js**: 后端运行时
-- **HTML/CSS/JavaScript**: 前端界面
-- **Tesseract.js**: OCR文字识别
-- **screenshot-desktop**: 截图功能
-- **chokidar**: 文件监控
-```
-
-## 🚀 快捷键
-
-| 快捷键 | 功能 |
-|--------|------|
-| `Ctrl+Shift+Space` | 呼出/隐藏应用 |
-| `Esc` | 关闭模态框/隐藏应用 |
-
-## 🔌 插件API
-
-### 插件接口
-```javascript
-// 插件必须导出的接口
-module.exports = {
-  name: string,           // 插件名称
-  description: string,    // 插件描述
-  version: string,        // 版本号
-  author: string,         // 作者
-  
-  // 执行方法
-  async execute(...args): Promise<Object>
-}
-```
-
-### 返回值格式
-```javascript
-{
-  success: boolean,       // 是否成功
-  result: any,           // 执行结果
-  message: string        // 消息
-}
-```
-
-## 🤝 贡献指南
-
-1. Fork 项目
-2. 创建功能分支 (`git checkout -b feature/AmazingFeature`)
-3. 提交更改 (`git commit -m 'Add some AmazingFeature'`)
-4. 推送到分支 (`git push origin feature/AmazingFeature`)
-5. 打开 Pull Request
-
-## 📄 许可证
-
-本项目采用 MIT 许可证 - 查看 [LICENSE](LICENSE) 文件了解详情。
-
-## 🙏 致谢
-
-- [Electron](https://www.electronjs.org/) - 跨平台桌面应用框架
-- [Tesseract.js](https://tesseract.projectnaptha.com/) - OCR文字识别
-- [Font Awesome](https://fontawesome.com/) - 图标库
-
-## 📞 联系方式
-
-- 作者: ILikeBug
-- 邮箱: ye351016@gmail.com
-- 项目地址: [GitHub](https://github.com/your-username/oTools)
+1. Place the plugin directory under `plugins/`.
+2. The app will automatically detect and load the plugin.
+3. Enable/disable plugins in the main UI or plugin management panel.
 
 ---
 
-⭐ 如果这个项目对你有帮助，请给它一个星标！ 
+## UI & Interaction
+
+- **Main Interface**: Activated by global hotkey, supports search, plugin buttons, status panel, performance monitoring, error statistics, etc.
+- **Plugin Buttons**: All loaded plugins are rendered as buttons; click to execute.
+- **Result Window**: For example, the OCR plugin automatically pops up a window to display recognition results.
+- **ESC**: Closes all popups or hides the main interface.
+
+---
+
+## Tech Stack
+
+- **Electron**: Cross-platform desktop application
+- **Node.js**: Backend logic
+- **HTML/CSS/JavaScript**: Frontend UI
+- **Tesseract.js**: OCR recognition
+- **screenshot-desktop**: Screenshot
+- **chokidar**: File/config hot loading
+
+---
+
+## FAQ
+
+- **Hotkey Conflict**: Modify the hotkey in `config/main.json`.
+- **Plugin Not Working**: Check the plugin directory structure and `plugin.json`.
+- **Log Viewing**: All logs are saved in `logs/otools.log`.
+
+---
+
+## Contributing
+
+1. Fork this project
+2. Create a new branch (`git checkout -b feature/xxx`)
+3. Commit your changes (`git commit -m 'description'`)
+4. Push the branch (`git push origin feature/xxx`)
+5. Submit a Pull Request
+
+---
+
+## License
+
+MIT License. See LICENSE for details.
+
+---
+
+## Contact
+
+- Author: ILikeBug
+- Email: ye351016@gmail.com
+- Project: [GitHub](https://github.com/your-username/oTools)
+
+---
+
+⭐ If you find this project helpful, please give it a star!
+
+---
+
+For more detailed development documentation or any questions, feel free to contact the author via email or GitHub Issue. 

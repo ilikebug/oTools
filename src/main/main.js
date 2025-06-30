@@ -85,7 +85,7 @@ const createWindow = () => {
  */
 function registerGlobalShortcuts() {
   const config = appManager.getComponent('configManager').getConfig('main');
-  const shortcut = config?.shortcuts?.toggle || 'CommandOrControl+Shift+Space';
+  const shortcut = config?.shortcuts?.toggle || 'Option+Space';
   
   const ret = globalShortcut.register(shortcut, () => {
     if (mainWindow) {
@@ -117,7 +117,10 @@ async function initializeApp() {
     // 创建应用管理器
     appManager = new AppManager();
     
-    // 初始化应用管理器
+    // 创建主窗口
+    createWindow();
+    
+    // 初始化应用管理器（传入主窗口引用）
     await appManager.initialize({
       logging: {
         level: 'info',
@@ -126,14 +129,12 @@ async function initializeApp() {
       },
       configDir: path.join(__dirname, '../../config'),
       macTools: macTools,
+      mainWindow: mainWindow, // 传入主窗口引用
       resultWindowManager: null // 稍后设置
     });
-    
+
     const logger = appManager.getComponent('logger');
     logger.log('应用管理器初始化完成');
-    
-    // 创建主窗口
-    createWindow();
     
     // 设置IPC和结果窗口管理器
     const setupIPC = require('./ipc');
