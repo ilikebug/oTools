@@ -3,7 +3,6 @@ const path = require('node:path');
 const fs = require('fs');
 const chokidar = require('chokidar');
 const BaseManager = require('../core/base-manager');
-const PluginProcessPool = require('./process-pool');
 
 class PluginManager extends BaseManager {
   constructor(options = {}) {
@@ -23,9 +22,9 @@ class PluginManager extends BaseManager {
     this.pluginsDir = path.join(__dirname, '..', '..', '..', 'plugins');
     this.watcher = null;
     this.mainWindow = null;
-    this.pluginProcessPool = options.appManager.get;
     this.resultWindowManager = null;
     this.macTools = null
+    this.pluginProcessPool = null
   }
 
   /**
@@ -37,6 +36,7 @@ class PluginManager extends BaseManager {
       
       this.mainWindow = options.mainWindow;
       this.resultWindowManager = options.resultWindowManager;
+      this.pluginProcessPool = options.pluginProcessPool;
 
       // 加载插件
       await this.loadPlugins();

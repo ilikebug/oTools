@@ -424,7 +424,6 @@ function setupResultWindowIPC(mainWindow, appManager) {
       const BrowserWindow = require('electron').BrowserWindow;
       const fs = require('fs');
       let fullHtmlPath = htmlPath;
-      
       // 如果不是绝对路径，则从插件目录查找
       if (!path.isAbsolute(htmlPath)) {
         // 默认插件目录
@@ -442,12 +441,7 @@ function setupResultWindowIPC(mainWindow, appManager) {
           }
         }
       }
-      
-      if (!fs.existsSync(fullHtmlPath)) {
-        logger.log(`HTML文件不存在: ${fullHtmlPath}`, 'error');
-        fullHtmlPath = path.join(__dirname, '../../renderer/result-viewer.html');
-      }
-      
+
       const win = new BrowserWindow({
         width: windowOptions.width || 900,
         height: windowOptions.height || 800,

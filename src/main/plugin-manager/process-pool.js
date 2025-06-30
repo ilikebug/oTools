@@ -350,7 +350,7 @@ class PluginProcessPool extends BaseManager {
     const { process: child, name } = processInfo;
 
     try {
-      const result = await this.callMainProcessAPI(msg.api, msg.args);
+      const result = await this.callMainProcessAPI(msg.data.api, msg.data.args);
       child.send(MessageBuilder.createResponse(msg.id, true, result));
     } catch (error) {
       child.send(MessageBuilder.createResponse(msg.id, false, null, error.message));
@@ -366,7 +366,7 @@ class PluginProcessPool extends BaseManager {
     const { process: child, name } = processInfo;
 
     try {
-      const { htmlPath, data, windowOptions } = msg;
+      const { htmlPath, data, windowOptions } = msg.data;
       
       if (this.resultWindowManager && this.resultWindowManager.showHtmlWindow) {
         this.resultWindowManager.showHtmlWindow(htmlPath, data, windowOptions);

@@ -41,6 +41,8 @@ class AppManager extends BaseManager {
     };
 
     this.components = new Map(); // 初始化组件Map
+
+    this.macTools = null;
   }
 
   /**
@@ -62,6 +64,7 @@ class AppManager extends BaseManager {
     try {
       this.startTime = Date.now();
       this.appStatus.status = 'initializing';
+      this.macTools = options.macTools;
       
       // 1. 初始化日志系统
       this.logger = new Logger();
@@ -115,7 +118,8 @@ class AppManager extends BaseManager {
         macTools: options.macTools,
         mainWindow: options.mainWindow,
         resultWindowManager: options.resultWindowManager,
-        enableWatch: options.enablePluginWatch !== false
+        enableWatch: options.enablePluginWatch !== false,
+        pluginProcessPool: this.pluginProcessPool
       });
       this.registerComponent('pluginManager', this.pluginManager);
       

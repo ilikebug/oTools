@@ -32,6 +32,7 @@ class ScreenshotOCRPlugin {
           await this.execute(msg.data.action, msg.data.args, msg.id);
           break;
         case this.MessageType.RESPONSE.SUCCESS:
+          console.log('11111111', msg)
         case this.MessageType.RESPONSE.ERROR:
           this.handleApiResponse(msg);
           break;
@@ -121,12 +122,17 @@ class ScreenshotOCRPlugin {
 
   // 通用显示HTML窗口
   async showHtmlWindow(htmlPath, data = {}, windowOptions = {}) {
-    const request = this.createRequest(this.MessageType.REQUEST.WINDOW_SHOW, {
-      htmlPath,
-      data,
-      windowOptions
+    return new Promise((resolve, reject) => {
+      const request = this.createRequest(this.MessageType.REQUEST.WINDOW_SHOW, {
+        htmlPath,
+        data,
+        windowOptions
+      });
+      // 保存回调函数
+      this.pendingRequests.set(request.id, { resolve, reject });
+      // 发送API调用请求
+      this.sendMessage(request);
     });
-    return this.callMainProcessApi('showHtmlWindow', [request.data]);
   }
 
   // 执行插件功能
@@ -155,7 +161,7 @@ class ScreenshotOCRPlugin {
       if (result && result.imageData && result.text !== undefined) {
         // 通用显示HTML窗口
         await this.showHtmlWindow(
-          'result-viewer.html',
+          '/Users/zhangye/Project/NodejsProject/oTools/plugins/screenshot-ocr/result-viewer.html',
           { imageData: result.imageData, text: result.text },
           { title: 'OCR结果', width: 900, height: 800 }
         );
