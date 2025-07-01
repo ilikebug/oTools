@@ -1,6 +1,6 @@
 /**
- * 基础管理器类
- * 提供所有管理器的基础功能和通用方法
+ * Base Manager Class
+ * Provides basic functions and common methods for all managers
  */
 class BaseManager {
   constructor(name) {
@@ -11,12 +11,12 @@ class BaseManager {
   }
 
   /**
-   * 初始化管理器
-   * @param {Object} options 初始化选项
+   * Initialize the manager
+   * @param {Object} options Initialization options
    */
   async initialize(options = {}) {
     if (this.isInitialized) {
-      throw new Error(`${this.name} 已经初始化`);
+      throw new Error(`${this.name} has been initialized`);
     }
 
     try {
@@ -26,15 +26,15 @@ class BaseManager {
       await this.onInitialize(options);
       this.isInitialized = true;
       
-      this.log(`初始化成功`);
+      this.log(`Initialization succeeded`);
     } catch (error) {
-      this.log(`初始化失败: ${error.message}`, 'error');
+      this.log(`Initialization failed: ${error.message}`, 'error');
       throw error;
     }
   }
 
   /**
-   * 销毁管理器
+   * Destroy the manager
    */
   async destroy() {
     if (!this.isInitialized) {
@@ -44,32 +44,32 @@ class BaseManager {
     try {
       await this.onDestroy();
       this.isInitialized = false;
-      this.log(`销毁成功`);
+      this.log(`Destruction succeeded`);
     } catch (error) {
-      this.log(`销毁失败: ${error.message}`, 'error');
+      this.log(`Destruction failed: ${error.message}`, 'error');
       throw error;
     }
   }
 
   /**
-   * 子类需要实现的初始化方法
-   * @param {Object} options 初始化选项
+   * Initialization method to be implemented by subclasses
+   * @param {Object} options Initialization options
    */
   async onInitialize(options) {
-    // 子类重写此方法
+    // Subclasses should override this method
   }
 
   /**
-   * 子类需要实现的销毁方法
+   * Destruction method to be implemented by subclasses
    */
   async onDestroy() {
-    // 子类重写此方法
+    // Subclasses should override this method
   }
 
   /**
-   * 记录日志
-   * @param {string} message 日志消息
-   * @param {string} level 日志级别
+   * Log messages
+   * @param {string} message Log message
+   * @param {string} level Log level
    */
   log(message, level = 'info') {
     if (this.logger) {
@@ -80,16 +80,16 @@ class BaseManager {
   }
 
   /**
-   * 检查管理器是否已初始化
+   * Check if the manager has been initialized
    */
   checkInitialized() {
     if (!this.isInitialized) {
-      throw new Error(`${this.name} 未初始化`);
+      throw new Error(`${this.name} has not been initialized`);
     }
   }
 
   /**
-   * 获取管理器状态
+   * Get manager status
    */
   getStatus() {
     return {

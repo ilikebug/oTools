@@ -1,9 +1,9 @@
-// 渲染进程主文件
-console.log('渲染进程JavaScript文件已加载');
+// Main renderer process file
+console.log('Rendering process JavaScript file has been loaded');
 
 class oToolsApp {
   constructor() {
-    console.log('oToolsApp 构造函数被调用');
+    console.log('oToolsApp constructor function is called');
     this.plugins = [];
     this.currentPanel = null;
     this.appStatus = null;
@@ -13,7 +13,7 @@ class oToolsApp {
   }
 
   async init() {
-    console.log('oToolsApp init 方法被调用');
+    console.log('oToolsApp init method is called');
     this.bindEvents();
     await this.loadAppStatus();
     await this.loadPlugins();
@@ -24,9 +24,9 @@ class oToolsApp {
   }
 
   bindEvents() {
-    console.log('绑定事件...');
+    console.log('Binding events...');
     try {
-      // 搜索功能
+      // Search feature
       const searchInput = document.getElementById('searchInput');
       const searchBtn = document.getElementById('searchBtn');
       
@@ -37,7 +37,7 @@ class oToolsApp {
           }
         });
       } else {
-        console.warn('找不到 searchInput 元素');
+        console.warn('searchInput element not found');
       }
       
       if (searchBtn) {
@@ -45,10 +45,10 @@ class oToolsApp {
           this.handleSearch();
         });
       } else {
-        console.warn('找不到 searchBtn 元素');
+        console.warn('searchBtn element not found');
       }
 
-      // 面板关闭按钮
+      // Panel close buttons
       const closePanelBtns = document.querySelectorAll('.close-panel-btn');
       if (closePanelBtns.length > 0) {
         closePanelBtns.forEach(btn => {
@@ -58,17 +58,17 @@ class oToolsApp {
           });
         });
       } else {
-        console.warn('找不到 close-panel-btn 元素');
+        console.warn('close-panel-btn element not found');
       }
 
-      // ESC键关闭面板
+      // ESC key closes panels
       document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') {
           this.hideAllPanels();
         }
       });
 
-      // 状态更新按钮
+      // Status update button
       const statusBtn = document.getElementById('statusBtn');
       if (statusBtn) {
         statusBtn.addEventListener('click', () => {
@@ -76,7 +76,7 @@ class oToolsApp {
         });
       }
 
-      // 性能监控按钮
+      // Performance monitor button
       const performanceBtn = document.getElementById('performanceBtn');
       if (performanceBtn) {
         performanceBtn.addEventListener('click', () => {
@@ -84,67 +84,67 @@ class oToolsApp {
         });
       }
       
-      console.log('事件绑定完成');
+      console.log('Event binding completed');
     } catch (error) {
-      console.error('绑定事件时出错:', error);
+      console.error('Error binding events:', error);
     }
   }
 
   async loadAppStatus() {
     try {
       if (!window.oToolsAPI || !window.oToolsAPI.getAppStatus) {
-        throw new Error('oToolsAPI 未注入或 getAppStatus 不存在');
+        throw new Error('oToolsAPI not injected or getAppStatus does not exist');
       }
       this.appStatus = await window.oToolsAPI.getAppStatus();
-      console.log("应用状态已加载:", this.appStatus);
+      console.log("Application status has been loaded:", this.appStatus);
     } catch (error) {
-      console.error('加载应用状态失败:', error);
+      console.error('Failed to load application status:', error);
     }
   }
 
   async loadPlugins() {
     try {
       if (!window.oToolsAPI || !window.oToolsAPI.getPlugins) {
-        throw new Error('oToolsAPI 未注入或 getPlugins 不存在');
+        throw new Error('oToolsAPI not injected or getPlugins does not exist');
       }
       this.plugins = await window.oToolsAPI.getPlugins();
-      console.log("已加载插件:", this.plugins);
+      console.log("Plugins have been loaded:", this.plugins);
       this.renderPluginButtons();
     } catch (error) {
-      console.error('加载插件失败:', error);
-      this.showNotification('插件加载失败', 'error');
+      console.error('Failed to load plugins:', error);
+      this.showNotification('Plugin loading failed', 'error');
     }
   }
 
   setupPluginWatcher() {
     if (!window.oToolsAPI || !window.oToolsAPI.onPluginsChanged) {
-      console.error('oToolsAPI 未注入或 onPluginsChanged 不存在');
+      console.error('oToolsAPI not injected or onPluginsChanged does not exist');
       return;
     }
     window.oToolsAPI.onPluginsChanged((plugins) => {
       this.plugins = plugins;
       this.renderPluginButtons();
-      this.showNotification('插件列表已更新', 'info');
+      this.showNotification('Plugin list has been updated', 'info');
     });
   }
 
   setupStatusUpdates() {
-    // 定期更新状态信息
+    // Periodically update status information
     setInterval(async () => {
       try {
         await this.loadAppStatus();
         this.updateStatusDisplay();
       } catch (error) {
-        console.error('更新状态失败:', error);
+        console.error('Failed to update status:', error);
       }
-    }, 30000); // 每30秒更新一次
+    }, 30000); // Update every 30 seconds
   }
 
-  // 渲染所有插件为按钮（不区分类型）
+  // Render all plugins as buttons (regardless of type)
   renderPluginButtons() {
     const actionGrid = document.querySelector('.action-grid');
     if (!actionGrid) {
-      console.error('找不到 action-grid 元素');
+      console.error('action-grid element not found');
       return;
     }
     
@@ -155,19 +155,19 @@ class oToolsApp {
       actionBtn.id = `${plugin.name.replace(/\s+/g, '')}Btn`;
       actionBtn.title = plugin.description;
       
-      // 根据插件状态设置样式
+      // Set style based on plugin status
       const isEnabled = plugin.enabled !== false;
       if (!isEnabled) {
         actionBtn.classList.add('disabled');
       }
       
-      // 设置按钮内容
+      // Set button content
       actionBtn.innerHTML = `
         <i class="${plugin.icon || 'fas fa-puzzle-piece'}"></i>
         <span>${plugin.shortName || plugin.name}</span>
       `;
       
-      // 添加点击事件
+      // Add click event
       actionBtn.addEventListener('click', () => {
         if (isEnabled) {
           this.executePlugin(plugin.name);
@@ -178,31 +178,31 @@ class oToolsApp {
     });
   }
 
-  // 通用插件执行逻辑
+  // General plugin execution logic
   async executePlugin(pluginName) {
     try {
       if (!window.oToolsAPI || !window.oToolsAPI.executePlugin) {
-        throw new Error('oToolsAPI 未注入或 executePlugin 不存在');
+        throw new Error('oToolsAPI not injected or executePlugin does not exist');
       }
-      this.showLoading('执行插件中...');
+      this.showLoading('Executing plugin...');
       const result = await window.oToolsAPI.executePlugin(pluginName);
       this.hideLoading();
       if (result && result.success) {
-        this.showNotification(`插件执行成功: ${result.message}`, 'success');
-        console.log('插件执行结果:', result.result);
+        this.showNotification(`Plugin execution succeeded: ${result.message}`, 'success');
+        console.log('Plugin execution result:', result.result);
       } else if (result) {
-        this.showNotification(`插件执行失败: ${result.message}`, 'error');
+        this.showNotification(`Plugin execution failed: ${result.message}`, 'error');
       }
     } catch (error) {
       this.hideLoading();
-      this.showNotification(`插件执行错误: ${error.message}`, 'error');
+      this.showNotification(`Plugin execution error: ${error.message}`, 'error');
     }
   }
 
   async showStatusPanel() {
     try {
       if (!window.oToolsAPI || !window.oToolsAPI.getPerformanceStats) {
-        throw new Error('oToolsAPI 未注入或 getPerformanceStats 不存在');
+        throw new Error('oToolsAPI not injected or getPerformanceStats does not exist');
       }
       
       this.performanceStats = await window.oToolsAPI.getPerformanceStats();
@@ -214,40 +214,40 @@ class oToolsApp {
         this.showPanel('statusPanel');
       }
     } catch (error) {
-      console.error('显示状态面板失败:', error);
-      this.showNotification('无法加载状态信息', 'error');
+      console.error('Failed to display status panel:', error);
+      this.showNotification('Unable to load status information', 'error');
     }
   }
 
   renderStatusContent() {
     return `
       <div class="status-content">
-        <h3>应用状态</h3>
+        <h3>Application status</h3>
         <div class="status-grid">
           <div class="status-item">
-            <label>状态:</label>
-            <span class="status-value ${this.appStatus?.status || 'unknown'}">${this.appStatus?.status || '未知'}</span>
+            <label>Status:</label>
+            <span class="status-value ${this.appStatus?.status || 'unknown'}">${this.appStatus?.status || 'Unknown'}</span>
           </div>
           <div class="status-item">
-            <label>运行时间:</label>
+            <label>Running time:</label>
             <span class="status-value">${this.formatUptime(this.appStatus?.uptime || 0)}</span>
           </div>
           <div class="status-item">
-            <label>组件数量:</label>
+            <label>Component count:</label>
             <span class="status-value">${this.appStatus?.componentCount || 0}</span>
           </div>
           <div class="status-item">
-            <label>插件数量:</label>
+            <label>Plugin count:</label>
             <span class="status-value">${this.plugins.length}</span>
           </div>
         </div>
         
-        <h4>性能统计</h4>
+        <h4>Performance statistics</h4>
         <div class="performance-stats">
           ${this.renderPerformanceStats()}
         </div>
         
-        <h4>错误统计</h4>
+        <h4>Error statistics</h4>
         <div class="error-stats">
           ${this.renderErrorStats()}
         </div>
@@ -256,20 +256,20 @@ class oToolsApp {
   }
 
   renderPerformanceStats() {
-    if (!this.performanceStats) return '<p>暂无性能数据</p>';
+    if (!this.performanceStats) return '<p>No performance data available</p>';
     
     return `
       <div class="stats-grid">
         <div class="stat-item">
-          <label>平均响应时间:</label>
+          <label>Average response time:</label>
           <span>${this.performanceStats.averageResponseTime || 0}ms</span>
         </div>
         <div class="stat-item">
-          <label>总请求数:</label>
+          <label>Total requests:</label>
           <span>${this.performanceStats.totalRequests || 0}</span>
         </div>
         <div class="stat-item">
-          <label>成功率:</label>
+          <label>Success rate:</label>
           <span>${this.performanceStats.successRate || 0}%</span>
         </div>
       </div>
@@ -277,21 +277,21 @@ class oToolsApp {
   }
 
   renderErrorStats() {
-    if (!this.errorStats) return '<p>暂无错误数据</p>';
+    if (!this.errorStats) return '<p>No error data available</p>';
     
     return `
       <div class="stats-grid">
         <div class="stat-item">
-          <label>总错误数:</label>
+          <label>Total errors:</label>
           <span>${this.errorStats.totalErrors || 0}</span>
         </div>
         <div class="stat-item">
-          <label>严重错误:</label>
+          <label>Critical errors:</label>
           <span>${this.errorStats.criticalErrors || 0}</span>
         </div>
         <div class="stat-item">
-          <label>最后错误:</label>
-          <span>${this.errorStats.lastErrorTime || '无'}</span>
+          <label>Last error:</label>
+          <span>${this.errorStats.lastErrorTime || 'None'}</span>
         </div>
       </div>
     `;
@@ -303,17 +303,17 @@ class oToolsApp {
     const hours = Math.floor(minutes / 60);
     const days = Math.floor(hours / 24);
     
-    if (days > 0) return `${days}天 ${hours % 24}小时`;
-    if (hours > 0) return `${hours}小时 ${minutes % 60}分钟`;
-    if (minutes > 0) return `${minutes}分钟 ${seconds % 60}秒`;
-    return `${seconds}秒`;
+    if (days > 0) return `${days} days ${hours % 24} hours`;
+    if (hours > 0) return `${hours} hours ${minutes % 60} minutes`;
+    if (minutes > 0) return `${minutes} minutes ${seconds % 60} seconds`;
+    return `${seconds} seconds`;
   }
 
   updateStatusDisplay() {
     const statusIndicator = document.getElementById('statusIndicator');
     if (statusIndicator && this.appStatus) {
       statusIndicator.className = `status-indicator ${this.appStatus.status}`;
-      statusIndicator.title = `应用状态: ${this.appStatus.status}`;
+      statusIndicator.title = `Application status: ${this.appStatus.status}`;
     }
   }
 
@@ -325,10 +325,10 @@ class oToolsApp {
       plugin.description.toLowerCase().includes(query.toLowerCase())
     );
     if (matchedPlugins.length > 0) {
-      this.showNotification(`找到 ${matchedPlugins.length} 个相关插件`, 'success');
+      this.showNotification(`Found ${matchedPlugins.length} related plugins`, 'success');
       this.highlightPlugins(matchedPlugins);
     } else {
-      this.showNotification('未找到相关插件', 'warning');
+      this.showNotification('No related plugins found', 'warning');
     }
   }
 
@@ -376,7 +376,7 @@ class oToolsApp {
     }
   }
 
-  showLoading(text = '处理中...') {
+  showLoading(text = 'Processing...') {
     const loading = document.getElementById('loading');
     if (loading) {
       const loadingText = loading.querySelector('.loading-text');
@@ -405,7 +405,7 @@ class oToolsApp {
     
     document.body.appendChild(notification);
     
-    // 自动移除通知
+    // Automatically remove notification
     setTimeout(() => {
       if (notification.parentElement) {
         notification.remove();
@@ -424,8 +424,9 @@ class oToolsApp {
   }
 }
 
-// 初始化应用
+// Initialize application
+
 document.addEventListener('DOMContentLoaded', () => {
-  console.log('DOM加载完成，初始化oTools应用');
+  console.log('DOM loaded, initializing oTools application');
   window.oToolsApp = new oToolsApp();
 }); 

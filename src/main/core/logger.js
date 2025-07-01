@@ -3,7 +3,7 @@ const path = require('path');
 const BaseManager = require('./base-manager');
 
 /**
- * 日志级别枚举
+ * Log level enumeration
  */
 const LogLevel = {
   ERROR: 0,
@@ -13,7 +13,7 @@ const LogLevel = {
 };
 
 /**
- * 日志级别名称映射
+ * Log level name mapping
  */
 const LogLevelNames = {
   [LogLevel.ERROR]: 'ERROR',
@@ -23,8 +23,8 @@ const LogLevelNames = {
 };
 
 /**
- * 统一日志管理器
- * 提供控制台、文件、远程等多种日志输出方式
+ * Unified logger manager
+ * Provides console, file, remote, and other logging outputs
  */
 class Logger extends BaseManager {
   constructor() {
@@ -44,7 +44,7 @@ class Logger extends BaseManager {
   }
 
   /**
-   * 初始化日志系统
+   * Initialize logger system
    */
   async initialize(options = {}) {
     try {
@@ -60,28 +60,28 @@ class Logger extends BaseManager {
         this.setupFileLogging();
       }
       
-      this.log('日志系统初始化完成');
+      this.log('Logger system initialization completed');
       
     } catch (error) {
-      console.error('日志系统初始化失败:', error);
+      console.error('Logger system initialization failed:', error);
       throw error;
     }
   }
 
   /**
-   * 销毁日志系统
+   * Destroy logger system
    */
   async destroy() {
     try {
       this.cleanup();
-      this.log('日志系统已销毁');
+      this.log('Logger system destroyed');
     } catch (error) {
-      console.error('日志系统销毁失败:', error);
+      console.error('Logger system destruction failed:', error);
     }
   }
 
   /**
-   * 设置文件日志
+   * Set file logging
    */
   setupFileLogging() {
     try {
@@ -93,18 +93,18 @@ class Logger extends BaseManager {
       this.currentLogFile = this.logFile;
       this.rotateLogFileIfNeeded();
       
-      this.log(`文件日志已启用: ${this.currentLogFile}`, 'info');
+      this.log(`File logging enabled: ${this.currentLogFile}`, 'info');
     } catch (error) {
-      console.error('设置文件日志失败:', error);
+      console.error('File logging setup failed:', error);
       this.enableFile = false;
     }
   }
 
   /**
-   * 记录日志
-   * @param {string} message 日志消息
-   * @param {string} level 日志级别
-   * @param {Object} data 附加数据
+   * Record log
+   * @param {string} message Log message
+   * @param {string} level Log level
+   * @param {Object} data Additional data
    */
   log(message, level = 'info', data = null) {
     const numericLevel = typeof level === 'string' ? LogLevel[level.toUpperCase()] : level;
@@ -127,10 +127,10 @@ class Logger extends BaseManager {
   }
 
   /**
-   * 创建日志条目
-   * @param {string} message 消息
-   * @param {number} level 级别
-   * @param {Object} data 数据
+   * Create log entry
+   * @param {string} message Message
+   * @param {number} level Level
+   * @param {Object} data Data
    */
   createLogEntry(message, level, data) {
     return {
@@ -144,7 +144,7 @@ class Logger extends BaseManager {
   }
 
   /**
-   * 获取级别名称
+   * Get level name
    */
   getLevelName(level) {
     const names = ['ERROR', 'WARN', 'INFO', 'DEBUG'];
@@ -152,8 +152,8 @@ class Logger extends BaseManager {
   }
 
   /**
-   * 控制台输出
-   * @param {Object} logEntry 日志条目
+   * Console output
+   * @param {Object} logEntry Log entry
    */
   consoleOutput(logEntry) {
     const { timestamp, level, message, data } = logEntry;
@@ -181,8 +181,8 @@ class Logger extends BaseManager {
   }
 
   /**
-   * 文件输出
-   * @param {Object} logEntry 日志条目
+   * File output
+   * @param {Object} logEntry Log entry
    */
   fileOutput(logEntry) {
     if (!this.fileStream) {
@@ -193,24 +193,24 @@ class Logger extends BaseManager {
       const logLine = JSON.stringify(logEntry) + '\n';
       this.fileStream.write(logLine);
       
-      // 检查文件大小，必要时轮转
+      // Check file size and rotate if necessary
       this.rotateLogFileIfNeeded();
     } catch (error) {
-      console.error('写入日志文件失败:', error);
+      console.error('Failed to write to log file:', error);
     }
   }
 
   /**
-   * 远程输出（预留接口）
-   * @param {Object} logEntry 日志条目
+   * Remote output (reserved interface)
+   * @param {Object} logEntry Log entry
    */
   remoteOutput(logEntry) {
-    // 预留远程日志接口
-    // 可以发送到日志服务器或云服务
+    // Reserved remote log interface
+    // Can be sent to log server or cloud service
   }
 
   /**
-   * 检查并轮转日志文件
+   * Check and rotate log file
    */
   rotateLogFileIfNeeded() {
     if (!this.currentLogFile || !fs.existsSync(this.currentLogFile)) {
@@ -225,25 +225,25 @@ class Logger extends BaseManager {
   }
 
   /**
-   * 创建新的日志文件
+   * Create new log file
    */
   createNewLogFile() {
     try {
       this.fileStream = fs.createWriteStream(this.currentLogFile, { flags: 'a' });
     } catch (error) {
-      console.error('创建日志文件失败:', error);
+      console.error('Failed to create log file:', error);
     }
   }
 
   /**
-   * 轮转日志文件
+   * Rotate log file
    */
   rotateLogFile() {
     if (this.fileStream) {
       this.fileStream.end();
     }
     
-    // 重命名现有文件
+    // Rename existing files
     for (let i = this.maxFiles - 1; i > 0; i--) {
       const oldFile = `${this.logFile}.${i}`;
       const newFile = `${this.logFile}.${i + 1}`;
@@ -253,18 +253,18 @@ class Logger extends BaseManager {
       }
     }
     
-    // 重命名当前文件
+    // Rename current file
     if (fs.existsSync(this.currentLogFile)) {
       fs.renameSync(this.currentLogFile, `${this.logFile}.1`);
     }
     
-    // 创建新的日志文件
+    // Create new log file
     this.createNewLogFile();
   }
 
   /**
-   * 设置日志级别
-   * @param {string|number} level 日志级别
+   * Set log level
+   * @param {string|number} level Log level
    */
   setLogLevel(level) {
     if (typeof level === 'string') {
@@ -275,8 +275,8 @@ class Logger extends BaseManager {
   }
 
   /**
-   * 启用文件日志
-   * @param {string} filePath 日志文件路径
+   * Enable file logging
+   * @param {string} filePath Log file path
    */
   enableFileLogging(filePath) {
     this.logFile = filePath;
@@ -285,7 +285,7 @@ class Logger extends BaseManager {
   }
 
   /**
-   * 获取日志统计信息
+   * Get log statistics
    */
   getStats() {
     return {
@@ -300,7 +300,7 @@ class Logger extends BaseManager {
   }
 
   /**
-   * 获取日志系统状态
+   * Get logger system status
    */
   getStatus() {
     return {
@@ -311,7 +311,7 @@ class Logger extends BaseManager {
   }
 
   /**
-   * 清理日志文件
+   * Clean up log files
    */
   cleanup() {
     if (this.fileStream) {

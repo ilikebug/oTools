@@ -1,4 +1,3 @@
-const { app, ipcMain } = require('electron');
 const BaseManager = require('./base-manager');
 const Logger = require('./logger');
 const ConfigManager = require('./config-manager');
@@ -9,23 +8,23 @@ const PluginManager = require('../plugin-manager/manager');
 const { macTools } = require('../main');
 
 /**
- * 应用管理器 - 统一管理所有核心组件
+ * Application Manager - Unify all core components
  */
 class AppManager extends BaseManager {
   constructor() {
     super('AppManager');
     
-    // 核心组件
+    // Core components
     this.logger = null;
     this.configManager = null;
     this.performanceMonitor = null;
     this.errorHandler = null;
     
-    // 插件相关组件
+    // Plugin related components
     this.pluginProcessPool = null;
     this.pluginManager = null;
     
-    // 应用状态
+    // Application status
     this.isInitialized = false;
     this.startTime = null;
     this.appStatus = {
@@ -36,25 +35,25 @@ class AppManager extends BaseManager {
       lastError: null
     };
 
-    this.components = new Map(); // 初始化组件Map
+    this.components = new Map(); // Initialize component Map
 
     this.macTools = null;
   }
 
   /**
-   * 注册组件
-   * @param {string} name 组件名称
-   * @param {object} componentInstance 组件实例
+   * Register component
+   * @param {string} name Component name
+   * @param {object} componentInstance Component instance
    */
   registerComponent(name, componentInstance) {
     if (this.components.has(name)) {
-      this.getComponent('logger')?.log(`组件 ${name} 已被覆盖注册`, 'warn');
+      this.getComponent('logger')?.log(`Component ${name} has been overwritten registered`, 'warn');
     }
     this.components.set(name, componentInstance);
   }
 
   /**
-   * 初始化应用管理器
+   * Initialize Application Manager
    */
   async initialize(options = {}) {
     try {
@@ -62,12 +61,12 @@ class AppManager extends BaseManager {
       this.appStatus.status = 'initializing';
       this.macTools = options.macTools;
       
-      // 1. 初始化日志系统
+      // 1. Initialize logger system
       this.logger = new Logger();
       await this.logger.initialize(options.logging || {});
       this.registerComponent('logger', this.logger);
       
-      // 2. 初始化配置管理器
+      // 2. Initialize configuration manager
       this.configManager = new ConfigManager();
       await this.configManager.initialize({
         configDir: options.configDir,
@@ -75,7 +74,7 @@ class AppManager extends BaseManager {
       });
       this.registerComponent('configManager', this.configManager);
       
-      // 3. 初始化性能监控
+      // 3. Initialize performance monitor
       this.performanceMonitor = new PerformanceMonitor();
       await this.performanceMonitor.initialize({
         logger: this.logger,
@@ -83,7 +82,7 @@ class AppManager extends BaseManager {
       });
       this.registerComponent('performanceMonitor', this.performanceMonitor);
       
-      // 4. 初始化错误处理器
+      // 4. Initialize error handler
       this.errorHandler = new ErrorHandler();
       await this.errorHandler.initialize({
         logger: this.logger,
@@ -93,7 +92,7 @@ class AppManager extends BaseManager {
       this.registerComponent('errorHandler', this.errorHandler);
       
       
-      // 6. 初始化插件进程池
+      // 6. Initialize plugin process pool
       this.pluginProcessPool = new PluginProcessPool(this);
       await this.pluginProcessPool.initialize({
         macTools: options.macTools,
@@ -101,7 +100,7 @@ class AppManager extends BaseManager {
       });
       this.registerComponent('pluginProcessPool', this.pluginProcessPool);
       
-      // 7. 初始化插件管理器
+      // 7. Initialize plugin manager
       this.pluginManager = new PluginManager(this);
       await this.pluginManager.initialize({
         macTools: options.macTools,
@@ -113,21 +112,21 @@ class AppManager extends BaseManager {
       this.registerComponent('pluginManager', this.pluginManager);
       
       
-      // 更新应用状态
+      // Update application status
       this.appStatus.status = 'running';
       this.appStatus.componentCount = this.getComponentCount();
       this.isInitialized = true;
       
-      this.logger.log('应用管理器初始化完成');
+      this.logger.log('Application Manager initialization completed');
       
     } catch (error) {
       this.appStatus.status = 'error';
       this.appStatus.lastError = error.message;
       
       if (this.logger) {
-        this.logger.log(`应用管理器初始化失败: ${error.message}`, 'error');
+        this.logger.log(`Application Manager initialization failed: ${error.message}`, 'error');
       } else {
-        console.error('应用管理器初始化失败:', error);
+        console.error('Application Manager initialization failed:', error);
       }
       
       throw error;
@@ -135,14 +134,14 @@ class AppManager extends BaseManager {
   }
 
   /**
-   * 销毁应用管理器
+   * Destroy Application Manager
    */
   async destroy() {
     try {
       this.appStatus.status = 'shutting_down';
-      this.logger.log('应用管理器开始销毁');
+      this.logger.log('Application Manager start destroying');
       
-      // 按相反顺序销毁组件
+      // Destroy components in reverse order
       const destroyOrder = [
         'pluginManager', 
         'pluginProcessPool',
@@ -159,9 +158,9 @@ class AppManager extends BaseManager {
         if (component && typeof component.destroy === 'function') {
           try {
             await component.destroy();
-            this.logger.log(`${componentName} 已销毁`);
+            this.logger.log(`${componentName} has been destroyed`);
           } catch (error) {
-            this.logger.log(`${componentName} 销毁失败: ${error.message}`, 'error');
+            this.logger.log(`${componentName} destroy failed: ${error.message}`, 'error');
           }
         }
       }
@@ -169,37 +168,37 @@ class AppManager extends BaseManager {
       this.appStatus.status = 'stopped';
       this.isInitialized = false;
       
-      console.log('应用管理器已销毁');
+      console.log('Application Manager has been destroyed');
       
     } catch (error) {
-      console.error('应用管理器销毁失败:', error);
+      console.error('Application Manager destroy failed:', error);
       throw error;
     }
   }
 
   /**
-   * 获取组件
+   * Get component
    */
   getComponent(componentName) {
     return this.components.get(componentName);
   }
 
   /**
-   * 获取所有组件
+   * Get all components
    */
   getAllComponents() {
     return this.components;
   }
 
   /**
-   * 获取组件数量
+   * Get component count
    */
   getComponentCount() {
     return this.components.size;
   }
 
   /**
-   * 获取应用状态
+   * Get application status
    */
   getAppStatus() {
     if (this.startTime) {
@@ -221,12 +220,12 @@ class AppManager extends BaseManager {
   }
 
   /**
-   * 获取详细状态信息
+   * Get detailed status information
    */
   getDetailedStatus() {
     const status = this.getAppStatus();
     
-    // 添加各组件的详细状态
+    // Add detailed status of each component
     const components = this.getAllComponents();
     for (const [name, component] of Object.entries(components)) {
       if (component && typeof component.getStatus === 'function') {
@@ -242,7 +241,7 @@ class AppManager extends BaseManager {
   }
 
   /**
-   * 健康检查
+   * Health check
    */
   async healthCheck() {
     const health = {
@@ -262,7 +261,7 @@ class AppManager extends BaseManager {
           continue;
         }
         
-        // 检查组件是否有健康检查方法
+        // Check if the component has health check method
         if (typeof component.healthCheck === 'function') {
           const componentHealth = await component.healthCheck();
           health.components[name] = componentHealth;
@@ -271,7 +270,7 @@ class AppManager extends BaseManager {
             health.issues.push(`${name}: ${componentHealth.error || 'Unknown error'}`);
           }
         } else {
-          // 基本检查
+          // Basic check
           health.components[name] = { 
             status: 'unknown', 
             message: 'No health check method available' 
@@ -287,7 +286,7 @@ class AppManager extends BaseManager {
       }
     }
     
-    // 如果有问题，更新整体状态
+    // If there are issues, update overall status
     if (health.issues.length > 0) {
       health.status = 'unhealthy';
     }
@@ -296,23 +295,23 @@ class AppManager extends BaseManager {
   }
 
   /**
-   * 重启组件
+   * Restart component
    */
   async restartComponent(componentName) {
     try {
-      this.logger.log(`重启组件: ${componentName}`);
+      this.logger.log(`Restart component: ${componentName}`);
       
       const component = this.getComponent(componentName);
       if (!component) {
-        throw new Error(`组件不存在: ${componentName}`);
+        throw new Error(`Component does not exist: ${componentName}`);
       }
       
-      // 销毁组件
+      // Destroy component
       if (typeof component.destroy === 'function') {
         await component.destroy();
       }
       
-      // 重新初始化组件
+      // Reinitialize component
       switch (componentName) {
         case 'logger':
           this.logger = new Logger();
@@ -359,41 +358,41 @@ class AppManager extends BaseManager {
           break;
           
         default:
-          throw new Error(`不支持的组件重启: ${componentName}`);
+          throw new Error(`Unsupported component restart: ${componentName}`);
       }
       
-      this.logger.log(`组件 ${componentName} 重启成功`);
+      this.logger.log(`Component ${componentName} restart succeeded`);
       
     } catch (error) {
-      this.logger.log(`组件 ${componentName} 重启失败: ${error.message}`, 'error');
+      this.logger.log(`Component ${componentName} restart failed: ${error.message}`, 'error');
       throw error;
     }
   }
 
   /**
-   * 发送消息到组件
+   * Send message to component
    */
   async sendMessage(componentName, message) {
     try {
       const component = this.getComponent(componentName);
       if (!component) {
-        throw new Error(`组件不存在: ${componentName}`);
+        throw new Error(`Component does not exist: ${componentName}`);
       }
       
       if (typeof component.handleMessage === 'function') {
         return await component.handleMessage(message);
       } else {
-        throw new Error(`组件 ${componentName} 不支持消息处理`);
+        throw new Error(`Component ${componentName} does not support message handling`);
       }
       
     } catch (error) {
-      this.logger.log(`发送消息到组件 ${componentName} 失败: ${error.message}`, 'error');
+      this.logger.log(`Send message to component ${componentName} failed: ${error.message}`, 'error');
       throw error;
     }
   }
 
   /**
-   * 广播消息到所有组件
+   * Broadcast message to all components
    */
   async broadcastMessage(message) {
     const results = {};

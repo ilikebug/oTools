@@ -4,8 +4,8 @@ const chokidar = require('chokidar');
 const BaseManager = require('./base-manager');
 
 /**
- * 配置管理器
- * 负责加载、验证、热重载应用配置
+ * Configuration Manager
+ * Responsible for loading, validating, and hot-reloading application configurations
  */
 class ConfigManager extends BaseManager {
   constructor() {
@@ -17,61 +17,61 @@ class ConfigManager extends BaseManager {
   }
 
   /**
-   * 初始化配置管理器
+   * Initialize the configuration manager
    */
   async onInitialize(options) {
     this.configDir = options.configDir || path.join(__dirname, '../../config');
     
-    // 确保配置目录存在
+    // Ensure the configuration directory exists
     if (!fs.existsSync(this.configDir)) {
       fs.mkdirSync(this.configDir, { recursive: true });
     }
     
-    // 加载所有配置
+    // Load all configurations
     await this.loadAllConfigurations();
     
-    // 设置配置监听
+    // Set up configuration watchers
     this.setupConfigWatchers();
     
-    this.log('配置管理器初始化完成');
+    this.log('Configuration manager initialized');
   }
 
   /**
-   * 销毁配置管理器
+   * Destroy the configuration manager
    */
   async onDestroy() {
-    // 关闭所有文件监听器
+    // Close all file watchers
     for (const watcher of this.watchers.values()) {
       watcher.close();
     }
     this.watchers.clear();
     
-    this.log('配置管理器已销毁');
+    this.log('Configuration manager destroyed');
   }
 
   /**
-   * 加载所有配置文件
+   * Load all configuration files
    */
   async loadAllConfigurations() {
     try {
-      // 加载主配置
+      // Load main configuration
       await this.loadMainConfig();
       
-      // 加载插件配置
+      // Load plugin configurations
       await this.loadPluginConfigs();
       
-      // 验证所有配置
+      // Validate all configurations
       this.validateAllConfigurations();
       
-      this.log(`已加载 ${this.configs.size} 个配置文件`);
+      this.log(`Loaded ${this.configs.size} configuration files`);
     } catch (error) {
-      this.log(`加载配置失败: ${error.message}`, 'error');
+      this.log(`Failed to load configuration: ${error.message}`, 'error');
       throw error;
     }
   }
 
   /**
-   * 加载主配置文件
+   * Load main configuration file
    */
   async loadMainConfig() {
     const mainConfigPath = path.join(this.configDir, 'main.json');
@@ -80,20 +80,20 @@ class ConfigManager extends BaseManager {
     let config;
     if (fs.existsSync(mainConfigPath)) {
       config = JSON.parse(fs.readFileSync(mainConfigPath, 'utf-8'));
-      // 合并默认配置
+      // Merge with default configuration
       config = this.mergeConfigs(defaultConfig, config);
     } else {
       config = defaultConfig;
-      // 保存默认配置
+      // Save default configuration
       this.saveConfig('main', config);
     }
     
     this.configs.set('main', config);
-    this.log('主配置加载完成');
+    this.log('Main configuration loaded');
   }
 
   /**
-   * 获取默认主配置
+   * Get default main configuration
    */
   getDefaultMainConfig() {
     return {
@@ -125,7 +125,7 @@ class ConfigManager extends BaseManager {
   }
 
   /**
-   * 加载插件配置
+   * Load plugin configurations
    */
   async loadPluginConfigs() {
     const pluginsConfigDir = path.join(this.configDir, 'plugins');
@@ -144,19 +144,19 @@ class ConfigManager extends BaseManager {
         try {
           const config = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
           this.configs.set(`plugin:${pluginName}`, config);
-          this.log(`插件配置加载完成: ${pluginName}`);
+          this.log(`Plugin configuration loaded: ${pluginName}`);
         } catch (error) {
-          this.log(`加载插件配置失败 ${pluginName}: ${error.message}`, 'error');
+          this.log(`Failed to load plugin configuration ${pluginName}: ${error.message}`, 'error');
         }
       }
     }
   }
 
   /**
-   * 设置配置文件监听
+   * Set up configuration file watchers
    */
   setupConfigWatchers() {
-    // 监听主配置文件
+    // Watch a single configuration file
     const mainConfigPath = path.join(this.configDir, 'main.json');
     this.watchConfigFile('main', mainConfigPath);
     
@@ -175,7 +175,7 @@ class ConfigManager extends BaseManager {
   }
 
   /**
-   * 监听单个配置文件
+   * Watch a single configuration file
    */
   watchConfigFile(configName, filePath) {
     if (!fs.existsSync(filePath)) {
@@ -192,7 +192,7 @@ class ConfigManager extends BaseManager {
   }
 
   /**
-   * 重新加载配置
+   * Reload configuration
    */
   async reloadConfig(configName) {
     try {
@@ -203,17 +203,17 @@ class ConfigManager extends BaseManager {
         await this.reloadPluginConfig(pluginName);
       }
       
-      this.log(`配置重新加载完成: ${configName}`);
+      this.log(`Configuration reloaded: ${configName}`);
       
-      // 通知配置变更
+      // Notify configuration change
       this.notifyConfigChange(configName);
     } catch (error) {
-      this.log(`重新加载配置失败 ${configName}: ${error.message}`, 'error');
+      this.log(`Failed to reload configuration ${configName}: ${error.message}`, 'error');
     }
   }
 
   /**
-   * 重新加载插件配置
+   * Reload plugin configuration
    */
   async reloadPluginConfig(pluginName) {
     const configPath = path.join(this.configDir, 'plugins', `${pluginName}.json`);
@@ -225,14 +225,14 @@ class ConfigManager extends BaseManager {
   }
 
   /**
-   * 获取配置
+   * Get configuration
    */
   getConfig(configName, defaultValue = null) {
     return this.configs.get(configName) || defaultValue;
   }
 
   /**
-   * 设置配置
+   * Set configuration
    */
   setConfig(configName, config) {
     this.configs.set(configName, config);
@@ -240,7 +240,7 @@ class ConfigManager extends BaseManager {
   }
 
   /**
-   * 保存配置到文件
+   * Save configuration to file
    */
   saveConfig(configName, config) {
     try {
@@ -258,15 +258,15 @@ class ConfigManager extends BaseManager {
       
       if (filePath) {
         fs.writeFileSync(filePath, JSON.stringify(config, null, 2));
-        this.log(`配置已保存: ${configName}`);
+        this.log(`Configuration saved: ${configName}`);
       }
     } catch (error) {
-      this.log(`保存配置失败 ${configName}: ${error.message}`, 'error');
+      this.log(`Failed to save configuration ${configName}: ${error.message}`, 'error');
     }
   }
 
   /**
-   * 合并配置
+   * Merge configurations
    */
   mergeConfigs(defaultConfig, userConfig) {
     const merged = { ...defaultConfig };
@@ -283,49 +283,49 @@ class ConfigManager extends BaseManager {
   }
 
   /**
-   * 验证配置
+   * Validate configuration
    */
   validateConfiguration(config, schema) {
-    // 简单的配置验证
+    // Simple configuration validation
     if (!config || typeof config !== 'object') {
-      throw new Error('配置必须是对象');
+      throw new Error('Configuration must be an object');
     }
     
-    // 可以在这里添加更复杂的验证逻辑
+    // More complex validation logic can be added here
     return true;
   }
 
   /**
-   * 验证所有配置
+   * Validate all configurations
    */
   validateAllConfigurations() {
     for (const [name, config] of this.configs) {
       try {
         this.validateConfiguration(config);
       } catch (error) {
-        this.log(`配置验证失败 ${name}: ${error.message}`, 'error');
+        this.log(`Configuration validation failed ${name}: ${error.message}`, 'error');
       }
     }
   }
 
   /**
-   * 通知配置变更
+   * Notify configuration change
    */
   notifyConfigChange(configName) {
-    // 这里可以通过事件系统通知其他组件
-    // 暂时使用简单的日志记录
-    this.log(`配置变更通知: ${configName}`);
+    // Other components can be notified via event system here
+    // Temporarily use simple log
+    this.log(`Configuration change notification: ${configName}`);
   }
 
   /**
-   * 获取所有配置名称
+   * Get all configuration names
    */
   getConfigNames() {
     return Array.from(this.configs.keys());
   }
 
   /**
-   * 获取配置统计信息
+   * Get configuration statistics
    */
   getStats() {
     return {

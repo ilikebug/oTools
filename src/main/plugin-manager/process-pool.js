@@ -4,7 +4,7 @@ const fs = require('fs');
 const BaseManager = require('../core/base-manager');
 
 /**
- * 进程状态枚举
+ * Process status enumeration
  */
 const ProcessStatus = {
   IDLE: 'idle',
@@ -15,8 +15,8 @@ const ProcessStatus = {
 };
 
 /**
- * 插件进程池管理器（BrowserWindow模式）
- * 实现插件的懒加载和进程复用
+ * Plugin process pool manager (BrowserWindow mode)
+ * Implement lazy loading and process reuse of plugins
  */
 class PluginProcessPool extends BaseManager {
   constructor(options = {}) {
@@ -27,7 +27,7 @@ class PluginProcessPool extends BaseManager {
   }
 
   async onInitialize() {
-    this.log(`插件进程池初始化，最大进程数: ${this.maxProcesses}`);
+    this.log(`Plugin process pool initialization, maximum process number: ${this.maxProcesses}`);
   }
 
   async onDestroy() {
@@ -37,7 +37,7 @@ class PluginProcessPool extends BaseManager {
       }
     }
     this.processes.clear();
-    this.log('插件进程池销毁完成');
+    this.log('Plugin process pool destruction completed');
   }
 
   async getProcess(pluginName, forceNew = false) {
@@ -49,7 +49,7 @@ class PluginProcessPool extends BaseManager {
       }
     }
     if (this.processes.size >= this.maxProcesses) {
-      throw new Error('已达最大插件进程数');
+      throw new Error('Maximum plugin process number reached');
     }
     return await this.createProcess(pluginName);
   }
@@ -57,12 +57,12 @@ class PluginProcessPool extends BaseManager {
   async createProcess(pluginName) {
     const pluginPath = path.join(this.pluginsDir, pluginName);
     const metaPath = path.join(pluginPath, 'plugin.json');
-    if (!fs.existsSync(metaPath)) throw new Error(`插件配置文件不存在: ${metaPath}`);
+    if (!fs.existsSync(metaPath)) throw new Error(`Plugin configuration file does not exist: ${metaPath}`);
     const meta = JSON.parse(fs.readFileSync(metaPath, 'utf-8'));
     const htmlPath = path.join(pluginPath, meta.ui && meta.ui.html ? meta.ui.html : 'index.html');
     const preloadPath = path.join(pluginPath, 'preload.js');
-    if (!fs.existsSync(htmlPath)) throw new Error(`插件主页面不存在: ${htmlPath}`);
-    if (!fs.existsSync(preloadPath)) throw new Error(`插件预加载脚本不存在: ${preloadPath}`);
+    if (!fs.existsSync(htmlPath)) throw new Error(`Plugin main page does not exist: ${htmlPath}`);
+    if (!fs.existsSync(preloadPath)) throw new Error(`Plugin preload script does not exist: ${preloadPath}`);
 
     const win = new BrowserWindow({
       show: false,
@@ -75,15 +75,15 @@ class PluginProcessPool extends BaseManager {
     await win.loadFile(htmlPath);
     const info = { window: win, status: 'idle', meta };
     this.processes.set(pluginName, info);
-    // 监听插件窗口消息
+    // Listen for plugin window messages
     win.webContents.on('ipc-message', (event, channel, ...args) => {
-      // 这里可根据需要处理插件发来的消息
-      this.log(`[${pluginName}] IPC消息: ${channel}`, args);
+      // Here you can handle messages sent by the plugin
+      this.log(`[${pluginName}] IPC message: ${channel}`, args);
     });
     win.on('closed', () => {
       this.processes.delete(pluginName);
     });
-    this.log(`插件进程创建成功: ${pluginName}`);
+    this.log(`Plugin process created successfully: ${pluginName}`);
     return info;
   }
 

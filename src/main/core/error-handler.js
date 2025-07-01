@@ -1,7 +1,7 @@
 const BaseManager = require('./base-manager');
 
 /**
- * 错误类型枚举
+ * Error type enumeration
  */
 const ErrorType = {
   PLUGIN_CRASH: 'plugin_crash',
@@ -13,7 +13,7 @@ const ErrorType = {
 };
 
 /**
- * 错误严重程度枚举
+ * Error severity enumeration
  */
 const ErrorSeverity = {
   LOW: 'low',
@@ -23,7 +23,7 @@ const ErrorSeverity = {
 };
 
 /**
- * 错误处理策略枚举
+ * Error handling strategy enumeration
  */
 const ErrorStrategy = {
   RETRY: 'retry',
@@ -34,8 +34,8 @@ const ErrorStrategy = {
 };
 
 /**
- * 统一错误处理器
- * 提供错误分类、处理策略、恢复机制等功能
+ * Unified error handler
+ * Provides error classification, handling strategy, recovery mechanism, etc.
  */
 class ErrorHandler extends BaseManager {
   constructor() {
@@ -54,18 +54,18 @@ class ErrorHandler extends BaseManager {
   }
 
   /**
-   * 初始化错误处理器
+   * Initialize error handler
    */
   async onInitialize(options) {
     this.maxErrors = options.maxErrors || this.maxErrors;
     this.retryAttempts = options.retryAttempts || this.retryAttempts;
     this.retryDelay = options.retryDelay || this.retryDelay;
     
-    this.log('错误处理器初始化完成');
+    this.log('Error handler initialization completed');
   }
 
   /**
-   * 销毁错误处理器
+   * Destroy error handler
    */
   async onDestroy() {
     this.errors = [];
@@ -73,14 +73,14 @@ class ErrorHandler extends BaseManager {
     this.recoveryStrategies.clear();
     this.notificationCallbacks = [];
     
-    this.log('错误处理器已销毁');
+    this.log('Error handler destroyed');
   }
 
   /**
-   * 设置默认错误处理策略
+   * Set default error handling strategy
    */
   setupDefaultStrategies() {
-    // 插件崩溃策略
+    // Plugin crash strategy
     this.setRecoveryStrategy(ErrorType.PLUGIN_CRASH, {
       strategy: ErrorStrategy.RESTART,
       maxAttempts: 3,
@@ -88,7 +88,7 @@ class ErrorHandler extends BaseManager {
       notify: true
     });
 
-    // 进程超时策略
+    // Process timeout strategy
     this.setRecoveryStrategy(ErrorType.PROCESS_TIMEOUT, {
       strategy: ErrorStrategy.RETRY,
       maxAttempts: 2,
@@ -96,7 +96,7 @@ class ErrorHandler extends BaseManager {
       notify: false
     });
 
-    // API错误策略
+    // API error strategy
     this.setRecoveryStrategy(ErrorType.API_ERROR, {
       strategy: ErrorStrategy.RETRY,
       maxAttempts: 3,
@@ -104,7 +104,7 @@ class ErrorHandler extends BaseManager {
       notify: false
     });
 
-    // 配置错误策略
+    // Config error strategy
     this.setRecoveryStrategy(ErrorType.CONFIG_ERROR, {
       strategy: ErrorStrategy.NOTIFY,
       maxAttempts: 1,
@@ -112,7 +112,7 @@ class ErrorHandler extends BaseManager {
       notify: true
     });
 
-    // 系统错误策略
+    // System error strategy
     this.setRecoveryStrategy(ErrorType.SYSTEM_ERROR, {
       strategy: ErrorStrategy.TERMINATE,
       maxAttempts: 1,
@@ -122,43 +122,43 @@ class ErrorHandler extends BaseManager {
   }
 
   /**
-   * 处理错误
-   * @param {Error} error 错误对象
-   * @param {Object} context 错误上下文
+   * Handle error
+   * @param {Error} error Error object
+   * @param {Object} context Error context
    */
   async handleError(error, context = {}) {
     const errorInfo = this.createErrorInfo(error, context);
     
-    // 记录错误
+    // Record error
     this.recordError(errorInfo);
     
-    // 确定错误类型和严重程度
+    // Determine error type and severity
     const errorType = this.classifyError(error, context);
     const severity = this.assessSeverity(error, context);
     
     errorInfo.type = errorType;
     errorInfo.severity = severity;
     
-    // 获取处理策略
+    // Get handling strategy
     const strategy = this.getRecoveryStrategy(errorType);
     
-    // 执行错误处理
+    // Execute error handling
     await this.executeErrorStrategy(errorInfo, strategy);
     
-    // 发送通知
+    // Send notification
     if (strategy.notify) {
       this.notifyError(errorInfo);
     }
     
-    this.log(`错误已处理: ${errorType} (${severity}) - ${error.message}`, 'error');
+    this.log(`Error handled: ${errorType} (${severity}) - ${error.message}`, 'error');
     
     return errorInfo;
   }
 
   /**
-   * 创建错误信息对象
-   * @param {Error} error 错误对象
-   * @param {Object} context 错误上下文
+   * Create error information object
+   * @param {Error} error Error object
+   * @param {Object} context Error context
    */
   createErrorInfo(error, context) {
     return {
@@ -177,60 +177,60 @@ class ErrorHandler extends BaseManager {
   }
 
   /**
-   * 记录错误
-   * @param {Object} errorInfo 错误信息
+   * Record error
+   * @param {Object} errorInfo Error information
    */
   recordError(errorInfo) {
     this.errors.push(errorInfo);
     
-    // 限制错误记录数量
+    // Limit error record count
     if (this.errors.length > this.maxErrors) {
       this.errors.shift();
     }
     
-    // 统计错误数量
+    // Count errors
     const errorType = errorInfo.type || 'unknown';
     const count = this.errorCounts.get(errorType) || 0;
     this.errorCounts.set(errorType, count + 1);
   }
 
   /**
-   * 分类错误
-   * @param {Error} error 错误对象
-   * @param {Object} context 错误上下文
+   * Classify error
+   * @param {Error} error Error object
+   * @param {Object} context Error context
    */
   classifyError(error, context) {
     const message = error.message.toLowerCase();
     const stack = error.stack.toLowerCase();
     
-    // 插件相关错误
-    if (message.includes('plugin') || message.includes('进程') || context.pluginName) {
-      if (message.includes('timeout') || message.includes('超时')) {
+    // Plugin related errors
+    if (message.includes('plugin') || message.includes('process') || context.pluginName) {
+      if (message.includes('timeout') || message.includes('timeout')) {
         return ErrorType.PROCESS_TIMEOUT;
       }
-      if (message.includes('crash') || message.includes('崩溃') || message.includes('exit')) {
+      if (message.includes('crash') || message.includes('crash') || message.includes('exit')) {
         return ErrorType.PLUGIN_CRASH;
       }
       return ErrorType.PLUGIN_CRASH;
     }
     
-    // API相关错误
-    if (message.includes('api') || message.includes('调用失败')) {
+    // API related errors
+    if (message.includes('api') || message.includes('call failed')) {
       return ErrorType.API_ERROR;
     }
     
-    // 配置相关错误
-    if (message.includes('config') || message.includes('配置')) {
+    // Config related errors
+    if (message.includes('config') || message.includes('config')) {
       return ErrorType.CONFIG_ERROR;
     }
     
-    // 网络相关错误
-    if (message.includes('network') || message.includes('网络') || message.includes('connection')) {
+    // Network related errors
+    if (message.includes('network') || message.includes('network') || message.includes('connection')) {
       return ErrorType.NETWORK_ERROR;
     }
     
-    // 系统相关错误
-    if (message.includes('system') || message.includes('系统') || message.includes('memory')) {
+    // System related errors
+    if (message.includes('system') || message.includes('system') || message.includes('memory')) {
       return ErrorType.SYSTEM_ERROR;
     }
     
@@ -238,39 +238,39 @@ class ErrorHandler extends BaseManager {
   }
 
   /**
-   * 评估错误严重程度
-   * @param {Error} error 错误对象
-   * @param {Object} context 错误上下文
+   * Assess error severity
+   * @param {Error} error Error object
+   * @param {Object} context Error context
    */
   assessSeverity(error, context) {
     const message = error.message.toLowerCase();
     
-    // 致命错误
-    if (message.includes('fatal') || message.includes('致命') || 
-        message.includes('critical') || message.includes('严重')) {
+    // Critical error
+    if (message.includes('fatal') || message.includes('fatal') || 
+        message.includes('critical') || message.includes('severe')) {
       return ErrorSeverity.CRITICAL;
     }
     
-    // 高严重程度
-    if (message.includes('crash') || message.includes('崩溃') || 
-        message.includes('terminate') || message.includes('终止')) {
+    // High severity
+    if (message.includes('crash') || message.includes('crash') || 
+        message.includes('terminate') || message.includes('terminate')) {
       return ErrorSeverity.HIGH;
     }
     
-    // 中等严重程度
-    if (message.includes('timeout') || message.includes('超时') || 
-        message.includes('failed') || message.includes('失败')) {
+    // Medium severity
+    if (message.includes('timeout') || message.includes('timeout') || 
+        message.includes('failed') || message.includes('failed')) {
       return ErrorSeverity.MEDIUM;
     }
     
-    // 低严重程度
+    // Low severity
     return ErrorSeverity.LOW;
   }
 
   /**
-   * 设置恢复策略
-   * @param {string} errorType 错误类型
-   * @param {Object} strategy 策略配置
+   * Set recovery strategy
+   * @param {string} errorType Error type
+   * @param {Object} strategy Strategy configuration
    */
   setRecoveryStrategy(errorType, strategy) {
     this.recoveryStrategies.set(errorType, {
@@ -282,8 +282,8 @@ class ErrorHandler extends BaseManager {
   }
 
   /**
-   * 获取恢复策略
-   * @param {string} errorType 错误类型
+   * Get recovery strategy
+   * @param {string} errorType Error type
    */
   getRecoveryStrategy(errorType) {
     return this.recoveryStrategies.get(errorType) || {
@@ -295,9 +295,9 @@ class ErrorHandler extends BaseManager {
   }
 
   /**
-   * 执行错误处理策略
-   * @param {Object} errorInfo 错误信息
-   * @param {Object} strategy 处理策略
+   * Execute error handling strategy
+   * @param {Object} errorInfo Error information
+   * @param {Object} strategy Handling strategy
    */
   async executeErrorStrategy(errorInfo, strategy) {
     const { strategy: strategyType, maxAttempts, delay } = strategy;
@@ -329,98 +329,98 @@ class ErrorHandler extends BaseManager {
   }
 
   /**
-   * 处理重试策略
-   * @param {Object} errorInfo 错误信息
-   * @param {number} maxAttempts 最大重试次数
-   * @param {number} delay 延迟时间
+   * Handle retry strategy
+   * @param {Object} errorInfo Error information
+   * @param {number} maxAttempts Maximum retry attempts
+   * @param {number} delay Delay time
    */
   async handleRetryStrategy(errorInfo, maxAttempts, delay) {
     const attempts = this.getErrorAttempts(errorInfo.context.pluginName || 'unknown');
     
     if (attempts < maxAttempts) {
-      this.log(`准备重试操作 (${attempts + 1}/${maxAttempts})`, 'warn');
+      this.log(`Preparing retry operation (${attempts + 1}/${maxAttempts})`, 'warn');
       
       if (delay > 0) {
         await this.delay(delay);
       }
       
-      // 这里可以触发重试逻辑
+      // Here you can trigger retry logic
       this.triggerRetry(errorInfo);
     } else {
-      this.log(`达到最大重试次数 (${maxAttempts})`, 'error');
+      this.log(`Maximum retry attempts reached (${maxAttempts})`, 'error');
     }
   }
 
   /**
-   * 处理重启策略
-   * @param {Object} errorInfo 错误信息
-   * @param {number} maxAttempts 最大重试次数
-   * @param {number} delay 延迟时间
+   * Handle restart strategy
+   * @param {Object} errorInfo Error information
+   * @param {number} maxAttempts Maximum retry attempts
+   * @param {number} delay Delay time
    */
   async handleRestartStrategy(errorInfo, maxAttempts, delay) {
     const pluginName = errorInfo.context.pluginName;
     if (!pluginName) {
-      this.log('重启策略需要插件名称', 'error');
+      this.log('Restart strategy requires plugin name', 'error');
       return;
     }
     
     const attempts = this.getErrorAttempts(pluginName);
     
     if (attempts < maxAttempts) {
-      this.log(`准备重启插件 ${pluginName} (${attempts + 1}/${maxAttempts})`, 'warn');
+      this.log(`Preparing to restart plugin ${pluginName} (${attempts + 1}/${maxAttempts})`, 'warn');
       
       if (delay > 0) {
         await this.delay(delay);
       }
       
-      // 这里可以触发重启逻辑
+      // Here you can trigger restart logic
       this.triggerRestart(pluginName);
     } else {
-      this.log(`插件 ${pluginName} 达到最大重启次数 (${maxAttempts})`, 'error');
+      this.log(`Plugin ${pluginName} reached maximum restart attempts (${maxAttempts})`, 'error');
     }
   }
 
   /**
-   * 处理忽略策略
-   * @param {Object} errorInfo 错误信息
+   * Handle ignore strategy
+   * @param {Object} errorInfo Error information
    */
   handleIgnoreStrategy(errorInfo) {
-    this.log(`忽略错误: ${errorInfo.message}`, 'debug');
+    this.log(`Ignoring error: ${errorInfo.message}`, 'debug');
   }
 
   /**
-   * 处理通知策略
-   * @param {Object} errorInfo 错误信息
+   * Handle notification strategy
+   * @param {Object} errorInfo Error information
    */
   handleNotifyStrategy(errorInfo) {
-    this.log(`错误通知: ${errorInfo.message}`, 'warn');
+    this.log(`Error notification: ${errorInfo.message}`, 'warn');
   }
 
   /**
-   * 处理终止策略
-   * @param {Object} errorInfo 错误信息
+   * Handle terminate strategy
+   * @param {Object} errorInfo Error information
    */
   async handleTerminateStrategy(errorInfo) {
-    this.log(`严重错误，准备终止应用: ${errorInfo.message}`, 'error');
+    this.log(`Severe error, preparing to terminate application: ${errorInfo.message}`, 'error');
     
-    // 延迟终止，给日志记录时间
+    // Delay termination, give log recording time
     await this.delay(1000);
     
-    // 这里可以触发应用终止逻辑
+    // Here you can trigger application termination logic
     this.triggerTermination(errorInfo);
   }
 
   /**
-   * 获取错误尝试次数
-   * @param {string} key 错误键
+   * Get error attempt count
+   * @param {string} key Error key
    */
   getErrorAttempts(key) {
     return this.errorCounts.get(key) || 0;
   }
 
   /**
-   * 注册错误通知回调
-   * @param {Function} callback 回调函数
+   * Register error notification callback
+   * @param {Function} callback Callback function
    */
   registerNotificationCallback(callback) {
     if (typeof callback === 'function') {
@@ -429,64 +429,64 @@ class ErrorHandler extends BaseManager {
   }
 
   /**
-   * 发送错误通知
-   * @param {Object} errorInfo 错误信息
+   * Send error notification
+   * @param {Object} errorInfo Error information
    */
   notifyError(errorInfo) {
     for (const callback of this.notificationCallbacks) {
       try {
         callback(errorInfo);
       } catch (error) {
-        this.log(`错误通知回调执行失败: ${error.message}`, 'error');
+        this.log(`Error notification callback execution failed: ${error.message}`, 'error');
       }
     }
   }
 
   /**
-   * 触发重试（预留接口）
-   * @param {Object} errorInfo 错误信息
+   * Trigger retry (reserved interface)
+   * @param {Object} errorInfo Error information
    */
   triggerRetry(errorInfo) {
-    // 子类可以重写此方法实现具体的重试逻辑
-    this.log(`触发重试: ${errorInfo.message}`);
+    // Subclass can override this method to implement specific retry logic
+    this.log(`Triggering retry: ${errorInfo.message}`);
   }
 
   /**
-   * 触发重启（预留接口）
-   * @param {string} pluginName 插件名称
+   * Trigger restart (reserved interface)
+   * @param {string} pluginName Plugin name
    */
   triggerRestart(pluginName) {
-    // 子类可以重写此方法实现具体的重启逻辑
-    this.log(`触发重启: ${pluginName}`);
+    // Subclass can override this method to implement specific restart logic
+    this.log(`Triggering restart: ${pluginName}`);
   }
 
   /**
-   * 触发终止（预留接口）
-   * @param {Object} errorInfo 错误信息
+   * Trigger termination (reserved interface)
+   * @param {Object} errorInfo Error information
    */
   triggerTermination(errorInfo) {
-    // 子类可以重写此方法实现具体的终止逻辑
-    this.log(`触发终止: ${errorInfo.message}`);
+    // Subclass can override this method to implement specific termination logic
+    this.log(`Triggering termination: ${errorInfo.message}`);
     process.exit(1);
   }
 
   /**
-   * 生成错误ID
+   * Generate error ID
    */
   generateErrorId() {
     return `error_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   }
 
   /**
-   * 延迟函数
-   * @param {number} ms 毫秒数
+   * Delay function
+   * @param {number} ms Milliseconds
    */
   delay(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
   }
 
   /**
-   * 获取错误统计信息
+   * Get error statistics
    */
   getErrorStats() {
     const stats = {
@@ -500,16 +500,16 @@ class ErrorHandler extends BaseManager {
   }
 
   /**
-   * 清理错误记录
+   * Clear error records
    */
   clearErrors() {
     this.errors = [];
     this.errorCounts.clear();
-    this.log('错误记录已清理');
+    this.log('Error records cleared');
   }
 
   /**
-   * 获取管理器状态
+   * Get manager status
    */
   getStatus() {
     const baseStatus = super.getStatus();

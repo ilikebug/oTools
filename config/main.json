@@ -2,7 +2,7 @@
   "app": {
     "name": "oTools",
     "version": "1.0.0",
-    "description": "功能丰富的桌面应用管理中心"
+    "description": "A feature-rich desktop application management center"
   },
   "logging": {
     "level": "info",
@@ -45,7 +45,7 @@
   },
   "ui": {
     "theme": "default",
-    "language": "zh-CN",
+    "language": "en-US",
     "window": {
       "width": 480,
       "height": 420,

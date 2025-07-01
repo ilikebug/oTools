@@ -9,54 +9,54 @@ window.electronAPI.onPluginExecute = (callback) => {
   });
 };
 
-// 插件主逻辑
+// Main plugin logic
 window.electronAPI.onPluginExecute(async (action, args) => {
   try {
     const result = await window.electronAPI.invoke('captureAndOCR');
     if (result && result.imageData && result.text !== undefined) {
-      // 优先调用页面的 displayResult 函数
+      // Prefer calling the page's displayResult function
       if (typeof window.displayResult === 'function') {
         window.displayResult({ imageData: result.imageData, text: result.text });
       } else {
-        // 兜底：直接操作 DOM
+        // Fallback: directly manipulate the DOM
         let container = document.getElementById('imageContainer');
         if (container) {
-          container.innerHTML = `<img src="data:image/png;base64,${result.imageData}" class="screenshot-image" alt="截图预览">`;
+          container.innerHTML = `<img src="data:image/png;base64,${result.imageData}" class="screenshot-image" alt="Screenshot Preview">`;
         }
         let textContent = document.getElementById('textContent');
         if (textContent) {
-          textContent.textContent = result.text || '未识别到文字内容';
+          textContent.textContent = result.text || 'No text recognized';
           textContent.className = 'text-content';
         }
       }
-      // 通知主进程显示窗口
+      // Notify main process to show window
       if (window.electronAPI.showPluginWindow) {
         window.electronAPI.showPluginWindow();
       }
     } else {
-      alert('未获取到有效的截图或OCR结果');
+      alert('No valid screenshot or OCR result obtained');
     }
   } catch (e) {
-    alert('截图或OCR失败: ' + e.message);
+    alert('Screenshot or OCR failed: ' + e.message);
   }
 }); 
 
 let currentImageData = null;
 let currentText = '';
 
-// 页面加载完成后初始化
+// Initialize after page load
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('OCR插件结果展示界面已加载');
+    console.log('OCR plugin result display page loaded');
     updateTimestamp();
     
-    // 监听来自主进程的消息
+    // Listen for messages from the main process
     window.electronAPI.onResultData((data) => {
-        console.log('收到结果数据:', data);
+        console.log('Received result data:', data);
         displayResult(data);
     });
 });
 
-// 显示结果
+// Display result
 function displayResult(data) {
     if (data.imageData) {
         displayImage(data.imageData);
@@ -66,10 +66,10 @@ function displayResult(data) {
         displayText(data.text);
     }
     
-    updateStatus('识别完成');
+    updateStatus('Recognition complete');
 }
 
-// 显示图片
+// Display image
 function displayImage(imageBase64) {
     currentImageData = imageBase64;
     const container = document.getElementById('imageContainer');
@@ -80,13 +80,13 @@ function displayImage(imageBase64) {
     const img = document.createElement('img');
     img.src = `data:image/png;base64,${imageBase64}`;
     img.className = 'screenshot-image';
-    img.alt = '截图预览';
+    img.alt = 'Screenshot Preview';
     
     container.innerHTML = '';
     container.appendChild(img);
 }
 
-// 显示文字
+// Display text
 function displayText(text) {
     currentText = text;
     const textContent = document.getElementById('textContent');
@@ -95,44 +95,44 @@ function displayText(text) {
         textContent.textContent = text;
         textContent.className = 'text-content';
     } else {
-        textContent.textContent = '未识别到文字内容';
+        textContent.textContent = 'No text recognized';
         textContent.className = 'text-content empty';
     }
 }
 
-// 显示错误信息
+// Display error message
 function displayError(message) {
     const errorContainer = document.getElementById('errorContainer');
     errorContainer.innerHTML = `<div class="error-message">${message}</div>`;
-    updateStatus('识别失败');
+    updateStatus('Recognition failed');
 }
 
-// 复制文字
+// Copy text
 async function copyText() {
     if (!currentText) {
-        updateStatus('没有可复制的文字');
+        updateStatus('No text to copy');
         return;
     }
     
     try {
         await navigator.clipboard.writeText(currentText);
-        updateStatus('文字已复制到剪贴板', 'copy-success');
-        setTimeout(() => updateStatus('准备就绪'), 2000);
+        updateStatus('Text copied to clipboard', 'copy-success');
+        setTimeout(() => updateStatus('Ready'), 2000);
     } catch (error) {
-        console.error('复制失败:', error);
-        updateStatus('复制失败');
+        console.error('Copy failed:', error);
+        updateStatus('Copy failed');
     }
 }
 
-// 复制图片
+// Copy image
 async function copyImage() {
     if (!currentImageData) {
-        updateStatus('没有可复制的图片');
+        updateStatus('No image to copy');
         return;
     }
     
     try {
-        // 将base64转换为blob
+        // Convert base64 to blob
         const response = await fetch(`data:image/png;base64,${currentImageData}`);
         const blob = await response.blob();
         
@@ -142,56 +142,56 @@ async function copyImage() {
             })
         ]);
         
-        updateStatus('图片已复制到剪贴板', 'copy-success');
-        setTimeout(() => updateStatus('准备就绪'), 2000);
+        updateStatus('Image copied to clipboard', 'copy-success');
+        setTimeout(() => updateStatus('Ready'), 2000);
     } catch (error) {
-        console.error('复制图片失败:', error);
-        updateStatus('复制图片失败');
+        console.error('Copy image failed:', error);
+        updateStatus('Copy image failed');
     }
 }
 
-// 保存图片
+// Save image
 function saveImage() {
     if (!currentImageData) {
-        updateStatus('没有可保存的图片');
+        updateStatus('No image to save');
         return;
     }
     
-    // 通过主进程保存图片
+    // Save image via main process
     window.electronAPI.saveImage(currentImageData);
 }
 
-// 清空文字
+// Clear text
 function clearText() {
     currentText = '';
     const textContent = document.getElementById('textContent');
-    textContent.textContent = '等待OCR识别结果...';
+    textContent.textContent = 'Waiting for OCR result...';
     textContent.className = 'text-content empty';
-    updateStatus('文字已清空');
+    updateStatus('Text cleared');
 }
 
-// 重新截图
+// New screenshot
 function newScreenshot() {
     window.electronAPI.newScreenshot();
 }
 
-// 关闭窗口
+// Close window
 function closeWindow() {
     window.electronAPI.closeResultWindow();
 }
 
-// 更新状态
+// Update status
 function updateStatus(message, className = '') {
     const statusText = document.getElementById('statusText');
     statusText.textContent = message;
     statusText.className = className;
 }
 
-// 更新时间戳
+// Update timestamp
 function updateTimestamp() {
     const timestamp = document.getElementById('timestamp');
-    timestamp.textContent = new Date().toLocaleString('zh-CN');
+    timestamp.textContent = new Date().toLocaleString('en-US');
 }
 
-// 定期更新时间戳
+// Update timestamp periodically
 setInterval(updateTimestamp, 1000);

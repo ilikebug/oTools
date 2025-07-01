@@ -1,43 +1,43 @@
 /**
- * 核心组件统一导出
- * 提供所有核心管理器的统一访问接口
+ * Unified export of core components
+ * Provides a unified access interface for all core managers
  */
 
-// 基础管理器
+// Base Manager
 const BaseManager = require('./base-manager');
 
-// 日志系统
+// Logger System
 const Logger = require('./logger');
 
-// 配置管理
+// Configuration Management
 const ConfigManager = require('./config-manager');
 
-// 性能监控
+// Performance Monitor
 const PerformanceMonitor = require('./performance-monitor');
 
-// 错误处理
+// Error Handler
 const ErrorHandler = require('./error-handler');
 
-// 应用管理器
+// Application Manager
 const { AppManager } = require('./app-manager');
 
-// 统一导出
+// Unified export
 module.exports = {
-  // 基础类
+  // Base Class
   BaseManager,
   
-  // 日志系统
+  // Logger System
   Logger,
   
-  // 配置管理
+  // Configuration Management
   ConfigManager,
   
-  // 性能监控
+  // Performance Monitor
   PerformanceMonitor,
   
-  // 错误处理
+  // Error Handler
   ErrorHandler,
   
-  // 应用管理器
+  // Application Manager
   AppManager
 }; 

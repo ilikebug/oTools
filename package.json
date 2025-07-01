@@ -2,7 +2,7 @@
   "name": "otools",
   "productName": "oTools",
   "version": "1.0.0",
-  "description": "功能强大的工具管理中心",
+  "description": "A powerful tool management center",
   "main": "src/main/main.js",
   "scripts": {
     "start": "electron-forge start",

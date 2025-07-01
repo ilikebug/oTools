@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -9,76 +9,76 @@
   </head>
   <body>
     <div class="app-container">
-      <!-- 顶部栏：左侧logo+文字，右侧状态指示器和设置按钮 -->
+      <!-- Top bar: left logo+text, right status indicator and settings button -->
       <div class="topbar">
         <div class="topbar-left">
           <i class="fas fa-wrench"></i>
           <span class="topbar-title">oTools</span>
-          <div class="status-indicator" id="statusIndicator" title="应用状态">
+          <div class="status-indicator" id="statusIndicator" title="App Status">
             <i class="fas fa-circle"></i>
           </div>
         </div>
         <div class="topbar-right">
-          <button class="status-btn" id="statusBtn" title="应用状态">
+          <button class="status-btn" id="statusBtn" title="App Status">
             <i class="fas fa-chart-line"></i>
           </button>
-          <button class="performance-btn" id="performanceBtn" title="性能监控">
+          <button class="performance-btn" id="performanceBtn" title="Performance Monitor">
             <i class="fas fa-tachometer-alt"></i>
           </button>
-          <button class="settings-btn" id="settingsBtn" title="设置">
+          <button class="settings-btn" id="settingsBtn" title="Settings">
             <i class="fas fa-cog"></i>
           </button>
         </div>
       </div>
 
-      <!-- 搜索区域 -->
+      <!-- Search section -->
       <div class="search-section">
         <div class="search-container">
           <i class="fas fa-search search-icon"></i>
-          <input type="text" id="searchInput" placeholder="搜索功能或插件..." class="search-input" />
+          <input type="text" id="searchInput" placeholder="Search features or plugins..." class="search-input" />
           <button class="search-btn" id="searchBtn">
             <i class="fas fa-arrow-right"></i>
           </button>
         </div>
       </div>
 
-      <!-- 快捷功能区域 - 动态生成 -->
+      <!-- Quick actions section - dynamically generated -->
       <div class="quick-actions">
         <div class="action-grid" id="actionGrid">
-          <!-- 快捷功能按钮将在这里动态生成 -->
+          <!-- Quick action buttons will be generated here dynamically -->
         </div>
       </div>
 
-      <!-- 插件管理区域 -->
+      <!-- Plugin management section -->
       <div class="plugins-section" id="pluginsSection" style="display: none;">
         <div class="plugins-header">
-          <h3>插件管理</h3>
+          <h3>Plugin Management</h3>
           <button class="close-panel-btn" data-panel="pluginsSection">
             <i class="fas fa-times"></i>
           </button>
         </div>
         <div class="plugins-grid" id="pluginsGrid">
-          <!-- 插件列表将在这里动态生成 -->
+          <!-- Plugin list will be generated here dynamically -->
         </div>
       </div>
 
-      <!-- 应用状态面板 -->
+      <!-- App status panel -->
       <div class="panel" id="statusPanel" style="display: none;">
         <div class="panel-header">
-          <h3>应用状态</h3>
+          <h3>App Status</h3>
           <button class="close-panel-btn" data-panel="statusPanel">
             <i class="fas fa-times"></i>
           </button>
         </div>
         <div class="panel-content">
-          <!-- 状态内容将在这里动态生成 -->
+          <!-- Status content will be generated here dynamically -->
         </div>
       </div>
 
-      <!-- 性能监控面板 -->
+      <!-- Performance monitor panel -->
       <div class="panel" id="performancePanel" style="display: none;">
         <div class="panel-header">
-          <h3>性能监控</h3>
+          <h3>Performance Monitor</h3>
           <button class="close-panel-btn" data-panel="performancePanel">
             <i class="fas fa-times"></i>
           </button>
@@ -86,82 +86,82 @@
         <div class="panel-content">
           <div class="performance-metrics">
             <div class="metric-item">
-              <label>CPU使用率:</label>
+              <label>CPU Usage:</label>
               <span id="cpuUsage">--</span>
             </div>
             <div class="metric-item">
-              <label>内存使用:</label>
+              <label>Memory Usage:</label>
               <span id="memoryUsage">--</span>
             </div>
             <div class="metric-item">
-              <label>响应时间:</label>
+              <label>Response Time:</label>
               <span id="responseTime">--</span>
             </div>
           </div>
           <div class="performance-chart" id="performanceChart">
-            <!-- 性能图表将在这里显示 -->
+            <!-- Performance chart will be displayed here -->
           </div>
         </div>
       </div>
 
-      <!-- 剪贴板面板 -->
+      <!-- Clipboard panel -->
       <div class="panel" id="clipboardPanel" style="display: none;">
         <div class="panel-header">
-          <h3>剪贴板管理</h3>
+          <h3>Clipboard Management</h3>
           <button class="close-panel-btn" data-panel="clipboardPanel">
             <i class="fas fa-times"></i>
           </button>
         </div>
         <div class="panel-content">
           <div class="clipboard-controls">
-            <button id="readClipboardBtn">读取剪贴板</button>
-            <button id="clearClipboardBtn">清空剪贴板</button>
+            <button id="readClipboardBtn">Read Clipboard</button>
+            <button id="clearClipboardBtn">Clear Clipboard</button>
           </div>
           <div class="clipboard-content">
-            <textarea id="clipboardText" placeholder="剪贴板内容将显示在这里..." readonly></textarea>
+            <textarea id="clipboardText" placeholder="Clipboard content will be displayed here..." readonly></textarea>
           </div>
         </div>
       </div>
 
-      <!-- 设置面板 -->
+      <!-- Settings panel -->
       <div class="panel" id="settingsPanel" style="display: none;">
         <div class="panel-header">
-          <h3>设置</h3>
+          <h3>Settings</h3>
           <button class="close-panel-btn" data-panel="settingsPanel">
             <i class="fas fa-times"></i>
           </button>
         </div>
         <div class="panel-content">
           <div class="settings-section">
-            <h4>应用设置</h4>
+            <h4>App Settings</h4>
             <div class="setting-item">
-              <label>自动启动:</label>
+              <label>Auto Start:</label>
               <input type="checkbox" id="autoStart" />
             </div>
             <div class="setting-item">
-              <label>开机启动:</label>
+              <label>Startup Launch:</label>
               <input type="checkbox" id="startupLaunch" />
             </div>
           </div>
           <div class="settings-section">
-            <h4>快捷键设置</h4>
+            <h4>Shortcut Settings</h4>
             <div class="setting-item">
-              <label>显示/隐藏:</label>
+              <label>Show/Hide:</label>
               <input type="text" id="toggleShortcut" value="Cmd+Shift+Space" readonly />
             </div>
             <div class="setting-item">
-              <label>截图:</label>
+              <label>Screenshot:</label>
               <input type="text" id="screenshotShortcut" value="Cmd+Shift+S" readonly />
             </div>
           </div>
           <div class="settings-section">
-            <h4>插件设置</h4>
+            <h4>Plugin Settings</h4>
             <div class="setting-item">
-              <label>自动加载插件:</label>
+              <label>Auto Load Plugins:</label>
               <input type="checkbox" id="autoLoadPlugins" checked />
             </div>
             <div class="setting-item">
-              <label>插件热重载:</label>
+              <label>Plugin Hot Reload:</label>
               <input type="checkbox" id="pluginHotReload" checked />
             </div>
           </div>
@@ -169,20 +169,20 @@
       </div>
     </div>
 
-    <!-- 加载遮罩 -->
+    <!-- Loading mask -->
     <div class="loading" id="loading" style="display: none;">
       <div class="loading-content">
         <i class="fas fa-spinner fa-spin"></i>
-        <p class="loading-text">处理中...</p>
+        <p class="loading-text">Processing...</p>
       </div>
     </div>
 
-    <!-- 通知容器 -->
+    <!-- Notification container -->
     <div class="notification-container" id="notificationContainer"></div>
 
     <script src="index.js"></script>
     <script>
-      // 设置按钮点击事件
+      // Settings button click event
       document.getElementById('settingsBtn').onclick = function() {
         const settingsPanel = document.getElementById('settingsPanel');
         if (settingsPanel) {

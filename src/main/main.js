@@ -2,7 +2,7 @@ const { app, BrowserWindow, globalShortcut } = require('electron');
 const path = require('node:path');
 const Store = require('electron-store');
 
-// 导入新的核心组件
+// Import new core components
 const { AppManager } = require('./core');
 const { getSavedWindowPosition, saveWindowPosition } = require('./utils/window');
 const MacTools = require('./utils/mac-tools');
@@ -11,7 +11,7 @@ if (require('electron-squirrel-startup')) {
   app.quit();
 }
 
-// 全局变量
+// Global variables
 let mainWindow;
 let appManager;
 let resultWindowManager;
@@ -19,7 +19,7 @@ let macTools;
 let store;
 
 /**
- * 创建主窗口
+ * Create main window
  */
 const createWindow = () => {
   const savedPos = getSavedWindowPosition(store);
@@ -44,17 +44,17 @@ const createWindow = () => {
     show: false
   });
 
-  // macOS 特殊设置
+  // macOS specific settings
   if (process.platform === 'darwin' && mainWindow && !mainWindow.isDestroyed()) {
     mainWindow.setAlwaysOnTop(true, 'screen-saver');
     mainWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
     mainWindow.setFullScreenable(false);
   }
 
-  // 加载主界面
+  // Load main interface
   mainWindow.loadFile(path.join(__dirname, '../renderer/index.html'));
   
-  // 窗口事件处理
+  // Window event handling
   mainWindow.once('ready-to-show', () => {
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.show();
@@ -74,14 +74,14 @@ const createWindow = () => {
     }
   });
 
-  // 开发模式打开开发者工具
+  // Open dev tools in development mode
   if (process.env.NODE_ENV === 'otools') {
     mainWindow.webContents.openDevTools();
   }
 };
 
 /**
- * 注册全局快捷键
+ * Register global shortcuts
  */
 function registerGlobalShortcuts() {
   const config = appManager.getComponent('configManager').getConfig('main');
@@ -99,28 +99,28 @@ function registerGlobalShortcuts() {
   });
   
   if (!ret) {
-    appManager.getComponent('logger').log('全局快捷键注册失败', 'error');
+    appManager.getComponent('logger').log('Global shortcut registration failed', 'error');
   } else {
-    appManager.getComponent('logger').log(`全局快捷键注册成功: ${shortcut}`);
+    appManager.getComponent('logger').log(`Global shortcut registered: ${shortcut}`);
   }
 }
 
 /**
- * 初始化应用
+ * Initialize application
  */
 async function initializeApp() {
   try {
-    // 初始化基础组件
+    // Initialize basic components
     store = new Store();
     macTools = new MacTools();
     
-    // 创建应用管理器
+    // Create app manager
     appManager = new AppManager();
     
-    // 创建主窗口
+    // Create main window
     createWindow();
     
-    // 初始化应用管理器（传入主窗口引用）
+    // Initialize app manager (pass main window reference)
     await appManager.initialize({
       logging: {
         level: 'info',
@@ -129,36 +129,36 @@ async function initializeApp() {
       },
       configDir: path.join(__dirname, '../../config'),
       macTools: macTools,
-      mainWindow: mainWindow, // 传入主窗口引用
-      resultWindowManager: null // 稍后设置
+      mainWindow: mainWindow, // Pass main window reference
+      resultWindowManager: null // Set later
     });
 
     const logger = appManager.getComponent('logger');
-    logger.log('应用管理器初始化完成');
+    logger.log('App manager initialized');
     
-    // 设置IPC和结果窗口管理器
+    // Set up IPC and result window manager
     const setupIPC = require('./ipc');
     resultWindowManager = setupIPC(mainWindow, appManager);
     
-    // 更新应用管理器中的结果窗口管理器引用
+    // Update result window manager reference in app manager
     const pluginProcessPool = appManager.getComponent('pluginProcessPool');
     if (pluginProcessPool && resultWindowManager) {
       pluginProcessPool.resultWindowManager = resultWindowManager;
     }
     
-    // 注册全局快捷键
+    // Register global shortcuts
     registerGlobalShortcuts();
     
-    logger.log('应用启动完成');
+    logger.log('Application started');
     
   } catch (error) {
-    console.error('应用初始化失败:', error);
+    console.error('Application initialization failed:', error);
     app.quit();
   }
 }
 
 /**
- * 安全操作窗口的辅助函数
+ * Helper function for safe window operations
  */
 function safeWindowOperation(operation) {
   if (mainWindow && !mainWindow.isDestroyed()) {
@@ -178,7 +178,7 @@ function safeMinimizeMainWindow() {
   safeWindowOperation(() => mainWindow.minimize());
 }
 
-// Electron 应用事件处理
+// Electron app event handling
 app.whenReady().then(initializeApp);
 
 app.on('window-all-closed', () => {
@@ -195,21 +195,21 @@ app.on('activate', () => {
 
 app.on('before-quit', async () => {
   try {
-    // 注销全局快捷键
+    // Unregister all global shortcuts
     globalShortcut.unregisterAll();
     
-    // 销毁应用管理器
+    // Destroy app manager
     if (appManager) {
       await appManager.destroy();
     }
     
-    console.log('应用已安全退出');
+    console.log('Application exited safely');
   } catch (error) {
-    console.error('应用退出时发生错误:', error);
+    console.error('Error occurred during application exit:', error);
   }
 });
 
-// 导出全局变量供其他模块使用
+// Export global variables for use in other modules
 module.exports = {
   mainWindow: () => mainWindow,
   appManager: () => appManager,

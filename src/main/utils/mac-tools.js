@@ -19,121 +19,121 @@ class MacTools {
   }
 
   /**
-   * 触发Mac系统的区域截图功能
-   * @returns {Promise<Buffer>} 截图的buffer数据
+   * Trigger Mac system region screenshot
+   * @returns {Promise<Buffer>} Screenshot buffer data
    */
   async captureScreenRegion() {
     try {
-      // 生成临时文件名
+      // Generate temp file name
       const timestamp = Date.now();
       const tempFile = path.join(this.tempDir, `screenshot-${timestamp}.png`);
       
-      // 使用Mac系统的screencapture命令进行区域截图
-      // -i 表示交互式选择区域
-      // -x 表示不播放快门声音
+      // Use Mac's screencapture command for region screenshot
+      // -i means interactive region selection
+      // -x means no shutter sound
       const command = `screencapture -i -x "${tempFile}"`;
       
-      console.log('开始区域截图...');
+      console.log('Starting region screenshot...');
       await execAsync(command);
       
-      // 检查文件是否存在
+      // Check if file exists
       if (!fs.existsSync(tempFile)) {
-        throw new Error('截图失败：用户可能取消了截图操作');
+        throw new Error('Screenshot failed: User may have canceled the screenshot operation');
       }
       
-      // 读取文件并转换为Buffer
+      // Read file and convert to Buffer
       const imageBuffer = fs.readFileSync(tempFile);
       
-      // 删除临时文件
+      // Delete temp file
       fs.unlinkSync(tempFile);
       
-      console.log('区域截图完成');
+      console.log('Region screenshot completed');
       return imageBuffer;
     } catch (error) {
-      console.error('区域截图失败:', error);
+      console.error('Region screenshot failed:', error);
       throw error;
     }
   }
 
   /**
-   * 使用Mac系统的OCR功能识别图片文字
-   * @param {Buffer} imageBuffer - 图片buffer数据
-   * @returns {Promise<string>} OCR识别结果
+   * Use Mac system's OCR to recognize text in image
+   * @param {Buffer} imageBuffer - Image buffer data
+   * @returns {Promise<string>} OCR result
    */
   async performOCR(imageBuffer) {
     try {
-      // 生成临时文件
+      // Generate temp file
       const timestamp = Date.now();
       const tempFile = path.join(this.tempDir, `ocr-${timestamp}.png`);
       
-      // 将buffer写入临时文件
+      // Write buffer to temp file
       fs.writeFileSync(tempFile, imageBuffer);
       
-      // 先尝试Mac原生OCR，再降级到Tesseract
+      // Try Mac native OCR first, then fallback to Tesseract
       try {
-        // 首先尝试使用Mac系统的OCR（如果可用）
+        // First try using Mac system OCR (if available)
         const result = await this.useMacOCR(tempFile);
         fs.unlinkSync(tempFile);
         return result;
       } catch (macError) {
-        console.log('Mac系统OCR不可用，尝试本地Tesseract');
+        console.log('Mac system OCR not available, trying local Tesseract');
         try {
-          // 最后尝试使用本地Tesseract
+          // Finally try using local Tesseract
           const result = await this.useLocalTesseract(tempFile);
           fs.unlinkSync(tempFile);
           return result;
         } catch (tesseractError) {
           fs.unlinkSync(tempFile);
-          throw new Error('所有OCR服务都不可用');
+          throw new Error('All OCR services are unavailable');
         }
       }
     } catch (error) {
-      console.error('OCR识别失败:', error);
+      console.error('OCR recognition failed:', error);
       throw error;
     }
   }
 
   /**
-   * 使用Mac系统的OCR功能
-   * @param {string} imagePath - 图片路径
-   * @returns {Promise<string>} OCR结果
+   * Use Mac system's OCR
+   * @param {string} imagePath - Image path
+   * @returns {Promise<string>} OCR result
    */
   async useMacOCR(imagePath) {
     try {
-      // 使用Mac系统的vision命令（如果可用）
-      // 注意：这个命令可能不是所有Mac系统都支持
+      // Use Mac's vision command (if available)
+      // Note: This command may not be supported on all Mac systems
       const command = `vision -i "${imagePath}" -o -`;
       const { stdout } = await execAsync(command);
       return stdout.trim();
     } catch (error) {
-      throw new Error('Mac系统OCR不可用');
+      throw new Error('Mac system OCR not available');
     }
   }
 
   /**
-   * 使用本地Tesseract进行OCR识别
-   * @param {string} imagePath - 图片路径
-   * @returns {Promise<string>} OCR结果
+   * Use local Tesseract for OCR
+   * @param {string} imagePath - Image path
+   * @returns {Promise<string>} OCR result
    */
   async useLocalTesseract(imagePath) {
     try {
-      // 检查tesseract是否安装
+      // Check if tesseract is installed
       await execAsync('which tesseract');
       
-      // 使用tesseract进行OCR识别
-      // -l chi_sim+eng 表示使用中文简体和英文
+      // Use tesseract for OCR
+      // -l chi_sim+eng means use Simplified Chinese and English
       const command = `tesseract "${imagePath}" stdout -l chi_sim+eng`;
       const { stdout } = await execAsync(command);
       
       return stdout.trim();
     } catch (error) {
-      console.error('本地Tesseract调用失败:', error);
-      throw new Error('本地Tesseract不可用，请安装tesseract-ocr');
+      console.error('Local Tesseract call failed:', error);
+      throw new Error('Local Tesseract not available, please install tesseract-ocr');
     }
   }
 
   /**
-   * 清理临时文件
+   * Clean up temporary files
    */
   cleanup() {
     try {
@@ -145,7 +145,7 @@ class MacTools {
         });
       }
     } catch (error) {
-      console.error('清理临时文件失败:', error);
+      console.error('Failed to clean up temporary files:', error);
     }
   }
 }

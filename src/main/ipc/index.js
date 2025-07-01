@@ -1,14 +1,14 @@
 const { ipcMain, dialog, shell, BrowserWindow, app } = require('electron');
 const path = require('path');
 
-// 全局变量存储结果窗口
+// Global variable to store result window
 let resultWindow = null;
 let pluginsDir = null;
 
 /**
- * 设置IPC通信
- * @param {BrowserWindow} mainWindow 主窗口
- * @param {AppManager} appManager 应用管理器
+ * Set up IPC communication
+ * @param {BrowserWindow} mainWindow Main window
+ * @param {AppManager} appManager Application manager
  */
 function setupIPC(mainWindow, appManager) {
   const logger = appManager.getComponent('logger');
@@ -16,34 +16,34 @@ function setupIPC(mainWindow, appManager) {
   const performanceMonitor = appManager.getComponent('performanceMonitor');
   const errorHandler = appManager.getComponent('errorHandler');
   
-  // 设置插件目录路径
+  // Set plugin directory path
   pluginsDir = path.join(__dirname, '..', '..', '..', 'plugins');
   
-  logger.log('IPC通信模块初始化开始');
+  logger.log('IPC communication module initialization started');
 
-  // 插件相关IPC处理
+  // Plugin-related IPC handling
   setupPluginIPC(mainWindow, appManager);
   
-  // 窗口控制IPC处理
+  // Window control IPC handling
   setupWindowIPC(mainWindow, appManager);
   
-  // 文件操作IPC处理
+  // File operation IPC handling
   setupFileIPC(mainWindow, appManager);
   
-  // 系统功能IPC处理
+  // System feature IPC handling
   setupSystemIPC(mainWindow, appManager);
   
-  // 结果窗口管理
+  // Result window management
   setupResultWindowIPC(mainWindow, appManager);
 
-  logger.log('IPC通信模块初始化完成');
+  logger.log('IPC communication module initialization completed');
   
-  // 返回结果窗口管理器
+  // Return result window manager
   return { showResultWindow, showHtmlWindow };
 }
 
 /**
- * 设置插件相关IPC处理
+ * Set up plugin-related IPC handling
  */
 function setupPluginIPC(mainWindow, appManager) {
   const logger = appManager.getComponent('logger');
@@ -51,7 +51,7 @@ function setupPluginIPC(mainWindow, appManager) {
   const errorHandler = appManager.getComponent('errorHandler');
   const pluginManager = appManager.getComponent('pluginManager')
 
-  // 获取插件列表
+  // Get plugin list
   ipcMain.handle('get-plugins', async () => {
     try {
       performanceMonitor.startTimer('get_plugins');
@@ -66,14 +66,14 @@ function setupPluginIPC(mainWindow, appManager) {
     }
   });
 
-  // 执行插件
+  // Execute plugin
   ipcMain.handle('execute-plugin', async (event, pluginName, ...args) => {
     try {
       performanceMonitor.startTimer('execute_plugin', pluginName);
-      // 在执行插件前隐藏主窗口
+      // Before executing the plugin, hide the main window
       if (mainWindow && !mainWindow.isDestroyed()) {
         mainWindow.hide();
-        logger.log(`执行插件 ${pluginName} 前隐藏主窗口`);
+        logger.log(`Executing plugin ${pluginName} before hiding main window`);
       }
       
       const result = await pluginManager.executePlugin(pluginName, 'default', ...args);
@@ -83,7 +83,7 @@ function setupPluginIPC(mainWindow, appManager) {
       return {
         success: true,
         result: result,
-        message: `插件 ${pluginName} 执行成功`
+        message: `Plugin ${pluginName} executed successfully`
       };
     } catch (error) {
       performanceMonitor.endTimer('execute_plugin', pluginName, { success: false, error: error.message });
@@ -101,11 +101,11 @@ function setupPluginIPC(mainWindow, appManager) {
     }
   });
 
-  // 插件进程管理
+  // Plugin process management
   ipcMain.handle('start-plugin', async (event, pluginName) => {
     try {
       await pluginManager.startPlugin(pluginName);
-      return { success: true, message: `插件 ${pluginName} 启动成功` };
+      return { success: true, message: `Plugin ${pluginName} started successfully` };
     } catch (error) {
       await errorHandler.handleError(error, { pluginName, operation: 'start_plugin' });
       return { success: false, message: error.message };
@@ -115,7 +115,7 @@ function setupPluginIPC(mainWindow, appManager) {
   ipcMain.handle('stop-plugin', async (event, pluginName) => {
     try {
       await pluginManager.stopPlugin(pluginName);
-      return { success: true, message: `插件 ${pluginName} 停止成功` };
+      return { success: true, message: `Plugin ${pluginName} stopped successfully` };
     } catch (error) {
       await errorHandler.handleError(error, { pluginName, operation: 'stop_plugin' });
       return { success: false, message: error.message };
@@ -135,7 +135,7 @@ function setupPluginIPC(mainWindow, appManager) {
 }
 
 /**
- * 设置窗口控制IPC处理
+ * Set up window control IPC handling
  */
 function setupWindowIPC(mainWindow, appManager) {
   const logger = appManager.getComponent('logger');
@@ -161,7 +161,7 @@ function setupWindowIPC(mainWindow, appManager) {
 }
 
 /**
- * 设置文件操作IPC处理
+ * Set up file operation IPC handling
  */
 function setupFileIPC(mainWindow, appManager) {
   const logger = appManager.getComponent('logger');
@@ -172,8 +172,8 @@ function setupFileIPC(mainWindow, appManager) {
       const result = await dialog.showOpenDialog(mainWindow, {
         properties: ['openFile'],
         filters: [
-          { name: '图片文件', extensions: ['jpg', 'jpeg', 'png', 'bmp', 'gif'] },
-          { name: '所有文件', extensions: ['*'] }
+          { name: 'Image files', extensions: ['jpg', 'jpeg', 'png', 'bmp', 'gif'] },
+          { name: 'All files', extensions: ['*'] }
         ],
         ...options
       });
@@ -197,11 +197,11 @@ function setupFileIPC(mainWindow, appManager) {
   ipcMain.handle('save-image', async (event, imageBase64) => {
     try {
       const result = await dialog.showSaveDialog(resultWindow || mainWindow, {
-        title: '保存截图',
+        title: 'Save screenshot',
         defaultPath: `screenshot_${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.png`,
         filters: [
-          { name: 'PNG图片', extensions: ['png'] },
-          { name: '所有文件', extensions: ['*'] }
+          { name: 'PNG image', extensions: ['png'] },
+          { name: 'All files', extensions: ['*'] }
         ]
       });
 
@@ -212,14 +212,14 @@ function setupFileIPC(mainWindow, appManager) {
         
         return {
           success: true,
-          message: '图片保存成功',
+          message: 'Image saved successfully',
           filePath: result.filePath
         };
       }
       
       return {
         success: false,
-        message: '用户取消保存'
+        message: 'User canceled saving'
       };
     } catch (error) {
       await errorHandler.handleError(error, { operation: 'save_image' });
@@ -232,57 +232,57 @@ function setupFileIPC(mainWindow, appManager) {
 }
 
 /**
- * 设置系统功能IPC处理
+ * Set up system feature IPC handling
  */
 function setupSystemIPC(mainWindow, appManager) {
   const performanceMonitor = appManager.getComponent('performanceMonitor');
   const errorHandler = appManager.getComponent('errorHandler');
   const configManager = appManager.getComponent('configManager');
 
-  // 获取应用状态
+  // Get application status
   ipcMain.handle('get-app-status', () => {
     return appManager.getAppStatus();
   });
 
-  // 获取性能统计
+  // Get performance statistics
   ipcMain.handle('get-performance-stats', () => {
     return performanceMonitor.getPerformanceStats();
   });
 
-  // 获取错误统计
+  // Get error statistics
   ipcMain.handle('get-error-stats', () => {
     return errorHandler.getErrorStats();
   });
 
-  // 获取配置信息
+  // Get configuration information
   ipcMain.handle('get-config', (event, configName) => {
     return configManager.getConfig(configName);
   });
 
-  // 设置配置
+  // Set configuration
   ipcMain.handle('set-config', async (event, configName, config) => {
     try {
       configManager.setConfig(configName, config);
-      return { success: true, message: '配置更新成功' };
+      return { success: true, message: 'Configuration updated successfully' };
     } catch (error) {
       await errorHandler.handleError(error, { operation: 'set_config', configName });
       return { success: false, message: error.message };
     }
   });
 
-  // 重新截图
+  // Redo screenshot
   ipcMain.handle('new-screenshot', async () => {
     try {
-      // 关闭当前结果窗口
+      // Close current result window
       if (resultWindow && !resultWindow.isDestroyed()) {
         resultWindow.close();
       }
-      // 重新执行截图OCR
+      // Redo screenshot OCR
       const macTools = require('../utils/mac-tools');
       const macToolsInstance = new macTools();
       const imageBuffer = await macToolsInstance.captureScreenRegion();
       const ocrResult = await macToolsInstance.performOCR(imageBuffer);
-      // 显示新的结果窗口
+      // Show new result window
       showResultWindow(
         imageBuffer.toString('base64'),
         ocrResult,
@@ -290,7 +290,7 @@ function setupSystemIPC(mainWindow, appManager) {
       );
       return {
         success: true,
-        message: '重新截图成功'
+        message: 'Screenshot redone successfully'
       };
     } catch (error) {
       await errorHandler.handleError(error, { operation: 'new_screenshot' });
@@ -301,7 +301,7 @@ function setupSystemIPC(mainWindow, appManager) {
     }
   });
 
-  // 新增：插件专用截图+OCR
+  // New: Plugin-specific screenshot + OCR
   const MacTools = require('../utils/mac-tools');
   ipcMain.handle('captureAndOCR', async () => {
     try {
@@ -317,7 +317,7 @@ function setupSystemIPC(mainWindow, appManager) {
     }
   });
 
-  // 关闭结果窗口
+  // Close result window
   ipcMain.handle('close-result-window', () => {
     if (resultWindow && !resultWindow.isDestroyed()) {
       resultWindow.close();
@@ -327,14 +327,14 @@ function setupSystemIPC(mainWindow, appManager) {
 }
 
 /**
- * 设置结果窗口管理IPC
+ * Set up result window management IPC
  */
 function setupResultWindowIPC(mainWindow, appManager) {
   const logger = appManager.getComponent('logger');
   const errorHandler = appManager.getComponent('errorHandler');
 
   /**
-   * 创建结果展示窗口
+   * Create result display window
    */
   function createResultWindow(pluginName = null, pluginConfig = null) {
     if (resultWindow && !resultWindow.isDestroyed()) {
@@ -342,13 +342,13 @@ function setupResultWindowIPC(mainWindow, appManager) {
       return resultWindow;
     }
 
-    // 确定窗口配置
+    // Determine window configuration
     let windowConfig = {
       width: 1200,
       height: 800,
       minWidth: 800,
       minHeight: 600,
-      title: '结果 - oTools',
+      title: 'Results - oTools',
       icon: path.join(__dirname, '../../renderer/assets/icon.png'),
       webPreferences: {
         nodeIntegration: false,
@@ -362,7 +362,7 @@ function setupResultWindowIPC(mainWindow, appManager) {
       closable: true
     };
 
-    // 如果提供了插件配置，使用插件的UI配置
+    // If plugin configuration is provided, use plugin's UI configuration
     if (pluginConfig && pluginConfig.ui) {
       windowConfig = {
         ...windowConfig,
@@ -370,37 +370,37 @@ function setupResultWindowIPC(mainWindow, appManager) {
         height: pluginConfig.ui.height || 800,
         minWidth: pluginConfig.ui.minWidth || 800,
         minHeight: pluginConfig.ui.minHeight || 600,
-        title: pluginConfig.ui.title || '结果 - oTools'
+        title: pluginConfig.ui.title || 'Results - oTools'
       };
     }
 
     resultWindow = new BrowserWindow(windowConfig);
 
-    // 确定要加载的HTML文件路径
+    // Determine the HTML file path to load
     let htmlPath;
     if (pluginConfig && pluginConfig.ui && pluginConfig.ui.html) {
-      // 从插件目录加载HTML文件
+      // Load HTML file from plugin directory
       htmlPath = path.join(pluginsDir, pluginName, pluginConfig.ui.html);
     }
 
-    // 检查HTML文件是否存在
+    // Check if HTML file exists
     if (!require('fs').existsSync(htmlPath)) {
-      logger.log(`HTML文件不存在: ${htmlPath}`, 'warn');
-      // 回退到默认页面
+      logger.log(`HTML file does not exist: ${htmlPath}`, 'warn');
+      // Fallback to default page
       htmlPath = path.join(__dirname, '../../renderer/result-viewer.html');
     }
 
-    logger.log(`加载结果窗口HTML: ${htmlPath}`);
+    logger.log(`Loading result window HTML: ${htmlPath}`);
 
-    // 加载结果展示页面
+    // Load result display page
     resultWindow.loadFile(htmlPath);
 
-    // 窗口准备好后显示
+    // Show window after it's ready
     resultWindow.once('ready-to-show', () => {
       resultWindow.show();
     });
 
-    // 窗口关闭时清理引用
+    // Clean up references when window is closed
     resultWindow.on('closed', () => {
       resultWindow = null;
     });
@@ -409,13 +409,13 @@ function setupResultWindowIPC(mainWindow, appManager) {
   }
 
   /**
-   * 显示结果窗口（供外部调用）
+   * Show result window (for external use)
    */
   function showResultWindow(imageData, text, pluginName = null, pluginConfig = null) {
     try {
       const window = createResultWindow(pluginName, pluginConfig);
       
-      // 等待窗口加载完成后发送数据
+      // Wait for window to load before sending data
       window.webContents.once('did-finish-load', () => {
         window.webContents.send('result-data', {
           imageData: imageData,
@@ -425,7 +425,7 @@ function setupResultWindowIPC(mainWindow, appManager) {
         });
       });
       
-      logger.log(`结果窗口已显示: ${pluginName || 'default'}`);
+      logger.log(`Result window displayed: ${pluginName || 'default'}`);
     } catch (error) {
       errorHandler.handleError(error, { 
         operation: 'show_result_window', 
@@ -435,18 +435,18 @@ function setupResultWindowIPC(mainWindow, appManager) {
   }
 
   /**
-   * 通用显示HTML窗口（供插件调用）
+   * Generic show HTML window (for plugins to use)
    */
   function showHtmlWindow(htmlPath, data = {}, windowOptions = {}) {
     try {
       const BrowserWindow = require('electron').BrowserWindow;
       const fs = require('fs');
       let fullHtmlPath = htmlPath;
-      // 如果不是绝对路径，则从插件目录查找
+      // If not absolute path, search for htmlPath in plugin directories
       if (!path.isAbsolute(htmlPath)) {
-        // 默认插件目录
+        // Default plugin directory
         const pluginsDir = path.join(__dirname, '../../plugins');
-        // 尝试查找所有插件目录下的 htmlPath
+        // Try to find htmlPath in all plugin directories
         const pluginDirs = fs.readdirSync(pluginsDir).filter(f => 
           fs.statSync(path.join(pluginsDir, f)).isDirectory()
         );
@@ -465,7 +465,7 @@ function setupResultWindowIPC(mainWindow, appManager) {
         height: windowOptions.height || 800,
         minWidth: windowOptions.minWidth || 800,
         minHeight: windowOptions.minHeight || 600,
-        title: windowOptions.title || '插件窗口',
+        title: windowOptions.title || 'Plugin window',
         webPreferences: {
           nodeIntegration: true,
           contextIsolation: false
@@ -483,10 +483,10 @@ function setupResultWindowIPC(mainWindow, appManager) {
       });
       
       win.on('closed', () => {
-        // 可选：清理引用
+        // Optional: Clean up references
       });
       
-      logger.log(`HTML窗口已显示: ${fullHtmlPath}`);
+      logger.log(`HTML window displayed: ${fullHtmlPath}`);
       return win;
     } catch (error) {
       errorHandler.handleError(error, { 
@@ -496,7 +496,7 @@ function setupResultWindowIPC(mainWindow, appManager) {
     }
   }
 
-  // 将函数绑定到全局作用域
+  // Bind functions to global scope
   global.showResultWindow = showResultWindow;
   global.showHtmlWindow = showHtmlWindow;
 }

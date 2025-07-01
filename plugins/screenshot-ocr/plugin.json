@@ -1,7 +1,7 @@
 {
   "name": "screenshot-ocr",
   "version": "1.0.0",
-  "description": "截图OCR识别插件",
+  "description": "Screenshot OCR recognition plugin",
   "author": "oTools",
   "main": "main.js",
   "icon": "fas fa-camera",
@@ -9,7 +9,7 @@
   "type": "ocr",
   "ui": {
     "html": "result-viewer.html",
-    "title": "截图OCR结果",
+    "title": "Screenshot OCR Result",
     "width": 900,
     "height": 800,
     "minWidth": 800,
@@ -18,7 +18,7 @@
   "actions": [
     {
       "name": "capture_and_ocr",
-      "description": "截图并OCR识别",
+      "description": "Screenshot and OCR recognition",
       "default": true
     }
   ]

@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>截图OCR结果 - oTools</title>
+    <title>Screenshot OCR Result - oTools</title>
     <style>
         * {
             margin: 0;
@@ -209,53 +209,53 @@
 </head>
 <body>
     <div class="container">
-        <!-- 左侧图片区域 -->
+        <!-- Left image section -->
         <div class="image-section">
             <div class="section-header plugin-header">
                 <div>
-                    <div class="plugin-title">截图预览</div>
-                    <div class="plugin-version">OCR识别插件 v1.0.0</div>
+                    <div class="plugin-title">Screenshot Preview</div>
+                    <div class="plugin-version">OCR Plugin v1.0.0</div>
                 </div>
                 <div class="action-buttons">
-                    <button class="btn btn-secondary" onclick="saveImage()">保存图片</button>
-                    <button class="btn btn-secondary" onclick="copyImage()">复制图片</button>
+                    <button class="btn btn-secondary" onclick="saveImage()">Save Image</button>
+                    <button class="btn btn-secondary" onclick="copyImage()">Copy Image</button>
                 </div>
             </div>
             <div class="section-content">
                 <div class="image-container" id="imageContainer">
                     <div class="loading" id="imageLoading">
                         <div class="spinner"></div>
-                        加载图片中...
+                        Loading image...
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- 右侧文字区域 -->
+        <!-- Right text section -->
         <div class="text-section">
             <div class="section-header">
-                <span>识别内容</span>
+                <span>Recognized Content</span>
                 <div class="action-buttons">
-                    <button class="btn btn-primary" onclick="copyText()">复制文字</button>
-                    <button class="btn btn-secondary" onclick="clearText()">清空</button>
+                    <button class="btn btn-primary" onclick="copyText()">Copy Text</button>
+                    <button class="btn btn-secondary" onclick="clearText()">Clear</button>
                 </div>
             </div>
             <div class="section-content">
                 <div id="errorContainer"></div>
                 <div class="text-content empty" id="textContent">
-                    等待OCR识别结果...
+                    Waiting for OCR result...
                 </div>
                 <div class="action-buttons">
-                    <button class="btn btn-primary" onclick="newScreenshot()">重新截图</button>
-                    <button class="btn btn-secondary" onclick="closeWindow()">关闭</button>
+                    <button class="btn btn-primary" onclick="newScreenshot()">New Screenshot</button>
+                    <button class="btn btn-secondary" onclick="closeWindow()">Close</button>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- 状态栏 -->
+    <!-- Status bar -->
     <div class="status-bar">
-        <span id="statusText">准备就绪</span>
+        <span id="statusText">Ready</span>
         <span id="timestamp"></span>
     </div>
 

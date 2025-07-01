@@ -1,8 +1,8 @@
 const BaseManager = require('./base-manager');
 
 /**
- * 性能监控器
- * 监控应用性能指标，识别性能瓶颈
+ * Performance Monitor
+ * Monitor application performance metrics, identify performance bottlenecks
  */
 class PerformanceMonitor extends BaseManager {
   constructor() {
@@ -10,7 +10,7 @@ class PerformanceMonitor extends BaseManager {
     this.metrics = new Map();
     this.startTime = Date.now();
     this.thresholds = {
-      slowOperation: 5000,    // 5秒
+      slowOperation: 5000,    // 5 seconds
       memoryWarning: 100 * 1024 * 1024,  // 100MB
       cpuWarning: 80          // 80%
     };
@@ -19,19 +19,19 @@ class PerformanceMonitor extends BaseManager {
   }
 
   /**
-   * 初始化性能监控器
+   * Initialize Performance Monitor
    */
   async onInitialize(options) {
     this.thresholds = { ...this.thresholds, ...options.thresholds };
     
-    // 启动定期监控
+    // Start periodic monitoring
     this.startPeriodicMonitoring();
     
-    this.log('性能监控器初始化完成');
+    this.log('Performance Monitor initialization completed');
   }
 
   /**
-   * 销毁性能监控器
+   * Destroy Performance Monitor
    */
   async onDestroy() {
     if (this.monitoringInterval) {
@@ -39,13 +39,13 @@ class PerformanceMonitor extends BaseManager {
       this.monitoringInterval = null;
     }
     
-    this.log('性能监控器已销毁');
+    this.log('Performance Monitor destroyed');
   }
 
   /**
-   * 开始计时
-   * @param {string} operation 操作名称
-   * @param {string} pluginName 插件名称（可选）
+   * Start Timer
+   * @param {string} operation Operation name
+   * @param {string} pluginName Plugin name (optional)
    */
   startTimer(operation, pluginName = null) {
     const key = pluginName ? `${pluginName}:${operation}` : operation;
@@ -58,10 +58,10 @@ class PerformanceMonitor extends BaseManager {
   }
 
   /**
-   * 结束计时
-   * @param {string} operation 操作名称
-   * @param {string} pluginName 插件名称（可选）
-   * @param {Object} data 附加数据
+   * End Timer
+   * @param {string} operation Operation name
+   * @param {string} pluginName Plugin name (optional)
+   * @param {Object} data Additional data
    */
   endTimer(operation, pluginName = null, data = {}) {
     const key = pluginName ? `${pluginName}:${operation}` : operation;
@@ -73,41 +73,41 @@ class PerformanceMonitor extends BaseManager {
       metric.status = 'completed';
       metric.data = data;
       
-      // 记录性能数据
+      // Record performance data
       this.logPerformance(metric);
       
-      // 检查性能阈值
+      // Check performance thresholds
       this.checkPerformanceThresholds(metric);
       
-      // 清理旧的指标数据
+      // Clean up old metric data
       this.cleanupOldMetrics();
     }
   }
 
   /**
-   * 记录性能数据
-   * @param {Object} metric 性能指标
+   * Record performance data
+   * @param {Object} metric Performance metric
    */
   logPerformance(metric) {
     const { operation, duration, pluginName } = metric;
     const pluginInfo = pluginName ? `[${pluginName}]` : '';
     
-    this.log(`${pluginInfo} ${operation} 耗时 ${duration.toFixed(2)}ms`, 'debug');
+    this.log(`${pluginInfo} ${operation} took ${duration.toFixed(2)}ms`, 'debug');
   }
 
   /**
-   * 检查性能阈值
-   * @param {Object} metric 性能指标
+   * Check performance thresholds
+   * @param {Object} metric Performance metric
    */
   checkPerformanceThresholds(metric) {
     const { operation, duration, pluginName } = metric;
     
-    // 检查慢操作
+    // Check slow operation
     if (duration > this.thresholds.slowOperation) {
       this.alertSlowOperation(metric);
     }
     
-    // 检查内存使用
+    // Check memory usage
     const memoryUsage = process.memoryUsage();
     if (memoryUsage.heapUsed > this.thresholds.memoryWarning) {
       this.alertHighMemoryUsage(memoryUsage);
@@ -115,14 +115,14 @@ class PerformanceMonitor extends BaseManager {
   }
 
   /**
-   * 警告慢操作
-   * @param {Object} metric 性能指标
+   * Alert slow operation
+   * @param {Object} metric Performance metric
    */
   alertSlowOperation(metric) {
     const alert = {
       type: 'slow_operation',
       timestamp: new Date().toISOString(),
-      message: `操作执行缓慢: ${metric.operation}`,
+      message: `Slow operation: ${metric.operation}`,
       data: {
         operation: metric.operation,
         duration: metric.duration,
@@ -132,21 +132,21 @@ class PerformanceMonitor extends BaseManager {
     };
     
     this.alerts.push(alert);
-    this.log(`性能警告: ${alert.message} (${metric.duration.toFixed(2)}ms)`, 'warn');
+    this.log(`Performance warning: ${alert.message} (${metric.duration.toFixed(2)}ms)`, 'warn');
     
-    // 通知其他组件
+    // Notify other components
     this.notifyPerformanceAlert(alert);
   }
 
   /**
-   * 警告高内存使用
-   * @param {Object} memoryUsage 内存使用情况
+   * Alert high memory usage
+   * @param {Object} memoryUsage Memory usage
    */
   alertHighMemoryUsage(memoryUsage) {
     const alert = {
       type: 'high_memory',
       timestamp: new Date().toISOString(),
-      message: '内存使用过高',
+      message: 'High memory usage',
       data: {
         heapUsed: memoryUsage.heapUsed,
         heapTotal: memoryUsage.heapTotal,
@@ -156,44 +156,44 @@ class PerformanceMonitor extends BaseManager {
     };
     
     this.alerts.push(alert);
-    this.log(`内存警告: ${alert.message} (${(memoryUsage.heapUsed / 1024 / 1024).toFixed(2)}MB)`, 'warn');
+    this.log(`Memory warning: ${alert.message} (${(memoryUsage.heapUsed / 1024 / 1024).toFixed(2)}MB)`, 'warn');
     
-    // 通知其他组件
+    // Notify other components
     this.notifyPerformanceAlert(alert);
   }
 
   /**
-   * 开始定期监控
+   * Start periodic monitoring
    */
   startPeriodicMonitoring() {
     this.monitoringInterval = setInterval(() => {
       this.checkSystemResources();
       this.cleanupOldAlerts();
-    }, 30000); // 每30秒检查一次
+    }, 30000); // Check every 30 seconds
   }
 
   /**
-   * 检查系统资源
+   * Check system resources
    */
   checkSystemResources() {
     const memoryUsage = process.memoryUsage();
     const uptime = process.uptime();
     
-    // 记录系统资源使用情况
-    this.log(`系统资源 - 内存: ${(memoryUsage.heapUsed / 1024 / 1024).toFixed(2)}MB, 运行时间: ${uptime.toFixed(0)}s`, 'debug');
+    // Record system resource usage
+    this.log(`System resources - Memory: ${(memoryUsage.heapUsed / 1024 / 1024).toFixed(2)}MB, Uptime: ${uptime.toFixed(0)}s`, 'debug');
     
-    // 检查内存使用
+    // Check memory usage
     if (memoryUsage.heapUsed > this.thresholds.memoryWarning) {
       this.alertHighMemoryUsage(memoryUsage);
     }
   }
 
   /**
-   * 清理旧的指标数据
+   * Clean up old metric data
    */
   cleanupOldMetrics() {
     const now = Date.now();
-    const maxAge = 5 * 60 * 1000; // 5分钟
+    const maxAge = 5 * 60 * 1000; // 5 minutes
     
     for (const [key, metric] of this.metrics.entries()) {
       if (metric.endTime && (now - metric.endTime) > maxAge) {
@@ -203,11 +203,11 @@ class PerformanceMonitor extends BaseManager {
   }
 
   /**
-   * 清理旧的警告
+   * Clean up old alerts
    */
   cleanupOldAlerts() {
     const now = Date.now();
-    const maxAge = 60 * 60 * 1000; // 1小时
+    const maxAge = 60 * 60 * 1000; // 1 hour
     
     this.alerts = this.alerts.filter(alert => {
       return (now - new Date(alert.timestamp).getTime()) < maxAge;
@@ -215,17 +215,17 @@ class PerformanceMonitor extends BaseManager {
   }
 
   /**
-   * 通知性能警告
-   * @param {Object} alert 警告信息
+   * Notify performance alert
+   * @param {Object} alert Alert information
    */
   notifyPerformanceAlert(alert) {
-    // 这里可以通过事件系统通知其他组件
-    // 暂时使用简单的日志记录
-    this.log(`性能警告通知: ${alert.type}`, 'warn');
+    // Here you can notify other components via event system
+    // For now, using simple log recording
+    this.log(`Performance warning notification: ${alert.type}`, 'warn');
   }
 
   /**
-   * 获取性能统计信息
+   * Get performance statistics
    */
   getPerformanceStats() {
     const stats = {
@@ -233,10 +233,10 @@ class PerformanceMonitor extends BaseManager {
       memoryUsage: process.memoryUsage(),
       metricsCount: this.metrics.size,
       alertsCount: this.alerts.length,
-      recentAlerts: this.alerts.slice(-5) // 最近5个警告
+      recentAlerts: this.alerts.slice(-5) // Recent 5 alerts
     };
     
-    // 计算平均响应时间
+    // Calculate average response time
     let totalDuration = 0;
     let completedCount = 0;
     
@@ -255,7 +255,7 @@ class PerformanceMonitor extends BaseManager {
   }
 
   /**
-   * 获取慢操作列表
+   * Get slow operation list
    */
   getSlowOperations(limit = 10) {
     const slowOperations = [];
@@ -266,32 +266,32 @@ class PerformanceMonitor extends BaseManager {
       }
     }
     
-    // 按持续时间排序
+    // Sort by duration
     slowOperations.sort((a, b) => b.duration - a.duration);
     
     return slowOperations.slice(0, limit);
   }
 
   /**
-   * 重置性能数据
+   * Reset performance data
    */
   resetMetrics() {
     this.metrics.clear();
     this.alerts = [];
-    this.log('性能数据已重置');
+    this.log('Performance data reset');
   }
 
   /**
-   * 设置性能阈值
-   * @param {Object} thresholds 新的阈值
+   * Set performance thresholds
+   * @param {Object} thresholds New thresholds
    */
   setThresholds(thresholds) {
     this.thresholds = { ...this.thresholds, ...thresholds };
-    this.log('性能阈值已更新');
+    this.log('Performance thresholds updated');
   }
 
   /**
-   * 获取监控状态
+   * Get monitoring status
    */
   getStatus() {
     const baseStatus = super.getStatus();
