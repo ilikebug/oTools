@@ -1,6 +1,5 @@
 const { ipcMain, dialog, shell, BrowserWindow, app } = require('electron');
 const path = require('path');
-const { MessageBuilder, MessageType } = require('../plugin-manager/message-protocol');
 
 // 全局变量存储结果窗口
 let resultWindow = null;
@@ -125,6 +124,13 @@ function setupPluginIPC(mainWindow, appManager) {
 
   ipcMain.handle('get-running-plugins', () => {
     return pluginManager.getPoolStatus();
+  });
+
+  ipcMain.handle('show-plugin-window', (event) => {
+    const win = BrowserWindow.fromWebContents(event.sender);
+    if (win && !win.isVisible()) {
+      win.show();
+    }
   });
 }
 
@@ -271,21 +277,17 @@ function setupSystemIPC(mainWindow, appManager) {
       if (resultWindow && !resultWindow.isDestroyed()) {
         resultWindow.close();
       }
-      
       // 重新执行截图OCR
       const macTools = require('../utils/mac-tools');
       const macToolsInstance = new macTools();
-      
       const imageBuffer = await macToolsInstance.captureScreenRegion();
       const ocrResult = await macToolsInstance.performOCR(imageBuffer);
-      
       // 显示新的结果窗口
       showResultWindow(
         imageBuffer.toString('base64'),
         ocrResult,
         'screenshot-ocr'
       );
-      
       return {
         success: true,
         message: '重新截图成功'
@@ -296,6 +298,22 @@ function setupSystemIPC(mainWindow, appManager) {
         success: false,
         message: error.message
       };
+    }
+  });
+
+  // 新增：插件专用截图+OCR
+  const MacTools = require('../utils/mac-tools');
+  ipcMain.handle('captureAndOCR', async () => {
+    try {
+      const macTools = new MacTools();
+      const imageBuffer = await macTools.captureScreenRegion();
+      const ocrResult = await macTools.performOCR(imageBuffer);
+      return {
+        imageData: imageBuffer.toString('base64'),
+        text: ocrResult
+      };
+    } catch (error) {
+      return { imageData: null, text: '', error: error.message };
     }
   });
 

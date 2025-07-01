@@ -18,9 +18,6 @@ const PerformanceMonitor = require('./performance-monitor');
 // 错误处理
 const ErrorHandler = require('./error-handler');
 
-// 消息协议
-const MessageProtocol = require('../plugin-manager/message-protocol');
-
 // 应用管理器
 const { AppManager } = require('./app-manager');
 
@@ -40,9 +37,6 @@ module.exports = {
   
   // 错误处理
   ErrorHandler,
-  
-  // 消息协议
-  MessageProtocol,
   
   // 应用管理器
   AppManager

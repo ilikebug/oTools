@@ -4,7 +4,6 @@ const Logger = require('./logger');
 const ConfigManager = require('./config-manager');
 const PerformanceMonitor = require('./performance-monitor');
 const ErrorHandler = require('./error-handler');
-const { MessageBuilder, MessageHandler, MessageRouter } = require('../plugin-manager/message-protocol');
 const PluginProcessPool = require('../plugin-manager/process-pool');
 const PluginManager = require('../plugin-manager/manager');
 const { macTools } = require('../main');
@@ -21,9 +20,6 @@ class AppManager extends BaseManager {
     this.configManager = null;
     this.performanceMonitor = null;
     this.errorHandler = null;
-    this.messageBuilder = null;
-    this.messageHandler = null;
-    this.messageRouter = null;
     
     // 插件相关组件
     this.pluginProcessPool = null;
@@ -96,13 +92,6 @@ class AppManager extends BaseManager {
       });
       this.registerComponent('errorHandler', this.errorHandler);
       
-      // 5. 初始化消息协议组件
-      this.messageBuilder = new MessageBuilder();
-      this.messageHandler = new MessageHandler();
-      this.messageRouter = new MessageRouter();
-      this.registerComponent('messageBuilder', this.messageBuilder);
-      this.registerComponent('messageHandler', this.messageHandler);
-      this.registerComponent('messageRouter', this.messageRouter);
       
       // 6. 初始化插件进程池
       this.pluginProcessPool = new PluginProcessPool(this);

@@ -3,6 +3,7 @@ const path = require('node:path');
 const fs = require('fs');
 const chokidar = require('chokidar');
 const BaseManager = require('../core/base-manager');
+const PluginProcessPool = require('./process-pool');
 
 class PluginManager extends BaseManager {
   constructor(options = {}) {
@@ -24,7 +25,9 @@ class PluginManager extends BaseManager {
     this.mainWindow = null;
     this.resultWindowManager = null;
     this.macTools = null
-    this.pluginProcessPool = null
+    this.pluginProcessPool = new PluginProcessPool({
+      maxProcesses: 5
+    });
   }
 
   /**
@@ -36,7 +39,6 @@ class PluginManager extends BaseManager {
       
       this.mainWindow = options.mainWindow;
       this.resultWindowManager = options.resultWindowManager;
-      this.pluginProcessPool = options.pluginProcessPool;
 
       // 加载插件
       await this.loadPlugins();
@@ -74,66 +76,6 @@ class PluginManager extends BaseManager {
       await this.errorHandler.handleError(error, { 
         operation: 'plugin_manager_destroy' 
       });
-    }
-  }
-
-  /**
-   * 设置结果窗口管理器
-   */
-  setResultWindowManager(resultWindowManager) {
-    this.resultWindowManager = resultWindowManager;
-    this.logger.log('结果窗口管理器已设置');
-  }
-
-  /**
-   * 显示结果窗口
-   */
-  showResultWindow(imageData, text, pluginName = null) {
-    try {
-      if (this.resultWindowManager && this.resultWindowManager.showResultWindow) {
-        // 获取插件配置
-        let pluginConfig = null;
-        if (pluginName && this.plugins.has(pluginName)) {
-          pluginConfig = this.plugins.get(pluginName);
-        }
-        
-        this.resultWindowManager.showResultWindow(imageData, text, pluginName, pluginConfig);
-        this.logger.log(`结果窗口已显示: ${pluginName || 'default'}`);
-        return true;
-      }
-      
-      this.logger.log('结果窗口管理器未设置或不可用', 'warn');
-      return false;
-      
-    } catch (error) {
-      this.errorHandler.handleError(error, { 
-        operation: 'show_result_window', 
-        pluginName 
-      });
-      return false;
-    }
-  }
-
-  /**
-   * 通用显示HTML窗口
-   */
-  showHtmlWindow(htmlPath, data = {}, windowOptions = {}) {
-    try {
-      if (this.resultWindowManager && this.resultWindowManager.showHtmlWindow) {
-        this.resultWindowManager.showHtmlWindow(htmlPath, data, windowOptions);
-        this.logger.log(`HTML窗口已显示: ${htmlPath}`);
-        return true;
-      }
-      
-      this.logger.log('结果窗口管理器未设置或不可用', 'warn');
-      return false;
-      
-    } catch (error) {
-      this.errorHandler.handleError(error, { 
-        operation: 'show_html_window', 
-        htmlPath 
-      });
-      return false;
     }
   }
 
@@ -292,45 +234,8 @@ class PluginManager extends BaseManager {
    * 执行插件
    * 只作为业务入口，实际执行委托给 pluginProcessPool
    */
-  async executePlugin(pluginName, action = 'default', ...args) {
-    try {
-      this.performanceMonitor.startTimer('execute_plugin', pluginName);
-      const plugin = this.plugins.get(pluginName);
-      if (!plugin) {
-        throw new Error(`插件不存在: ${pluginName}`);
-      }
-      // 在执行插件前隐藏主窗口
-      if (this.mainWindow && !this.mainWindow.isDestroyed()) {
-        this.mainWindow.hide();
-        this.logger.log(`执行插件 ${pluginName} 前隐藏主窗口`);
-      }
-      // 统一委托给 pluginProcessPool
-      if (this.pluginProcessPool) {
-        const result = await this.pluginProcessPool.executePlugin(pluginName, action, ...args);
-        this.performanceMonitor.endTimer('execute_plugin', pluginName, { success: true, action });
-        return {
-          success: true,
-          message: `插件 ${pluginName} 执行成功`,
-          result: result
-        };
-      } else {
-        // 没有进程池时返回模拟结果
-        this.performanceMonitor.endTimer('execute_plugin', pluginName, { success: true, action, simulated: true });
-        return {
-          success: true,
-          message: `插件 ${pluginName} 执行成功（模拟）`,
-          result: `执行了插件: ${pluginName}, 动作: ${action}`
-        };
-      }
-    } catch (error) {
-      this.performanceMonitor.endTimer('execute_plugin', pluginName, { success: false, error: error.message });
-      await this.errorHandler.handleError(error, { pluginName, operation: 'execute_plugin', action, args });
-      return {
-        success: false,
-        message: error.message,
-        result: null
-      };
-    }
+  async executePlugin(pluginName, action, ...args) {
+    return await this.pluginProcessPool.executePlugin(pluginName, action, ...args);
   }
 
   /**
@@ -345,6 +250,23 @@ class PluginManager extends BaseManager {
       pluginProcessPoolActive: !!this.pluginProcessPool,
       resultWindowManagerActive: !!this.resultWindowManager
     };
+  }
+
+  async startPlugin(pluginName) {
+    await this.pluginProcessPool.getProcess(pluginName);
+    this.logger.log(`插件已启动: ${pluginName}`);
+  }
+
+  async stopPlugin(pluginName) {
+    const info = this.pluginProcessPool.processes.get(pluginName);
+    if (info && info.window && !info.window.isDestroyed()) {
+      info.window.close();
+      this.logger.log(`插件已停止: ${pluginName}`);
+    }
+  }
+
+  getPoolStatus() {
+    return this.pluginProcessPool.getPoolStatus();
   }
 }
 
