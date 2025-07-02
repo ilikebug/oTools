@@ -116,6 +116,8 @@ async function initializeApp() {
     
     // Create app manager
     appManager = new AppManager();
+    // 挂载到 global，供 IPC 刷新快捷键时访问
+    global.appManager = () => appManager;
     
     // Create main window
     createWindow();
@@ -215,5 +217,6 @@ module.exports = {
   appManager: () => appManager,
   resultWindowManager: () => resultWindowManager,
   macTools: () => macTools,
-  store: () => store
+  store: () => store,
+  registerGlobalShortcuts
 };

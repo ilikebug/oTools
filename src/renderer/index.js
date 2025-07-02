@@ -14,6 +14,10 @@ class oToolsApp {
 
   async init() {
     console.log('oToolsApp init method is called');
+    // 页面初始化时隐藏所有面板，防止意外显示
+    document.querySelectorAll('.panel').forEach(panel => {
+      panel.style.display = 'none';
+    });
     this.bindEvents();
     await this.loadAppStatus();
     await this.loadPlugins();
@@ -21,6 +25,8 @@ class oToolsApp {
     this.setupStatusUpdates();
     this.renderPluginButtons();
     this.updateStatusDisplay();
+    this.loadSettingsFromConfig();
+    this.bindSettingsEvents();
   }
 
   bindEvents() {
@@ -53,7 +59,7 @@ class oToolsApp {
       if (closePanelBtns.length > 0) {
         closePanelBtns.forEach(btn => {
           btn.addEventListener('click', (e) => {
-            const panelId = e.target.closest('.close-panel-btn').dataset.panel;
+            const panelId = btn.dataset.panel;
             this.hidePanel(panelId);
           });
         });
@@ -83,7 +89,15 @@ class oToolsApp {
           this.showPerformancePanel();
         });
       }
-      
+
+      // Settings button
+      const settingsBtn = document.getElementById('settingsBtn');
+      if (settingsBtn) {
+        settingsBtn.addEventListener('click', () => {
+          this.showPanel('settingsPanel');
+        });
+      }
+
       console.log('Event binding completed');
     } catch (error) {
       console.error('Error binding events:', error);
@@ -210,7 +224,10 @@ class oToolsApp {
       
       const statusPanel = document.getElementById('statusPanel');
       if (statusPanel) {
-        statusPanel.innerHTML = this.renderStatusContent();
+        const content = statusPanel.querySelector('.panel-content');
+        if (content) {
+          content.innerHTML = this.renderStatusContent();
+        }
         this.showPanel('statusPanel');
       }
     } catch (error) {
@@ -421,6 +438,157 @@ class oToolsApp {
       info: 'fas fa-info-circle'
     };
     return icons[type] || icons.info;
+  }
+
+  async loadSettingsFromConfig() {
+    if (!window.oToolsAPI || !window.oToolsAPI.getConfig) return;
+    const config = await window.oToolsAPI.getConfig('main');
+    if (!config) return;
+    // 开机自启
+    const autoStart = document.getElementById('autoStart');
+    if (autoStart) autoStart.checked = !!config.plugins?.enableAutoStart;
+    // 自动加载插件
+    const autoLoadPlugins = document.getElementById('autoLoadPlugins');
+    if (autoLoadPlugins) autoLoadPlugins.checked = !!config.plugins?.autoLoad;
+    // 快捷键
+    const toggleShortcut = document.getElementById('toggleShortcut');
+    if (toggleShortcut) toggleShortcut.value = config.shortcuts?.toggle || '';
+    const screenshotShortcut = document.getElementById('screenshotShortcut');
+    if (screenshotShortcut) screenshotShortcut.value = config.shortcuts?.screenshot || '';
+  }
+
+  bindSettingsEvents() {
+    // 开机自启
+    const autoStart = document.getElementById('autoStart');
+    if (autoStart) {
+      autoStart.addEventListener('change', async (e) => {
+        const config = await window.oToolsAPI.getConfig('main');
+        config.plugins = config.plugins || {};
+        config.plugins.enableAutoStart = !!e.target.checked;
+        await window.oToolsAPI.setConfig('main', config);
+        this.showNotification('开机自启设置已保存', 'success');
+      });
+    }
+    // 自动加载插件
+    const autoLoadPlugins = document.getElementById('autoLoadPlugins');
+    if (autoLoadPlugins) {
+      autoLoadPlugins.addEventListener('change', async (e) => {
+        const config = await window.oToolsAPI.getConfig('main');
+        config.plugins = config.plugins || {};
+        config.plugins.autoLoad = !!e.target.checked;
+        await window.oToolsAPI.setConfig('main', config);
+        this.showNotification('自动加载插件设置已保存', 'success');
+      });
+    }
+    // 快捷键捕获
+    this.captureShortcutInput('toggleShortcut', ['shortcuts', 'toggle']);
+    this.captureShortcutInput('screenshotShortcut', ['shortcuts', 'screenshot']);
+  }
+
+  captureShortcutInput(inputId, configPath) {
+    const input = document.getElementById(inputId);
+    if (!input) return;
+    let lastValue = input.value;
+    let pressedKeys = new Set();
+    let displayKeys = [];
+    let keyOrder = [];
+    let keydownListener, keyupListener;
+
+    // Helper: convert Set to shortcut string
+    function getShortcutString(keys) {
+      // Ensure modifier key order
+      const order = ['CommandOrControl', 'Ctrl', 'Meta', 'Alt', 'Shift'];
+      let arr = [];
+      for (let o of order) {
+        if (keys.has(o)) arr.push(o);
+      }
+      // Other keys
+      for (let k of keys) {
+        if (!order.includes(k)) arr.push(k);
+      }
+      return arr.join('+');
+    }
+
+    function normalizeKey(e) {
+      if (e.key === 'Control' || e.key === 'Meta') return 'CommandOrControl';
+      if (e.key === 'Alt') return 'Alt';
+      if (e.key === 'Shift') return 'Shift';
+      // Use event.code for physical key, not affected by modifiers
+      if (e.code.startsWith('Key')) return e.code.slice(3).toUpperCase();
+      if (e.code.startsWith('Digit')) return e.code.slice(5);
+      // Function keys
+      if (e.code.startsWith('F') && e.code.length <= 3) return e.code;
+      // Other special keys
+      return e.code;
+    }
+
+    function isValidShortcut(keys) {
+      const modifiers = ['CommandOrControl', 'Ctrl', 'Meta', 'Alt', 'Shift'];
+      return [...keys].some(k => !modifiers.includes(k));
+    }
+
+    keydownListener = (e) => {
+      e.preventDefault();
+      const key = normalizeKey(e);
+      if (!pressedKeys.has(key)) {
+        pressedKeys.add(key);
+        keyOrder.push(key);
+      }
+      // Keep unique order
+      displayKeys = keyOrder.filter((k, i) => keyOrder.indexOf(k) === i);
+      input.value = getShortcutString(new Set(displayKeys));
+    };
+
+    keyupListener = (e) => {
+      const key = normalizeKey(e);
+      pressedKeys.delete(key);
+      // Save when all keys are released
+      if (pressedKeys.size === 0 && displayKeys.length > 0) {
+        if (isValidShortcut(displayKeys)) {
+          const shortcut = getShortcutString(new Set(displayKeys));
+          input.value = shortcut;
+          // Save to config
+          window.oToolsAPI.getConfig('main').then(config => {
+            let obj = config;
+            for (let i = 0; i < configPath.length - 1; i++) {
+              if (!obj[configPath[i]]) obj[configPath[i]] = {};
+              obj = obj[configPath[i]];
+            }
+            obj[configPath[configPath.length - 1]] = shortcut;
+            window.oToolsAPI.setConfig('main', config).then(() => {
+              this.showNotification('Shortcut saved', 'success');
+              if (window.oToolsAPI.refreshShortcut) {
+                window.oToolsAPI.refreshShortcut();
+              }
+            });
+          });
+          // Remove listeners
+          window.removeEventListener('keydown', keydownListener);
+          window.removeEventListener('keyup', keyupListener);
+          input.blur();
+        } else {
+          // Only modifier keys, do not save, restore last value
+          input.value = lastValue;
+          window.removeEventListener('keydown', keydownListener);
+          window.removeEventListener('keyup', keyupListener);
+        }
+      }
+    };
+
+    input.addEventListener('focus', () => {
+      lastValue = input.value;
+      input.value = 'Press shortcut...';
+      pressedKeys.clear();
+      displayKeys = [];
+      keyOrder = [];
+      window.addEventListener('keydown', keydownListener);
+      window.addEventListener('keyup', keyupListener);
+    });
+    input.addEventListener('blur', () => {
+      if (input.value === 'Press shortcut...') input.value = lastValue;
+      window.removeEventListener('keydown', keydownListener);
+      window.removeEventListener('keyup', keyupListener);
+    });
   }
 }
 

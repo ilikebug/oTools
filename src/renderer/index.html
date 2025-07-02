@@ -138,10 +138,6 @@
               <label>Auto Start:</label>
               <input type="checkbox" id="autoStart" />
             </div>
-            <div class="setting-item">
-              <label>Startup Launch:</label>
-              <input type="checkbox" id="startupLaunch" />
-            </div>
           </div>
           <div class="settings-section">
             <h4>Shortcut Settings</h4>
@@ -160,10 +156,6 @@
               <label>Auto Load Plugins:</label>
               <input type="checkbox" id="autoLoadPlugins" checked />
             </div>
-            <div class="setting-item">
-              <label>Plugin Hot Reload:</label>
-              <input type="checkbox" id="pluginHotReload" checked />
-            </div>
           </div>
         </div>
       </div>
@@ -181,14 +173,5 @@
     <div class="notification-container" id="notificationContainer"></div>
 
     <script src="index.js"></script>
-    <script>
-      // Settings button click event
-      document.getElementById('settingsBtn').onclick = function() {
-        const settingsPanel = document.getElementById('settingsPanel');
-        if (settingsPanel) {
-          settingsPanel.style.display = 'flex';
-        }
-      };
-    </script>
   </body>
 </html>

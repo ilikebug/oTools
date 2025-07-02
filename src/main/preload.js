@@ -46,7 +46,9 @@ contextBridge.exposeInMainWorld('oToolsAPI', {
   // Remove event listeners
   removeAllListeners: (channel) => {
     ipcRenderer.removeAllListeners(channel);
-  }
+  },
+  
+  refreshShortcut: () => ipcRenderer.invoke('refresh-shortcut'),
 });
 
 // Expose dedicated API for result display page

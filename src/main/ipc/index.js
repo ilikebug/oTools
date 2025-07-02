@@ -324,6 +324,27 @@ function setupSystemIPC(mainWindow, appManager) {
     }
     return { success: true };
   });
+
+  // Refresh global shortcut
+  ipcMain.handle('refresh-shortcut', async () => {
+    try {
+      const appManager = global.appManager ? global.appManager() : null;
+      if (appManager && appManager.getComponent) {
+        const mainJs = require('../main');
+        if (mainJs && mainJs.registerGlobalShortcuts) {
+          // 先注销所有快捷键
+          const { globalShortcut } = require('electron');
+          globalShortcut.unregisterAll();
+          // 重新注册
+          mainJs.registerGlobalShortcuts();
+          return { success: true };
+        }
+      }
+      return { success: false, message: 'AppManager or registerGlobalShortcuts not found' };
+    } catch (e) {
+      return { success: false, message: e.message };
+    }
+  });
 }
 
 /**
