@@ -119,7 +119,7 @@ class ConfigManager extends BaseManager {
         logFile: 'logs/otools.log'
       },
       shortcuts: {
-        toggle: 'CommandOrControl+Shift+Space'
+        toggle: 'Alt+Space'
       }
     };
   }
@@ -159,19 +159,6 @@ class ConfigManager extends BaseManager {
     // Watch a single configuration file
     const mainConfigPath = path.join(this.configDir, 'main.json');
     this.watchConfigFile('main', mainConfigPath);
-    
-    // 监听插件配置文件
-    const pluginsConfigDir = path.join(this.configDir, 'plugins');
-    if (fs.existsSync(pluginsConfigDir)) {
-      const watcher = chokidar.watch(path.join(pluginsConfigDir, '*.json'));
-      
-      watcher.on('change', (filePath) => {
-        const pluginName = path.basename(filePath, '.json');
-        this.reloadPluginConfig(pluginName);
-      });
-      
-      this.watchers.set('plugins', watcher);
-    }
   }
 
   /**

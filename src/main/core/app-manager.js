@@ -1,11 +1,9 @@
 const BaseManager = require('./base-manager');
 const Logger = require('./logger');
 const ConfigManager = require('./config-manager');
-const PerformanceMonitor = require('./performance-monitor');
 const ErrorHandler = require('./error-handler');
 const PluginProcessPool = require('../plugin-manager/process-pool');
 const PluginManager = require('../plugin-manager/manager');
-const { macTools } = require('../main');
 
 /**
  * Application Manager - Unify all core components
@@ -17,7 +15,6 @@ class AppManager extends BaseManager {
     // Core components
     this.logger = null;
     this.configManager = null;
-    this.performanceMonitor = null;
     this.errorHandler = null;
     
     // Plugin related components
@@ -36,8 +33,6 @@ class AppManager extends BaseManager {
     };
 
     this.components = new Map(); // Initialize component Map
-
-    this.macTools = null;
   }
 
   /**
@@ -59,7 +54,6 @@ class AppManager extends BaseManager {
     try {
       this.startTime = Date.now();
       this.appStatus.status = 'initializing';
-      this.macTools = options.macTools;
       
       // 1. Initialize logger system
       this.logger = new Logger();
@@ -74,20 +68,11 @@ class AppManager extends BaseManager {
       });
       this.registerComponent('configManager', this.configManager);
       
-      // 3. Initialize performance monitor
-      this.performanceMonitor = new PerformanceMonitor();
-      await this.performanceMonitor.initialize({
-        logger: this.logger,
-        configManager: this.configManager
-      });
-      this.registerComponent('performanceMonitor', this.performanceMonitor);
-      
       // 4. Initialize error handler
       this.errorHandler = new ErrorHandler();
       await this.errorHandler.initialize({
         logger: this.logger,
-        configManager: this.configManager,
-        performanceMonitor: this.performanceMonitor
+        configManager: this.configManager
       });
       this.registerComponent('errorHandler', this.errorHandler);
       
@@ -148,7 +133,6 @@ class AppManager extends BaseManager {
         'messageHandler',
         'messageRouter',
         'errorHandler',
-        'performanceMonitor',
         'configManager',
         'logger'
       ];
@@ -167,9 +151,7 @@ class AppManager extends BaseManager {
       
       this.appStatus.status = 'stopped';
       this.isInitialized = false;
-      
-      console.log('Application Manager has been destroyed');
-      
+            
     } catch (error) {
       console.error('Application Manager destroy failed:', error);
       throw error;
@@ -204,7 +186,6 @@ class AppManager extends BaseManager {
     if (this.startTime) {
       this.appStatus.uptime = Date.now() - this.startTime;
     }
-    
     return {
       ...this.appStatus,
       components: [...this.components.entries()].reduce((acc, [name, component]) => {
@@ -292,103 +273,6 @@ class AppManager extends BaseManager {
     }
     
     return health;
-  }
-
-  /**
-   * Restart component
-   */
-  async restartComponent(componentName) {
-    try {
-      this.logger.log(`Restart component: ${componentName}`);
-      
-      const component = this.getComponent(componentName);
-      if (!component) {
-        throw new Error(`Component does not exist: ${componentName}`);
-      }
-      
-      // Destroy component
-      if (typeof component.destroy === 'function') {
-        await component.destroy();
-      }
-      
-      // Reinitialize component
-      switch (componentName) {
-        case 'logger':
-          this.logger = new Logger();
-          await this.logger.initialize({});
-          break;
-          
-        case 'configManager':
-          this.configManager = new ConfigManager();
-          await this.configManager.initialize({ logger: this.logger });
-          break;
-          
-        case 'performanceMonitor':
-          this.performanceMonitor = new PerformanceMonitor();
-          await this.performanceMonitor.initialize({ 
-            logger: this.logger, 
-            configManager: this.configManager 
-          });
-          break;
-          
-        case 'errorHandler':
-          this.errorHandler = new ErrorHandler();
-          await this.errorHandler.initialize({ 
-            logger: this.logger, 
-            configManager: this.configManager, 
-            performanceMonitor: this.performanceMonitor 
-          });
-          break;
-          
-        case 'pluginProcessPool':
-          this.pluginProcessPool = new PluginProcessPool(this);
-          await this.pluginProcessPool.initialize({});
-          break;
-          
-        case 'pluginManager':
-          this.pluginManager = new PluginManager({
-            appManager: this,
-            logger: this.logger,
-            configManager: this.configManager,
-            errorHandler: this.errorHandler,
-            performanceMonitor: this.performanceMonitor
-          });
-          this.registerComponent('pluginManager', this.pluginManager);
-          await this.pluginManager.initialize({});
-          break;
-          
-        default:
-          throw new Error(`Unsupported component restart: ${componentName}`);
-      }
-      
-      this.logger.log(`Component ${componentName} restart succeeded`);
-      
-    } catch (error) {
-      this.logger.log(`Component ${componentName} restart failed: ${error.message}`, 'error');
-      throw error;
-    }
-  }
-
-  /**
-   * Send message to component
-   */
-  async sendMessage(componentName, message) {
-    try {
-      const component = this.getComponent(componentName);
-      if (!component) {
-        throw new Error(`Component does not exist: ${componentName}`);
-      }
-      
-      if (typeof component.handleMessage === 'function') {
-        return await component.handleMessage(message);
-      } else {
-        throw new Error(`Component ${componentName} does not support message handling`);
-      }
-      
-    } catch (error) {
-      this.logger.log(`Send message to component ${componentName} failed: ${error.message}`, 'error');
-      throw error;
-    }
   }
 
   /**

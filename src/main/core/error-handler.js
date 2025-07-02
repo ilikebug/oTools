@@ -41,8 +41,6 @@ class ErrorHandler extends BaseManager {
   constructor() {
     super('ErrorHandler');
     
-    this.errors = [];
-    this.errorCounts = new Map();
     this.recoveryStrategies = new Map();
     this.notificationCallbacks = [];
     
@@ -68,8 +66,6 @@ class ErrorHandler extends BaseManager {
    * Destroy error handler
    */
   async onDestroy() {
-    this.errors = [];
-    this.errorCounts.clear();
     this.recoveryStrategies.clear();
     this.notificationCallbacks = [];
     
@@ -129,9 +125,6 @@ class ErrorHandler extends BaseManager {
   async handleError(error, context = {}) {
     const errorInfo = this.createErrorInfo(error, context);
     
-    // Record error
-    this.recordError(errorInfo);
-    
     // Determine error type and severity
     const errorType = this.classifyError(error, context);
     const severity = this.assessSeverity(error, context);
@@ -174,24 +167,6 @@ class ErrorHandler extends BaseManager {
         uptime: process.uptime()
       }
     };
-  }
-
-  /**
-   * Record error
-   * @param {Object} errorInfo Error information
-   */
-  recordError(errorInfo) {
-    this.errors.push(errorInfo);
-    
-    // Limit error record count
-    if (this.errors.length > this.maxErrors) {
-      this.errors.shift();
-    }
-    
-    // Count errors
-    const errorType = errorInfo.type || 'unknown';
-    const count = this.errorCounts.get(errorType) || 0;
-    this.errorCounts.set(errorType, count + 1);
   }
 
   /**
@@ -483,29 +458,6 @@ class ErrorHandler extends BaseManager {
    */
   delay(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
-  }
-
-  /**
-   * Get error statistics
-   */
-  getErrorStats() {
-    const stats = {
-      totalErrors: this.errors.length,
-      errorCounts: Object.fromEntries(this.errorCounts),
-      recentErrors: this.errors.slice(-10),
-      errorTypes: Array.from(this.errorCounts.keys())
-    };
-    
-    return stats;
-  }
-
-  /**
-   * Clear error records
-   */
-  clearErrors() {
-    this.errors = [];
-    this.errorCounts.clear();
-    this.log('Error records cleared');
   }
 
   /**

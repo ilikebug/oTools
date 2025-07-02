@@ -46,12 +46,9 @@ let currentText = '';
 
 // Initialize after page load
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('OCR plugin result display page loaded');
     updateTimestamp();
-    
     // Listen for messages from the main process
-    window.electronAPI.onResultData((data) => {
-        console.log('Received result data:', data);
+    window.oToolsAPI.onResultData((data) => {
         displayResult(data);
     });
 });
@@ -158,7 +155,7 @@ function saveImage() {
     }
     
     // Save image via main process
-    window.electronAPI.saveImage(currentImageData);
+    window.oToolsAPI.saveImage(currentImageData);
 }
 
 // Clear text
@@ -172,12 +169,12 @@ function clearText() {
 
 // New screenshot
 function newScreenshot() {
-    window.electronAPI.newScreenshot();
+    window.oToolsAPI.newScreenshot();
 }
 
 // Close window
 function closeWindow() {
-    window.electronAPI.closeResultWindow();
+    window.oToolsAPI.closeResultWindow();
 }
 
 // Update status

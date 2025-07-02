@@ -8,7 +8,7 @@
   "shortName": "OCR",
   "type": "ocr",
   "ui": {
-    "html": "result-viewer.html",
+    "html": "index.html",
     "title": "Screenshot OCR Result",
     "width": 900,
     "height": 800,

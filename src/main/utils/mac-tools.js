@@ -33,7 +33,6 @@ class MacTools {
       // -x means no shutter sound
       const command = `screencapture -i -x "${tempFile}"`;
       
-      console.log('Starting region screenshot...');
       await execAsync(command);
       
       // Check if file exists
@@ -47,7 +46,6 @@ class MacTools {
       // Delete temp file
       fs.unlinkSync(tempFile);
       
-      console.log('Region screenshot completed');
       return imageBuffer;
     } catch (error) {
       console.error('Region screenshot failed:', error);
@@ -76,7 +74,6 @@ class MacTools {
         fs.unlinkSync(tempFile);
         return result;
       } catch (macError) {
-        console.log('Mac system OCR not available, trying local Tesseract');
         try {
           // Finally try using local Tesseract
           const result = await this.useLocalTesseract(tempFile);

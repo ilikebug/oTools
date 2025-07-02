@@ -19,11 +19,8 @@
           </div>
         </div>
         <div class="topbar-right">
-          <button class="status-btn" id="statusBtn" title="App Status">
+          <button class="status-btn" id="statusBtn" title="Application Status">
             <i class="fas fa-chart-line"></i>
-          </button>
-          <button class="performance-btn" id="performanceBtn" title="Performance Monitor">
-            <i class="fas fa-tachometer-alt"></i>
           </button>
           <button class="settings-btn" id="settingsBtn" title="Settings">
             <i class="fas fa-cog"></i>
@@ -49,19 +46,6 @@
         </div>
       </div>
 
-      <!-- Plugin management section -->
-      <div class="plugins-section" id="pluginsSection" style="display: none;">
-        <div class="plugins-header">
-          <h3>Plugin Management</h3>
-          <button class="close-panel-btn" data-panel="pluginsSection">
-            <i class="fas fa-times"></i>
-          </button>
-        </div>
-        <div class="plugins-grid" id="pluginsGrid">
-          <!-- Plugin list will be generated here dynamically -->
-        </div>
-      </div>
-
       <!-- App status panel -->
       <div class="panel" id="statusPanel" style="display: none;">
         <div class="panel-header">
@@ -75,54 +59,6 @@
         </div>
       </div>
 
-      <!-- Performance monitor panel -->
-      <div class="panel" id="performancePanel" style="display: none;">
-        <div class="panel-header">
-          <h3>Performance Monitor</h3>
-          <button class="close-panel-btn" data-panel="performancePanel">
-            <i class="fas fa-times"></i>
-          </button>
-        </div>
-        <div class="panel-content">
-          <div class="performance-metrics">
-            <div class="metric-item">
-              <label>CPU Usage:</label>
-              <span id="cpuUsage">--</span>
-            </div>
-            <div class="metric-item">
-              <label>Memory Usage:</label>
-              <span id="memoryUsage">--</span>
-            </div>
-            <div class="metric-item">
-              <label>Response Time:</label>
-              <span id="responseTime">--</span>
-            </div>
-          </div>
-          <div class="performance-chart" id="performanceChart">
-            <!-- Performance chart will be displayed here -->
-          </div>
-        </div>
-      </div>
-
-      <!-- Clipboard panel -->
-      <div class="panel" id="clipboardPanel" style="display: none;">
-        <div class="panel-header">
-          <h3>Clipboard Management</h3>
-          <button class="close-panel-btn" data-panel="clipboardPanel">
-            <i class="fas fa-times"></i>
-          </button>
-        </div>
-        <div class="panel-content">
-          <div class="clipboard-controls">
-            <button id="readClipboardBtn">Read Clipboard</button>
-            <button id="clearClipboardBtn">Clear Clipboard</button>
-          </div>
-          <div class="clipboard-content">
-            <textarea id="clipboardText" placeholder="Clipboard content will be displayed here..." readonly></textarea>
-          </div>
-        </div>
-      </div>
-
       <!-- Settings panel -->
       <div class="panel" id="settingsPanel" style="display: none;">
         <div class="panel-header">
@@ -132,45 +68,10 @@
           </button>
         </div>
         <div class="panel-content">
-          <div class="settings-section">
-            <h4>App Settings</h4>
-            <div class="setting-item">
-              <label>Auto Start:</label>
-              <input type="checkbox" id="autoStart" />
-            </div>
-          </div>
-          <div class="settings-section">
-            <h4>Shortcut Settings</h4>
-            <div class="setting-item">
-              <label>Show/Hide:</label>
-              <input type="text" id="toggleShortcut" value="Cmd+Shift+Space" readonly />
-            </div>
-            <div class="setting-item">
-              <label>Screenshot:</label>
-              <input type="text" id="screenshotShortcut" value="Cmd+Shift+S" readonly />
-            </div>
-          </div>
-          <div class="settings-section">
-            <h4>Plugin Settings</h4>
-            <div class="setting-item">
-              <label>Auto Load Plugins:</label>
-              <input type="checkbox" id="autoLoadPlugins" checked />
-            </div>
-          </div>
+          <!-- Status content will be generated here dynamically -->
         </div>
       </div>
     </div>
-
-    <!-- Loading mask -->
-    <div class="loading" id="loading" style="display: none;">
-      <div class="loading-content">
-        <i class="fas fa-spinner fa-spin"></i>
-        <p class="loading-text">Processing...</p>
-      </div>
-    </div>
-
-    <!-- Notification container -->
-    <div class="notification-container" id="notificationContainer"></div>
 
     <script src="index.js"></script>
   </body>

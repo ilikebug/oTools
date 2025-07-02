@@ -12,9 +12,6 @@ const Logger = require('./logger');
 // Configuration Management
 const ConfigManager = require('./config-manager');
 
-// Performance Monitor
-const PerformanceMonitor = require('./performance-monitor');
-
 // Error Handler
 const ErrorHandler = require('./error-handler');
 
@@ -31,9 +28,6 @@ module.exports = {
   
   // Configuration Management
   ConfigManager,
-  
-  // Performance Monitor
-  PerformanceMonitor,
   
   // Error Handler
   ErrorHandler,

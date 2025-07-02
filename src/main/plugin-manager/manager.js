@@ -13,7 +13,6 @@ class PluginManager extends BaseManager {
     this.logger = options.logger;
     this.configManager = options.configManager;
     this.errorHandler = options.errorHandler;
-    this.performanceMonitor = options.performanceMonitor;
 
     if (!this.logger) {
       throw new Error('PluginManager requires a logger instance.');
@@ -35,8 +34,6 @@ class PluginManager extends BaseManager {
    */
   async initialize(options = {}) {
     try {
-      this.performanceMonitor.startTimer('plugin_manager_init');
-      
       this.mainWindow = options.mainWindow;
       this.resultWindowManager = options.resultWindowManager;
 
@@ -48,7 +45,6 @@ class PluginManager extends BaseManager {
         this.watchPlugins();
       }
       
-      this.performanceMonitor.endTimer('plugin_manager_init');
       this.logger.log('Plugin manager initialization completed');
       
     } catch (error) {
@@ -84,8 +80,6 @@ class PluginManager extends BaseManager {
    */
   async loadPlugins() {
     try {
-      this.performanceMonitor.startTimer('load_plugins');
-
       this.plugins.clear();
 
       if (!fs.existsSync(this.pluginsDir)) {
@@ -121,10 +115,6 @@ class PluginManager extends BaseManager {
           }
         }
       }
-      
-      this.performanceMonitor.endTimer('load_plugins', null, { 
-        pluginCount: loadedPlugins.length 
-      });
       
       this.logger.log(`Plugin loading completed, ${loadedPlugins.length} plugins loaded: ${loadedPlugins.join(', ')}`);
       

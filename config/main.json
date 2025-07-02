@@ -29,7 +29,7 @@
     "format": "json"
   },
   "shortcuts": {
-    "toggle": "Alt+K",
+    "toggle": "Alt+Space",
     "screenshot": "CommandOrControl"
   },
   "performance": {

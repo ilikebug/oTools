@@ -1,19 +1,13 @@
 // Main renderer process file
-console.log('Rendering process JavaScript file has been loaded');
-
 class oToolsApp {
   constructor() {
-    console.log('oToolsApp constructor function is called');
     this.plugins = [];
     this.currentPanel = null;
     this.appStatus = null;
-    this.performanceStats = null;
-    this.errorStats = null;
     this.init();
   }
 
   async init() {
-    console.log('oToolsApp init method is called');
     // 页面初始化时隐藏所有面板，防止意外显示
     document.querySelectorAll('.panel').forEach(panel => {
       panel.style.display = 'none';
@@ -30,7 +24,6 @@ class oToolsApp {
   }
 
   bindEvents() {
-    console.log('Binding events...');
     try {
       // Search feature
       const searchInput = document.getElementById('searchInput');
@@ -67,13 +60,6 @@ class oToolsApp {
         console.warn('close-panel-btn element not found');
       }
 
-      // ESC key closes panels
-      document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') {
-          this.hideAllPanels();
-        }
-      });
-
       // Status update button
       const statusBtn = document.getElementById('statusBtn');
       if (statusBtn) {
@@ -82,23 +68,14 @@ class oToolsApp {
         });
       }
 
-      // Performance monitor button
-      const performanceBtn = document.getElementById('performanceBtn');
-      if (performanceBtn) {
-        performanceBtn.addEventListener('click', () => {
-          this.showPerformancePanel();
-        });
-      }
-
       // Settings button
       const settingsBtn = document.getElementById('settingsBtn');
       if (settingsBtn) {
         settingsBtn.addEventListener('click', () => {
-          this.showPanel('settingsPanel');
+          this.showSettingsPanel();
         });
       }
 
-      console.log('Event binding completed');
     } catch (error) {
       console.error('Error binding events:', error);
     }
@@ -110,7 +87,6 @@ class oToolsApp {
         throw new Error('oToolsAPI not injected or getAppStatus does not exist');
       }
       this.appStatus = await window.oToolsAPI.getAppStatus();
-      console.log("Application status has been loaded:", this.appStatus);
     } catch (error) {
       console.error('Failed to load application status:', error);
     }
@@ -122,11 +98,9 @@ class oToolsApp {
         throw new Error('oToolsAPI not injected or getPlugins does not exist');
       }
       this.plugins = await window.oToolsAPI.getPlugins();
-      console.log("Plugins have been loaded:", this.plugins);
       this.renderPluginButtons();
     } catch (error) {
       console.error('Failed to load plugins:', error);
-      this.showNotification('Plugin loading failed', 'error');
     }
   }
 
@@ -138,7 +112,6 @@ class oToolsApp {
     window.oToolsAPI.onPluginsChanged((plugins) => {
       this.plugins = plugins;
       this.renderPluginButtons();
-      this.showNotification('Plugin list has been updated', 'info');
     });
   }
 
@@ -198,12 +171,10 @@ class oToolsApp {
       if (!window.oToolsAPI || !window.oToolsAPI.executePlugin) {
         throw new Error('oToolsAPI not injected or executePlugin does not exist');
       }
-      this.showLoading('Executing plugin...');
       const result = await window.oToolsAPI.executePlugin(pluginName);
       this.hideLoading();
       if (result && result.success) {
         this.showNotification(`Plugin execution succeeded: ${result.message}`, 'success');
-        console.log('Plugin execution result:', result.result);
       } else if (result) {
         this.showNotification(`Plugin execution failed: ${result.message}`, 'error');
       }
@@ -215,13 +186,6 @@ class oToolsApp {
 
   async showStatusPanel() {
     try {
-      if (!window.oToolsAPI || !window.oToolsAPI.getPerformanceStats) {
-        throw new Error('oToolsAPI not injected or getPerformanceStats does not exist');
-      }
-      
-      this.performanceStats = await window.oToolsAPI.getPerformanceStats();
-      this.errorStats = await window.oToolsAPI.getErrorStats();
-      
       const statusPanel = document.getElementById('statusPanel');
       if (statusPanel) {
         const content = statusPanel.querySelector('.panel-content');
@@ -232,7 +196,6 @@ class oToolsApp {
       }
     } catch (error) {
       console.error('Failed to display status panel:', error);
-      this.showNotification('Unable to load status information', 'error');
     }
   }
 
@@ -258,59 +221,49 @@ class oToolsApp {
             <span class="status-value">${this.plugins.length}</span>
           </div>
         </div>
-        
-        <h4>Performance statistics</h4>
-        <div class="performance-stats">
-          ${this.renderPerformanceStats()}
-        </div>
-        
-        <h4>Error statistics</h4>
-        <div class="error-stats">
-          ${this.renderErrorStats()}
-        </div>
       </div>
     `;
   }
 
-  renderPerformanceStats() {
-    if (!this.performanceStats) return '<p>No performance data available</p>';
-    
-    return `
-      <div class="stats-grid">
-        <div class="stat-item">
-          <label>Average response time:</label>
-          <span>${this.performanceStats.averageResponseTime || 0}ms</span>
-        </div>
-        <div class="stat-item">
-          <label>Total requests:</label>
-          <span>${this.performanceStats.totalRequests || 0}</span>
-        </div>
-        <div class="stat-item">
-          <label>Success rate:</label>
-          <span>${this.performanceStats.successRate || 0}%</span>
-        </div>
-      </div>
-    `;
+  async showSettingsPanel() {
+    try {
+      const settingsPanel = document.getElementById('settingsPanel');
+      if (settingsPanel) {
+        const content = settingsPanel.querySelector('.panel-content');
+        if (content) {
+          content.innerHTML = this.renderSettingsContent();
+        }
+        this.showPanel('settingsPanel');
+      }
+    } catch (error) {
+      console.error('Failed to display status panel:', error);
+      this.showNotification('Unable to load status information', 'error');
+    }
   }
 
-  renderErrorStats() {
-    if (!this.errorStats) return '<p>No error data available</p>';
-    
+  renderSettingsContent() {
     return `
-      <div class="stats-grid">
-        <div class="stat-item">
-          <label>Total errors:</label>
-          <span>${this.errorStats.totalErrors || 0}</span>
-        </div>
-        <div class="stat-item">
-          <label>Critical errors:</label>
-          <span>${this.errorStats.criticalErrors || 0}</span>
-        </div>
-        <div class="stat-item">
-          <label>Last error:</label>
-          <span>${this.errorStats.lastErrorTime || 'None'}</span>
-        </div>
+    <div class="settings-section">
+      <h4>App Settings</h4>
+      <div class="setting-item">
+        <label>Auto Start:</label>
+        <input type="checkbox" id="autoStart" checked />
       </div>
+    </div>
+    <div class="settings-section">
+      <h4>Plugin Settings</h4>
+      <div class="setting-item">
+        <label>Auto Load Plugins:</label>
+        <input type="checkbox" id="autoLoadPlugins" checked />
+      </div>
+    </div>
+    <div class="settings-section">
+      <h4>Shortcut Settings</h4>
+      <div class="setting-item">
+        <label>Show/Hide:</label>
+        <input type="text" id="toggleShortcut" readonly />
+      </div>
+    </div>
     `;
   }
 
@@ -342,7 +295,6 @@ class oToolsApp {
       plugin.description.toLowerCase().includes(query.toLowerCase())
     );
     if (matchedPlugins.length > 0) {
-      this.showNotification(`Found ${matchedPlugins.length} related plugins`, 'success');
       this.highlightPlugins(matchedPlugins);
     } else {
       this.showNotification('No related plugins found', 'warning');
@@ -393,17 +345,6 @@ class oToolsApp {
     }
   }
 
-  showLoading(text = 'Processing...') {
-    const loading = document.getElementById('loading');
-    if (loading) {
-      const loadingText = loading.querySelector('.loading-text');
-      if (loadingText) {
-        loadingText.textContent = text;
-      }
-      loading.style.display = 'flex';
-    }
-  }
-
   hideLoading() {
     const loading = document.getElementById('loading');
     if (loading) {
@@ -412,22 +353,14 @@ class oToolsApp {
   }
 
   showNotification(message, type = 'info') {
-    const notification = document.createElement('div');
-    notification.className = `notification notification-${type}`;
-    notification.innerHTML = `
-      <i class="${this.getNotificationIcon(type)}"></i>
-      <span>${message}</span>
-      <button class="notification-close" onclick="this.parentElement.remove()">×</button>
-    `;
-    
-    document.body.appendChild(notification);
-    
-    // Automatically remove notification
-    setTimeout(() => {
-      if (notification.parentElement) {
-        notification.remove();
-      }
-    }, 5000);
+    if (window.oToolsAPI && window.oToolsAPI.showSystemNotification) {
+      let title = 'Notification';
+      if (type === 'success') title = 'Success';
+      if (type === 'error') title = 'Error';
+      if (type === 'warning') title = 'Warning';
+      window.oToolsAPI.showSystemNotification(title, message);
+      return;
+    }
   }
 
   getNotificationIcon(type) {
@@ -453,8 +386,6 @@ class oToolsApp {
     // 快捷键
     const toggleShortcut = document.getElementById('toggleShortcut');
     if (toggleShortcut) toggleShortcut.value = config.shortcuts?.toggle || '';
-    const screenshotShortcut = document.getElementById('screenshotShortcut');
-    if (screenshotShortcut) screenshotShortcut.value = config.shortcuts?.screenshot || '';
   }
 
   bindSettingsEvents() {
@@ -466,7 +397,6 @@ class oToolsApp {
         config.plugins = config.plugins || {};
         config.plugins.enableAutoStart = !!e.target.checked;
         await window.oToolsAPI.setConfig('main', config);
-        this.showNotification('开机自启设置已保存', 'success');
       });
     }
     // 自动加载插件
@@ -477,12 +407,10 @@ class oToolsApp {
         config.plugins = config.plugins || {};
         config.plugins.autoLoad = !!e.target.checked;
         await window.oToolsAPI.setConfig('main', config);
-        this.showNotification('自动加载插件设置已保存', 'success');
       });
     }
     // 快捷键捕获
     this.captureShortcutInput('toggleShortcut', ['shortcuts', 'toggle']);
-    this.captureShortcutInput('screenshotShortcut', ['shortcuts', 'screenshot']);
   }
 
   captureShortcutInput(inputId, configPath) {
@@ -556,7 +484,6 @@ class oToolsApp {
             }
             obj[configPath[configPath.length - 1]] = shortcut;
             window.oToolsAPI.setConfig('main', config).then(() => {
-              this.showNotification('Shortcut saved', 'success');
               if (window.oToolsAPI.refreshShortcut) {
                 window.oToolsAPI.refreshShortcut();
               }
@@ -593,8 +520,6 @@ class oToolsApp {
 }
 
 // Initialize application
-
 document.addEventListener('DOMContentLoaded', () => {
-  console.log('DOM loaded, initializing oTools application');
   window.oToolsApp = new oToolsApp();
 }); 

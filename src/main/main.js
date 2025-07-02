@@ -1,4 +1,4 @@
-const { app, BrowserWindow, globalShortcut } = require('electron');
+const { app, BrowserWindow, globalShortcut, ipcMain, Notification } = require('electron');
 const path = require('node:path');
 const Store = require('electron-store');
 
@@ -26,7 +26,7 @@ const createWindow = () => {
   
   mainWindow = new BrowserWindow({
     width: 480,
-    height: 420,
+    height: 400,
     x: savedPos ? savedPos.x : undefined,
     y: savedPos ? savedPos.y : undefined,
     center: !savedPos,
@@ -36,7 +36,7 @@ const createWindow = () => {
     alwaysOnTop: true,
     skipTaskbar: true,
     webPreferences: {
-      preload: path.join(__dirname, 'preload.js'),
+      preload: path.join(__dirname, '../renderer/preload.js'),
       nodeIntegration: false,
       contextIsolation: true,
       enableRemoteModule: false
@@ -85,7 +85,7 @@ const createWindow = () => {
  */
 function registerGlobalShortcuts() {
   const config = appManager.getComponent('configManager').getConfig('main');
-  const shortcut = config?.shortcuts?.toggle || 'Option+Space';
+  const shortcut = config?.shortcuts?.toggle || 'Alt+Space';
   
   const ret = globalShortcut.register(shortcut, () => {
     if (mainWindow) {
@@ -116,9 +116,7 @@ async function initializeApp() {
     
     // Create app manager
     appManager = new AppManager();
-    // 挂载到 global，供 IPC 刷新快捷键时访问
-    global.appManager = () => appManager;
-    
+      
     // Create main window
     createWindow();
     
@@ -176,10 +174,6 @@ function safeHideMainWindow() {
   safeWindowOperation(() => mainWindow.hide());
 }
 
-function safeMinimizeMainWindow() {
-  safeWindowOperation(() => mainWindow.minimize());
-}
-
 // Electron app event handling
 app.whenReady().then(initializeApp);
 
@@ -205,7 +199,6 @@ app.on('before-quit', async () => {
       await appManager.destroy();
     }
     
-    console.log('Application exited safely');
   } catch (error) {
     console.error('Error occurred during application exit:', error);
   }
