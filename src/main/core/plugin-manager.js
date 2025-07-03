@@ -3,11 +3,12 @@ const path = require('node:path');
 const fs = require('fs');
 const chokidar = require('chokidar');
 const logger = require('../utils/logger');
+const { GetPluginDir } = require('../comm');
 
 class PluginManager {
   constructor() {
     this.plugins = new Map();
-    this.pluginsDir = path.join(__dirname, '..', '..', '..', 'plugins');
+    this.pluginsDir = GetPluginDir();
     
     this.maxProcesses = 10;
     this.processes = new Map(); // name -> { window, status, ... }
@@ -34,9 +35,6 @@ class PluginManager {
       logger.info('Plugin manager initialization completed');
       
     } catch (error) {
-      await this.errorHandler.handleError(error, { 
-        operation: 'plugin_manager_init' 
-      });
       throw error;
     }
   }
@@ -55,9 +53,7 @@ class PluginManager {
       logger.info('Plugin manager destroyed');
       
     } catch (error) {
-      await this.errorHandler.handleError(error, { 
-        operation: 'plugin_manager_destroy' 
-      });
+      throw error;
     }
   }
 
@@ -91,12 +87,9 @@ class PluginManager {
               
               this.plugins.set(meta.name, pluginInfo);
               loadedPlugins.push(meta.name);
-              
+          
             } catch (e) {
-              await this.errorHandler.handleError(e, { 
-                operation: 'load_plugin_meta', 
-                pluginPath: fullPath 
-              });
+              throw e;
             }
           }
         }
@@ -105,7 +98,7 @@ class PluginManager {
       logger.info(`Plugin loading completed, ${loadedPlugins.length} plugins loaded: ${loadedPlugins.join(', ')}`);
       
     } catch (error) {
-      await this.errorHandler.handleError(error, { operation: 'load_plugins' });
+      throw error;
     }
   }
 
@@ -144,15 +137,13 @@ class PluginManager {
           }
         })
         .on('error', (error) => {
-          this.errorHandler.handleError(error, { 
-            operation: 'plugin_watcher_error' 
-          });
+          throw error;
         });
       
       logger.info('Plugin watcher started');
       
     } catch (error) {
-      this.errorHandler.handleError(error, { operation: 'watch_plugins' });
+      throw error;
     }
   }
 
@@ -187,7 +178,6 @@ class PluginManager {
         loadedAt: plugin.loadedAt
       }));
     } catch (error) {
-      this.errorHandler.handleError(error, { operation: 'get_plugins_list' });
       return [];
     }
   }

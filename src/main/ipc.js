@@ -1,4 +1,4 @@
-const { ipcMain, dialog, shell, BrowserWindow, Notification } = require('electron');
+const { ipcMain, BrowserWindow, Notification } = require('electron');
 const path = require('path');
 const MacTools = require('./utils/mac-tools');
 const logger = require('./utils/logger');
@@ -99,6 +99,11 @@ function setupSystemIPC(appManager) {
   // Get configuration information
   ipcMain.handle('get-config', (event, configName) => {
     return configManager.getConfig(configName);
+  });
+
+  // Get configuration names
+  ipcMain.handle('get-config-names', () => {
+    return configManager.getConfigNames();
   });
 
   // Set configuration

@@ -1,11 +1,10 @@
 const { globalShortcut } = require('electron');
 
-const ConfigManager = require('./config-manager');
 const PluginManager = require('./plugin-manager');
 const KeyboardManager = require('./keyboard-manager')
 const MacTools = require('../utils/mac-tools');
 const logger = require('../utils/logger');
-const consts = require('../consts')
+const consts = require('../comm')
 const { setupIPC } = require('../ipc')
 
 /**
@@ -57,11 +56,12 @@ class AppManager {
       this.store = options.store
       this.mainWindow = options.mainWindow
       
-      
       // Initialize configuration manager
-      this.configManager = new ConfigManager();
-      await this.configManager.initialize();
+      this.configManager = options.configManager
       this.registerComponent('configManager', this.configManager);
+
+      // Iiitialize logger
+      logger.initialize(this.configManager.getConfig('main').logger)
       
       // Initialize plugin manager
       this.pluginManager = new PluginManager();

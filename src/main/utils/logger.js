@@ -1,5 +1,7 @@
 const fs = require('fs');
 const path = require('path');
+const { app } = require('electron');
+const {GetLoggerDir} =  require('../comm')
 
 /**
  * Log level enumeration
@@ -32,10 +34,10 @@ class Logger {
     this.maxFileSize = 10 * 1024 * 1024; // 10MB
     this.maxFiles = 5;
     this.enableConsole = true;
-    this.enableFile = false;
+    this.enableFile = true;
     this.enableRemote = false;
     
-    this.logDir = null;
+    this.logDir = GetLoggerDir();
     this.currentLogFile = null;
     this.fileStream = null;
   }
@@ -56,9 +58,7 @@ class Logger {
       if (this.enableFile && this.logFile) {
         this.setupFileLogging();
       }
-      
-      this.log('Logger system initialization completed');
-      
+            
     } catch (error) {
       console.error('Logger system initialization failed:', error);
       throw error;
@@ -82,14 +82,11 @@ class Logger {
    */
   setupFileLogging() {
     try {
-      this.logDir = path.dirname(this.logFile);
       if (!fs.existsSync(this.logDir)) {
         fs.mkdirSync(this.logDir, { recursive: true });
       }
-      
-      this.currentLogFile = this.logFile;
+      this.currentLogFile = path.join(this.logDir, this.logFile);
       this.rotateLogFileIfNeeded();
-      
       this.log(`File logging enabled: ${this.currentLogFile}`, 'info');
     } catch (error) {
       console.error('File logging setup failed:', error);
@@ -112,7 +109,6 @@ class Logger {
       if (this.enableConsole) {
         this.consoleOutput(logEntry);
       }
-      
       if (this.enableFile) {
         this.fileOutput(logEntry);
       }
@@ -239,23 +235,16 @@ class Logger {
     if (this.fileStream) {
       this.fileStream.end();
     }
-    
-    // Rename existing files
     for (let i = this.maxFiles - 1; i > 0; i--) {
-      const oldFile = `${this.logFile}.${i}`;
-      const newFile = `${this.logFile}.${i + 1}`;
-      
+      const oldFile = path.join(this.logDir, `${this.logFile}.${i}`);
+      const newFile = path.join(this.logDir, `${this.logFile}.${i + 1}`);
       if (fs.existsSync(oldFile)) {
         fs.renameSync(oldFile, newFile);
       }
     }
-    
-    // Rename current file
     if (fs.existsSync(this.currentLogFile)) {
-      fs.renameSync(this.currentLogFile, `${this.logFile}.1`);
+      fs.renameSync(this.currentLogFile, path.join(this.logDir, `${this.logFile}.1`));
     }
-    
-    // Create new log file
     this.createNewLogFile();
   }
 
@@ -318,19 +307,13 @@ class Logger {
   }
 }
 
-// 创建全局唯一 logger 实例
+
 const logger = new Logger();
 
-// 便捷方法：logger.info(...), logger.error(...), logger.warn(...), logger.debug(...)
 ['info', 'error', 'warn', 'debug'].forEach(level => {
   logger[level] = function(message, data = null) {
     this.log(message, level, data);
   };
 });
-
-// 便捷初始化方法
-logger.init = function(options = {}) {
-  return this.initialize(options);
-};
 
 module.exports = logger; 

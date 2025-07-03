@@ -2,6 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const chokidar = require('chokidar');
 const logger = require('../utils/logger');
+const {GetPluginDir, GetConfigDir} = require('../comm')
 
 /**
  * Configuration Manager
@@ -13,8 +14,8 @@ class ConfigManager {
     this.watchers = new Map();
     this.validators = new Map();
 
-    this.configDir = path.join(__dirname, '../../config');  
-    this.pluginsDir = path.join(__dirname, '../../../plugins');
+    this.configDir = GetConfigDir();  
+    this.pluginsDir = GetPluginDir();
   }
 
   /**
@@ -73,18 +74,16 @@ class ConfigManager {
    * Load main configuration file
    */
   async loadMainConfig() {
+    if (!fs.existsSync(this.configDir)) {
+      fs.mkdirSync(this.configDir, { recursive: true });
+    }
     const mainConfigPath = path.join(this.configDir, 'main.json');
     const defaultConfig = this.getDefaultMainConfig();
-    
     let config;
     if (fs.existsSync(mainConfigPath)) {
       config = JSON.parse(fs.readFileSync(mainConfigPath, 'utf-8'));
-      // Merge with default configuration
-      config = this.mergeConfigs(defaultConfig, config);
     } else {
       config = defaultConfig;
-      // Save default configuration
-      this.saveConfig('main', config);
     }
     
     this.configs.set('main', config);
@@ -99,7 +98,8 @@ class ConfigManager {
       app: {
         name: 'oTools',
         version: '1.0.0',
-        debug: false
+        debug: false,
+        autoStart: true
       },
       window: {
         width: 480,
@@ -115,7 +115,7 @@ class ConfigManager {
       logging: {
         level: 'info',
         enableFile: true,
-        logFile: 'logs/otools.log'
+        logFile: 'otools.log'
       },
       shortcuts: {
         toggle: 'Alt+Space'
@@ -127,15 +127,8 @@ class ConfigManager {
    * Load plugin configurations
    */
   async loadPluginConfigs() {
-    // plugins 目录（插件本体）
-  
-
     if (!fs.existsSync(this.pluginsDir)) {
-      logger.warn('Plugins directory does not exist:', this.pluginsDir);
-      return;
-    }
-    if (!fs.existsSync(pluginsConfigDir)) {
-      fs.mkdirSync(pluginsConfigDir, { recursive: true });
+      fs.mkdirSync(this.pluginsDir, { recursive: true });
     }
 
     const pluginFolders = fs.readdirSync(this.pluginsDir).filter(file => {
@@ -144,11 +137,12 @@ class ConfigManager {
     });
 
     for (const pluginName of pluginFolders) {
-      const configPath = path.join(pluginsConfigDir, `plugin.json`);
+      const configPath = path.join(this.pluginsDir, pluginName, `plugin.json`);
       if (fs.existsSync(configPath)) {
         try {
           const config = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
-          this.configs.set(`plugin:${config.name}`, config);
+          config.configPath = configPath;
+          this.configs.set(`plugin:${pluginName}`, config);
         } catch (error) {
           logger.error(`Failed to load plugin configuration ${pluginName}: ${error.message}`);
         }
@@ -199,8 +193,6 @@ class ConfigManager {
       
       logger.info(`Configuration reloaded: ${configName}`);
       
-      // Notify configuration change
-      this.notifyConfigChange(configName);
     } catch (error) {
       logger.error(`Failed to reload configuration ${configName}: ${error.message}`);
     }
@@ -210,7 +202,7 @@ class ConfigManager {
    * Reload plugin configuration
    */
   async reloadPluginConfig(pluginName) {
-    const configPath = path.join(this.configDir, 'plugins', `${pluginName}.json`);
+    const configPath = path.join(this.pluginsDir, pluginName, `plug.json`);
     
     if (fs.existsSync(configPath)) {
       const config = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
@@ -221,7 +213,7 @@ class ConfigManager {
   /**
    * Get configuration
    */
-  getConfig(configName, defaultValue = null) {
+  getConfig(configName, defaultValue = '') {
     return this.configs.get(configName) || defaultValue;
   }
 
@@ -243,11 +235,9 @@ class ConfigManager {
         filePath = path.join(this.configDir, 'main.json');
       } else if (configName.startsWith('plugin:')) {
         const pluginName = configName.replace('plugin:', '');
-        const pluginsDir = path.join(this.configDir, 'plugins');
-        if (!fs.existsSync(pluginsDir)) {
-          fs.mkdirSync(pluginsDir, { recursive: true });
-        }
-        filePath = path.join(pluginsDir, `${pluginName}.json`);
+        filePath = path.join(this.pluginsDir, pluginName, 'plug.json');
+        const config = this.getConfig(configName)
+        filePath = config.configPath
       }
       
       if (filePath) {

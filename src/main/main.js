@@ -3,7 +3,9 @@ const path = require('node:path');
 const Store = require('electron-store');
 const logger = require('./utils/logger');
 const { AppManager } = require('./core');
-const { getSavedWindowPosition, saveWindowPosition } = require('./utils/window');
+const { getSavedWindowPosition, saveWindowPosition } = require('./comm');
+const ConfigManager = require('./core/config-manager');
+
 
 if (require('electron-squirrel-startup')) {
   app.quit();
@@ -17,12 +19,12 @@ let store;
 /**
  * Create main window
  */
-const createWindow = () => {
+const createWindow = (conf) => {
   const savedPos = getSavedWindowPosition(store);
   
   mainWindow = new BrowserWindow({
-    width: 480,
-    height: 400,
+    width: conf ? conf.window.width: 420,
+    height: conf ? conf.window.height: 380,
     x: savedPos ? savedPos.x : undefined,
     y: savedPos ? savedPos.y : undefined,
     center: !savedPos,
@@ -82,17 +84,20 @@ async function initializeApp() {
   try {
     // Initialize basic components
     store = new Store();
+    const configManager = new ConfigManager();
+    await configManager.initialize();
+    const mainConfig  = configManager.getConfig('main')
     // Create main window
-    createWindow();
+    createWindow(mainConfig);
     // Create app manager
     appManager = new AppManager();
     await appManager.initialize(
       {
+        configManager: configManager,
         mainWindow: mainWindow,
         store: store
       }
     );
-    
     logger.info('Application started');
     
   } catch (error) {
@@ -112,6 +117,7 @@ app.on('window-all-closed', () => {
 
 app.on('activate', () => {
   if (BrowserWindow.getAllWindows().length === 0) {
+
     createWindow();
   }
 });

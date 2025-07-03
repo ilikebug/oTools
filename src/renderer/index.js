@@ -8,7 +8,7 @@ class oToolsApp {
   }
 
   async init() {
-    // 页面初始化时隐藏所有面板，防止意外显示
+    // Hide all panels on page initialization to prevent accidental display
     document.querySelectorAll('.panel').forEach(panel => {
       panel.style.display = 'none';
     });
@@ -229,42 +229,12 @@ class oToolsApp {
     try {
       const settingsPanel = document.getElementById('settingsPanel');
       if (settingsPanel) {
-        const content = settingsPanel.querySelector('.panel-content');
-        if (content) {
-          content.innerHTML = this.renderSettingsContent();
-        }
         this.showPanel('settingsPanel');
       }
     } catch (error) {
       console.error('Failed to display status panel:', error);
       this.showNotification('Unable to load status information', 'error');
     }
-  }
-
-  renderSettingsContent() {
-    return `
-    <div class="settings-section">
-      <h4>App Settings</h4>
-      <div class="setting-item">
-        <label>Auto Start:</label>
-        <input type="checkbox" id="autoStart" checked />
-      </div>
-    </div>
-    <div class="settings-section">
-      <h4>Plugin Settings</h4>
-      <div class="setting-item">
-        <label>Auto Load Plugins:</label>
-        <input type="checkbox" id="autoLoadPlugins" checked />
-      </div>
-    </div>
-    <div class="settings-section">
-      <h4>Shortcut Settings</h4>
-      <div class="setting-item">
-        <label>Show/Hide:</label>
-        <input type="text" id="toggleShortcut" readonly />
-      </div>
-    </div>
-    `;
   }
 
   formatUptime(ms) {
@@ -377,29 +347,29 @@ class oToolsApp {
     if (!window.oToolsAPI || !window.oToolsAPI.getConfig) return;
     const config = await window.oToolsAPI.getConfig('main');
     if (!config) return;
-    // 开机自启
+    // Auto start
     const autoStart = document.getElementById('autoStart');
-    if (autoStart) autoStart.checked = !!config.plugins?.enableAutoStart;
-    // 自动加载插件
+    if (autoStart) autoStart.checked = !!config.app?.autoStart;
+    // Auto load plugins
     const autoLoadPlugins = document.getElementById('autoLoadPlugins');
     if (autoLoadPlugins) autoLoadPlugins.checked = !!config.plugins?.autoLoad;
-    // 快捷键
+    // Shortcut
     const toggleShortcut = document.getElementById('toggleShortcut');
     if (toggleShortcut) toggleShortcut.value = config.shortcuts?.toggle || '';
   }
 
   bindSettingsEvents() {
-    // 开机自启
+    // Auto start
     const autoStart = document.getElementById('autoStart');
     if (autoStart) {
       autoStart.addEventListener('change', async (e) => {
         const config = await window.oToolsAPI.getConfig('main');
-        config.plugins = config.plugins || {};
-        config.plugins.enableAutoStart = !!e.target.checked;
+        config.app = config.app || {};
+        config.app.autoStart = !!e.target.checked;
         await window.oToolsAPI.setConfig('main', config);
       });
     }
-    // 自动加载插件
+    // Auto load plugins
     const autoLoadPlugins = document.getElementById('autoLoadPlugins');
     if (autoLoadPlugins) {
       autoLoadPlugins.addEventListener('change', async (e) => {
@@ -409,7 +379,7 @@ class oToolsApp {
         await window.oToolsAPI.setConfig('main', config);
       });
     }
-    // 快捷键捕获
+    // Shortcut capture
     this.captureShortcutInput('toggleShortcut', ['shortcuts', 'toggle']);
   }
 

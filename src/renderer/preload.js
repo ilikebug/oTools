@@ -11,6 +11,7 @@ contextBridge.exposeInMainWorld('oToolsAPI', {
   // Config management
   getConfig: (configName) => ipcRenderer.invoke('get-config', configName),
   setConfig: (configName, config) => ipcRenderer.invoke('set-config', configName, config),
+  getConfigNames: () => ipcRenderer.invoke('get-config-names'),
   
   // Plugin related
   getPlugins: () => ipcRenderer.invoke('get-plugins'),
