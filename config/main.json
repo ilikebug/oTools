@@ -2,7 +2,6 @@
   "app": {
     "name": "oTools",
     "version": "1.0.0",
-    "debug": false,
     "description": "A feature-rich desktop application management center"
   },
   "window": {
@@ -13,11 +12,7 @@
   },
   "plugins": {
     "autoLoad": true,
-    "maxProcesses": 10,
-    "timeout": 30000,
-    "retryAttempts": 2,
-    "retryDelay": 1000,
-    "enableAutoStart": true
+    "maxProcesses": 10
   },
   "logging": {
     "level": "info",
@@ -31,33 +26,6 @@
   "shortcuts": {
     "toggle": "Alt+Space",
     "screenshot": "CommandOrControl"
-  },
-  "performance": {
-    "enableMonitoring": true,
-    "thresholds": {
-      "pluginExecution": 5000,
-      "apiCall": 1000,
-      "fileOperation": 2000
-    },
-    "enableAlerts": true,
-    "alertThreshold": 10000
-  },
-  "errorHandling": {
-    "maxErrors": 100,
-    "retryAttempts": 3,
-    "retryDelay": 1000,
-    "enableNotifications": true,
-    "logErrors": true
-  },
-  "ui": {
-    "theme": "default",
-    "language": "en-US",
-    "window": {
-      "width": 480,
-      "height": 420,
-      "minWidth": 400,
-      "minHeight": 300
-    }
   },
   "security": {
     "enableSandbox": true,

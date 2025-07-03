@@ -1,33 +1,36 @@
-const BaseManager = require('./base-manager');
+const { globalShortcut } = require('electron');
+
 const ConfigManager = require('./config-manager');
 const PluginManager = require('./plugin-manager');
+const KeyboardManager = require('./keyboard-manager')
+const MacTools = require('../utils/mac-tools');
 const logger = require('../utils/logger');
+const consts = require('../consts')
+const { setupIPC } = require('../ipc')
 
 /**
  * Application Manager - Unify all core components
  */
-class AppManager extends BaseManager {
+class AppManager {
   constructor() {
-    super('AppManager');
-    
-    // Core components
     this.configManager = null;
-    
-    // Plugin related components
     this.pluginManager = null;
-    
-    // Application status
-    this.isInitialized = false;
+    this.keyboardManager = null;
+  
     this.startTime = null;
     this.appStatus = {
       version: '1.0.0',
-      status: 'initializing',
+      status: consts.APP_STATUS.INITIALIZING,
       uptime: 0,
       componentCount: 0,
       lastError: null
     };
 
-    this.components = new Map(); // Initialize component Map
+    this.components = new Map(); 
+
+    this.mainWindow = null;
+    this.macTools = null;
+    this.store = null
   }
 
   /**
@@ -48,33 +51,41 @@ class AppManager extends BaseManager {
   async initialize(options = {}) {
     try {
       this.startTime = Date.now();
-      this.appStatus.status = 'initializing';
+      this.appStatus.status = consts.APP_STATUS.INITIALIZING;
+
+      this.macTools = new MacTools()
+      this.store = options.store
+      this.mainWindow = options.mainWindow
       
-      // 2. Initialize configuration manager
+      
+      // Initialize configuration manager
       this.configManager = new ConfigManager();
-      await this.configManager.initialize({
-        configDir: options.configDir,
-      });
+      await this.configManager.initialize();
       this.registerComponent('configManager', this.configManager);
       
-      // 7. Initialize plugin manager
-      this.pluginManager = new PluginManager(this);
+      // Initialize plugin manager
+      this.pluginManager = new PluginManager();
       await this.pluginManager.initialize({
-        macTools: options.macTools,
-        mainWindow: options.mainWindow,
-        resultWindowManager: options.resultWindowManager,
+        macTools: this.macTools,
+        mainWindow: this.mainWindow,
         enableWatch: options.enablePluginWatch !== false
       });
       this.registerComponent('pluginManager', this.pluginManager);
-      
+
+      // Initialize keyboard manager
+      this.keyboardManager = new KeyboardManager()
+      this.keyboardManager.initialize({configManager: this.configManager})
+      this.registerComponent('keyboardManager', this.keyboardManager);
+
+      // Set IPC
+      setupIPC(this);
+
+      // Register global shortcuts
+      this.registerGlobalShortcuts() 
       
       // Update application status
-      this.appStatus.status = 'running';
-      this.appStatus.componentCount = this.getComponentCount();
-      this.isInitialized = true;
-      
-      logger.info('Application Manager initialization completed');
-      
+      this.appStatus.status = consts.APP_STATUS.RUNNING;
+      this.appStatus.componentCount = this.getComponentCount();      
     } catch (error) {
       this.appStatus.status = 'error';
       this.appStatus.lastError = error.message;
@@ -115,13 +126,57 @@ class AppManager extends BaseManager {
         }
       }
       
-      this.appStatus.status = 'stopped';
-      this.isInitialized = false;
+      this.appStatus.status = consts.APP_STATUS.STOPPED;
             
     } catch (error) {
       console.error('Application Manager destroy failed:', error);
       throw error;
     }
+  }
+
+  /**
+ * Register global shortcuts
+ */
+ registerGlobalShortcuts() {
+  const config = this.configManager.getConfig('main');
+  const shortcut = config?.shortcuts?.toggle || 'Alt+Space';
+  
+  const ret = globalShortcut.register(shortcut, () => {
+    if (this.mainWindow) {
+      if (this.mainWindow.isVisible()) {
+        this.mainWindow.hide();
+      } else {
+        this.mainWindow.show();
+        this.mainWindow.focus();
+      }
+    }
+   });
+    if (!ret) {
+      logger.error('Global shortcut registration failed');
+    } else {
+      logger.info(`Global shortcut registered: ${shortcut}`);
+    }
+  }
+
+  /**
+  * Get application status
+  */
+  getAppStatus() {
+    if (this.startTime) {
+      this.appStatus.uptime = Date.now() - this.startTime;
+    }
+    return {
+      ...this.appStatus,
+      components: [...this.components.entries()].reduce((acc, [name, component]) => {
+        acc[name] = {
+          active: !!component,
+          status: component ? 'active' : 'inactive',
+          hasDestroy: typeof component?.destroy === 'function',
+          hasGetStatus: typeof component?.getStatus === 'function'
+        };
+        return acc;
+      }, {})
+    };
   }
 
   /**
@@ -146,24 +201,25 @@ class AppManager extends BaseManager {
   }
 
   /**
-   * Get application status
+   * Check main window status
    */
-  getAppStatus() {
-    if (this.startTime) {
-      this.appStatus.uptime = Date.now() - this.startTime;
-    }
-    return {
-      ...this.appStatus,
-      components: [...this.components.entries()].reduce((acc, [name, component]) => {
-        acc[name] = {
-          active: !!component,
-          status: component ? 'active' : 'inactive',
-          hasDestroy: typeof component?.destroy === 'function',
-          hasGetStatus: typeof component?.getStatus === 'function'
-        };
-        return acc;
-      }, {})
-    };
+  mainWindowIsDestoryed() {
+    return this.mainWindow && !this.mainWindow.isDestroyed()
+  }
+
+  /**
+   * hide main main window
+   */
+  mainWindowHide() {
+    this.mainWindow.hide()
+  }
+
+  /**
+   * show main window
+   */
+  mainWindowShow() {
+    this.mainWindow.show();
+    this.mainWindow.focus();
   }
 
 }

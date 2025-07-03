@@ -1,12 +1,9 @@
-const { app, BrowserWindow, globalShortcut, ipcMain, Notification } = require('electron');
+const { app, BrowserWindow, globalShortcut } = require('electron');
 const path = require('node:path');
 const Store = require('electron-store');
 const logger = require('./utils/logger');
-
-// Import new core components
 const { AppManager } = require('./core');
 const { getSavedWindowPosition, saveWindowPosition } = require('./utils/window');
-const MacTools = require('./utils/mac-tools');
 
 if (require('electron-squirrel-startup')) {
   app.quit();
@@ -15,8 +12,6 @@ if (require('electron-squirrel-startup')) {
 // Global variables
 let mainWindow;
 let appManager;
-let resultWindowManager;
-let macTools;
 let store;
 
 /**
@@ -82,72 +77,22 @@ const createWindow = () => {
 };
 
 /**
- * Register global shortcuts
- */
-function registerGlobalShortcuts() {
-  const config = appManager.getComponent('configManager').getConfig('main');
-  const shortcut = config?.shortcuts?.toggle || 'Alt+Space';
-  
-  const ret = globalShortcut.register(shortcut, () => {
-    if (mainWindow) {
-      if (mainWindow.isVisible()) {
-        mainWindow.hide();
-      } else {
-        mainWindow.show();
-        mainWindow.focus();
-      }
-    }
-  });
-  
-  if (!ret) {
-    logger.error('Global shortcut registration failed');
-  } else {
-    logger.info(`Global shortcut registered: ${shortcut}`);
-  }
-}
-
-/**
  * Initialize application
  */
 async function initializeApp() {
   try {
     // Initialize basic components
     store = new Store();
-    macTools = new MacTools();
-    
-    // Create app manager
-    appManager = new AppManager();
-      
     // Create main window
     createWindow();
-    
-    // Initialize app manager (pass main window reference)
-    await appManager.initialize({
-      logging: {
-        level: 'info',
-        enableFile: true,
-        logFile: path.join(__dirname, '../../logs/otools.log')
-      },
-      configDir: path.join(__dirname, '../../config'),
-      macTools: macTools,
-      mainWindow: mainWindow, // Pass main window reference
-      resultWindowManager: null // Set later
-    });
-
-    logger.info('App manager initialized');
-    
-    // Set up IPC and result window manager
-    const setupIPC = require('./ipc');
-    resultWindowManager = setupIPC(mainWindow, appManager);
-    
-    // Update result window manager reference in app manager
-    const pluginProcessPool = appManager.getComponent('pluginProcessPool');
-    if (pluginProcessPool && resultWindowManager) {
-      pluginProcessPool.resultWindowManager = resultWindowManager;
-    }
-    
-    // Register global shortcuts
-    registerGlobalShortcuts();
+    // Create app manager
+    appManager = new AppManager();
+    await appManager.initialize(
+      {
+        mainWindow: mainWindow,
+        store: store
+      }
+    );
     
     logger.info('Application started');
     
@@ -155,23 +100,6 @@ async function initializeApp() {
     console.error('Application initialization failed:', error);
     app.quit();
   }
-}
-
-/**
- * Helper function for safe window operations
- */
-function safeWindowOperation(operation) {
-  if (mainWindow && !mainWindow.isDestroyed()) {
-    operation();
-  }
-}
-
-function safeShowMainWindow() {
-  safeWindowOperation(() => mainWindow.show());
-}
-
-function safeHideMainWindow() {
-  safeWindowOperation(() => mainWindow.hide());
 }
 
 // Electron app event handling
@@ -203,13 +131,3 @@ app.on('before-quit', async () => {
     console.error('Error occurred during application exit:', error);
   }
 });
-
-// Export global variables for use in other modules
-module.exports = {
-  mainWindow: () => mainWindow,
-  appManager: () => appManager,
-  resultWindowManager: () => resultWindowManager,
-  macTools: () => macTools,
-  store: () => store,
-  registerGlobalShortcuts
-};

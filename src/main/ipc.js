@@ -4,38 +4,23 @@ const MacTools = require('./utils/mac-tools');
 const logger = require('./utils/logger');
 
 
-// Global variable to store result window
-let resultWindow = null;
-let pluginsDir = null;
-
 /**
  * Set up IPC communication
- * @param {BrowserWindow} mainWindow Main window
  * @param {AppManager} appManager Application manager
  */
-function setupIPC(mainWindow, appManager) {
-  logger.info('IPC communication module initialization started');
-
-  // Set plugin directory path
-  pluginsDir = path.join(__dirname, '..', '..', '..', 'plugins');
+function setupIPC(appManager) {
   
   // Plugin-related IPC handling
-  setupPluginIPC(mainWindow, appManager);
-  
-  // Window control IPC handling
-  setupWindowIPC(mainWindow, appManager);
-  
-  // File operation IPC handling
-  setupFileIPC(mainWindow, appManager);
+  setupPluginIPC(appManager);
   
   // System feature IPC handling
-  setupSystemIPC(mainWindow, appManager);
+  setupSystemIPC(appManager);
 }
 
 /**
  * Set up plugin-related IPC handling
  */
-function setupPluginIPC(mainWindow, appManager) {
+function setupPluginIPC(appManager) {
   const pluginManager = appManager.getComponent('pluginManager')
 
   // Get plugin list
@@ -52,8 +37,8 @@ function setupPluginIPC(mainWindow, appManager) {
   ipcMain.handle('execute-plugin', async (event, pluginName, ...args) => {
     try {
       // Before executing the plugin, hide the main window
-      if (mainWindow && !mainWindow.isDestroyed()) {
-        mainWindow.hide();
+      if (appManager.mainWindowIsDestoryed()) {
+        appManager.mainWindowHide()
         logger.info(`Executing plugin ${pluginName} before hiding main window`);
       }
       
@@ -101,63 +86,9 @@ function setupPluginIPC(mainWindow, appManager) {
 }
 
 /**
- * Set up window control IPC handling
- */
-function setupWindowIPC(mainWindow, appManager) {
-  ipcMain.handle('minimize-window', () => {
-    if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.minimize();
-    }
-  });
-  
-  ipcMain.handle('close-window', () => {
-    if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.hide();
-    }
-  });
-
-  ipcMain.handle('show-window', () => {
-    if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.show();
-      mainWindow.focus();
-    }
-  });
-}
-
-/**
- * Set up file operation IPC handling
- */
-function setupFileIPC(mainWindow) {
-  ipcMain.handle('open-file-dialog', async (event, options = {}) => {
-    try {
-      const result = await dialog.showOpenDialog(mainWindow, {
-        properties: ['openFile'],
-        filters: [
-          { name: 'Image files', extensions: ['jpg', 'jpeg', 'png', 'bmp', 'gif'] },
-          { name: 'All files', extensions: ['*'] }
-        ],
-        ...options
-      });
-      return result;
-    } catch (error) {
-      return { canceled: true, error: error.message };
-    }
-  });
-
-  ipcMain.handle('open-external', async (event, url) => {
-    try {
-      await shell.openExternal(url);
-      return { success: true };
-    } catch (error) {
-      return { success: false, error: error.message };
-    }
-  });
-}
-
-/**
  * Set up system feature IPC handling
  */
-function setupSystemIPC(mainWindow, appManager) {
+function setupSystemIPC(appManager) {
   const configManager = appManager.getComponent('configManager');
 
   // Get application status
@@ -177,36 +108,6 @@ function setupSystemIPC(mainWindow, appManager) {
       return { success: true, message: 'Configuration updated successfully' };
     } catch (error) {
       return { success: false, message: error.message };
-    }
-  });
-
-  // Redo screenshot
-  ipcMain.handle('new-screenshot', async () => {
-    try {
-      // Close current result window
-      if (resultWindow && !resultWindow.isDestroyed()) {
-        resultWindow.close();
-      }
-      // Redo screenshot OCR
-      const macTools = require('./utils/mac-tools');
-      const macToolsInstance = new macTools();
-      const imageBuffer = await macToolsInstance.captureScreenRegion();
-      const ocrResult = await macToolsInstance.performOCR(imageBuffer);
-      // Show new result window
-      showResultWindow(
-        imageBuffer.toString('base64'),
-        ocrResult,
-        'screenshot-ocr'
-      );
-      return {
-        success: true,
-        message: 'Screenshot redone successfully'
-      };
-    } catch (error) {
-      return {
-        success: false,
-        message: error.message
-      };
     }
   });
 
@@ -252,4 +153,4 @@ function setupSystemIPC(mainWindow, appManager) {
   });
 }
 
-module.exports = setupIPC; 
+module.exports = { setupIPC }; 

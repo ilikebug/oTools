@@ -1,0 +1,26 @@
+{
+  "app": {
+    "name": "oTools",
+    "version": "1.0.0",
+    "debug": false
+  },
+  "window": {
+    "width": 480,
+    "height": 420,
+    "alwaysOnTop": true,
+    "skipTaskbar": true
+  },
+  "plugins": {
+    "autoLoad": true,
+    "maxProcesses": 5,
+    "timeout": 30000
+  },
+  "logging": {
+    "level": "info",
+    "enableFile": true,
+    "logFile": "logs/otools.log"
+  },
+  "shortcuts": {
+    "toggle": "Alt+Space"
+  }
+}

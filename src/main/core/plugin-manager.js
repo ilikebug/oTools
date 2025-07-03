@@ -1,24 +1,19 @@
-// Plugin manager, responsible for plugin scanning, metadata reading, hot reloading, etc.
+// Plugin manager, responsible for plugin scanning, hot reloading, etc.
 const path = require('node:path');
 const fs = require('fs');
 const chokidar = require('chokidar');
-const BaseManager = require('./base-manager');
 const logger = require('../utils/logger');
 
-class PluginManager extends BaseManager {
-  constructor(options = {}) {
-    super('PluginManager');
-
-    this.appManager = options.appManager;
-    this.configManager = options.configManager;
-    this.errorHandler = options.errorHandler;
-
+class PluginManager {
+  constructor() {
     this.plugins = new Map();
     this.pluginsDir = path.join(__dirname, '..', '..', '..', 'plugins');
+    
+    this.maxProcesses = 10;
+    this.processes = new Map(); // name -> { window, status, ... }
+
     this.watcher = null;
     this.mainWindow = null;
-    this.maxProcesses = options.maxProcesses || 5;
-    this.processes = new Map(); // name -> { window, status, ... }
   }
 
   /**

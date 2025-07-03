@@ -1,28 +1,25 @@
 const fs = require('fs');
 const path = require('path');
 const chokidar = require('chokidar');
-const BaseManager = require('./base-manager');
 const logger = require('../utils/logger');
 
 /**
  * Configuration Manager
  * Responsible for loading, validating, and hot-reloading application configurations
  */
-class ConfigManager extends BaseManager {
+class ConfigManager {
   constructor() {
-    super('ConfigManager');
     this.configs = new Map();
     this.watchers = new Map();
     this.validators = new Map();
-    this.configDir = null;
+    
+    this.configDir = path.join(__dirname, '../../config');
   }
 
   /**
    * Initialize the configuration manager
    */
-  async onInitialize(options) {
-    this.configDir = options.configDir || path.join(__dirname, '../../config');
-    
+  async initialize() {
     // Ensure the configuration directory exists
     if (!fs.existsSync(this.configDir)) {
       fs.mkdirSync(this.configDir, { recursive: true });
