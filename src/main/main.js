@@ -40,8 +40,7 @@ const createWindow = () => {
     show: false
   });
 
-  // macOS specific settings
-  if (process.platform === 'darwin' && mainWindow && !mainWindow.isDestroyed()) {
+  if (mainWindow && !mainWindow.isDestroyed()) {
     mainWindow.setAlwaysOnTop(true, 'screen-saver');
     mainWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
     mainWindow.setFullScreenable(false);

@@ -12,8 +12,9 @@ class ConfigManager {
     this.configs = new Map();
     this.watchers = new Map();
     this.validators = new Map();
-    
-    this.configDir = path.join(__dirname, '../../config');
+
+    this.configDir = path.join(__dirname, '../../config');  
+    this.pluginsDir = path.join(__dirname, '../../../plugins');
   }
 
   /**
@@ -126,26 +127,34 @@ class ConfigManager {
    * Load plugin configurations
    */
   async loadPluginConfigs() {
-    const pluginsConfigDir = path.join(this.configDir, 'plugins');
-    
-    if (!fs.existsSync(pluginsConfigDir)) {
-      fs.mkdirSync(pluginsConfigDir, { recursive: true });
+    // plugins 目录（插件本体）
+  
+
+    if (!fs.existsSync(this.pluginsDir)) {
+      logger.warn('Plugins directory does not exist:', this.pluginsDir);
       return;
     }
-    
-    const files = fs.readdirSync(pluginsConfigDir);
-    for (const file of files) {
-      if (file.endsWith('.json')) {
-        const pluginName = path.basename(file, '.json');
-        const configPath = path.join(pluginsConfigDir, file);
-        
+    if (!fs.existsSync(pluginsConfigDir)) {
+      fs.mkdirSync(pluginsConfigDir, { recursive: true });
+    }
+
+    const pluginFolders = fs.readdirSync(this.pluginsDir).filter(file => {
+      const fullPath = path.join(this.pluginsDir, file);
+      return fs.statSync(fullPath).isDirectory();
+    });
+
+    for (const pluginName of pluginFolders) {
+      const configPath = path.join(pluginsConfigDir, `plugin.json`);
+      if (fs.existsSync(configPath)) {
         try {
           const config = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
-          this.configs.set(`plugin:${pluginName}`, config);
-          logger.info(`Plugin configuration loaded: ${pluginName}`);
+          this.configs.set(`plugin:${config.name}`, config);
         } catch (error) {
           logger.error(`Failed to load plugin configuration ${pluginName}: ${error.message}`);
         }
+      } else {
+        // 没有配置文件可以跳过或设置默认配置
+        logger.info(`No config found for plugin: ${pluginName}`);
       }
     }
   }
@@ -294,30 +303,10 @@ class ConfigManager {
   }
 
   /**
-   * Notify configuration change
-   */
-  notifyConfigChange(configName) {
-    // Other components can be notified via event system here
-    // Temporarily use simple log
-    logger.info(`Configuration change notification: ${configName}`);
-  }
-
-  /**
    * Get all configuration names
    */
   getConfigNames() {
     return Array.from(this.configs.keys());
-  }
-
-  /**
-   * Get configuration statistics
-   */
-  getStats() {
-    return {
-      totalConfigs: this.configs.size,
-      configNames: this.getConfigNames(),
-      watchersCount: this.watchers.size
-    };
   }
 }
 
