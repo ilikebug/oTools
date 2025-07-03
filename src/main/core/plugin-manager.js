@@ -2,31 +2,23 @@
 const path = require('node:path');
 const fs = require('fs');
 const chokidar = require('chokidar');
-const BaseManager = require('../core/base-manager');
-const PluginProcessPool = require('./process-pool');
+const BaseManager = require('./base-manager');
+const logger = require('../utils/logger');
 
 class PluginManager extends BaseManager {
   constructor(options = {}) {
     super('PluginManager');
 
     this.appManager = options.appManager;
-    this.logger = options.logger;
     this.configManager = options.configManager;
     this.errorHandler = options.errorHandler;
 
-    if (!this.logger) {
-      throw new Error('PluginManager requires a logger instance.');
-    }
-    
     this.plugins = new Map();
     this.pluginsDir = path.join(__dirname, '..', '..', '..', 'plugins');
     this.watcher = null;
     this.mainWindow = null;
-    this.resultWindowManager = null;
-    this.macTools = null
-    this.pluginProcessPool = new PluginProcessPool({
-      maxProcesses: 5
-    });
+    this.maxProcesses = options.maxProcesses || 5;
+    this.processes = new Map(); // name -> { window, status, ... }
   }
 
   /**
@@ -35,7 +27,6 @@ class PluginManager extends BaseManager {
   async initialize(options = {}) {
     try {
       this.mainWindow = options.mainWindow;
-      this.resultWindowManager = options.resultWindowManager;
 
       // Load plugins
       await this.loadPlugins();
@@ -45,7 +36,7 @@ class PluginManager extends BaseManager {
         this.watchPlugins();
       }
       
-      this.logger.log('Plugin manager initialization completed');
+      logger.info('Plugin manager initialization completed');
       
     } catch (error) {
       await this.errorHandler.handleError(error, { 
@@ -66,7 +57,7 @@ class PluginManager extends BaseManager {
       }
       
       this.plugins.clear();
-      this.logger.log('Plugin manager destroyed');
+      logger.info('Plugin manager destroyed');
       
     } catch (error) {
       await this.errorHandler.handleError(error, { 
@@ -116,7 +107,7 @@ class PluginManager extends BaseManager {
         }
       }
       
-      this.logger.log(`Plugin loading completed, ${loadedPlugins.length} plugins loaded: ${loadedPlugins.join(', ')}`);
+      logger.info(`Plugin loading completed, ${loadedPlugins.length} plugins loaded: ${loadedPlugins.join(', ')}`);
       
     } catch (error) {
       await this.errorHandler.handleError(error, { operation: 'load_plugins' });
@@ -141,18 +132,18 @@ class PluginManager extends BaseManager {
       
       this.watcher
         .on('addDir', async (dirPath) => {
-          this.logger.log(`New plugin directory detected: ${dirPath}`);
+          logger.info(`New plugin directory detected: ${dirPath}`);
           await this.loadPlugins();
           this.notifyPluginsChanged();
         })
         .on('unlinkDir', async (dirPath) => {
-          this.logger.log(`Plugin directory deleted: ${dirPath}`);
+          logger.info(`Plugin directory deleted: ${dirPath}`);
           await this.loadPlugins();
           this.notifyPluginsChanged();
         })
         .on('change', async (filePath) => {
           if (filePath.endsWith('plugin.json')) {
-            this.logger.log(`Plugin configuration changed: ${filePath}`);
+            logger.info(`Plugin configuration changed: ${filePath}`);
             await this.loadPlugins();
             this.notifyPluginsChanged();
           }
@@ -163,7 +154,7 @@ class PluginManager extends BaseManager {
           });
         });
       
-      this.logger.log('Plugin watcher started');
+      logger.info('Plugin watcher started');
       
     } catch (error) {
       this.errorHandler.handleError(error, { operation: 'watch_plugins' });
@@ -177,10 +168,10 @@ class PluginManager extends BaseManager {
     try {
       if (this.mainWindow && !this.mainWindow.isDestroyed()) {
         this.mainWindow.webContents.send('plugins-changed', this.getPluginsList());
-        this.logger.log('Notification sent to render process about plugin list change');
+        logger.info('Notification sent to render process about plugin list change');
       }
     } catch (error) {
-      this.errorHandler.handleError(error, { operation: 'notify_plugins_changed' });
+      logger.info(`Error in notifyPluginsChanged: ${error.message}`);
     }
   }
 
@@ -221,11 +212,68 @@ class PluginManager extends BaseManager {
   }
 
   /**
-   * Execute plugin
-   * Only as a business entry, actual execution is delegated to pluginProcessPool
+   * 插件进程池相关方法
    */
+  async getProcess(pluginName, forceNew = false) {
+    if (!forceNew && this.processes.has(pluginName)) {
+      const info = this.processes.get(pluginName);
+      if (info.status === 'idle' && info.window && !info.window.isDestroyed()) {
+        info.status = 'busy';
+        return info;
+      }
+    }
+    if (this.processes.size >= this.maxProcesses) {
+      throw new Error('Maximum plugin process number reached');
+    }
+    return await this.createProcess(pluginName);
+  }
+
+  async createProcess(pluginName) {
+    const pluginPath = path.join(this.pluginsDir, pluginName);
+    const metaPath = path.join(pluginPath, 'plugin.json');
+    if (!fs.existsSync(metaPath)) throw new Error(`Plugin configuration file does not exist: ${metaPath}`);
+    const meta = JSON.parse(fs.readFileSync(metaPath, 'utf-8'));
+    const htmlPath = path.join(pluginPath, meta.ui && meta.ui.html ? meta.ui.html : 'index.html');
+    const preloadPath = path.join(pluginPath, 'preload.js');
+    if (!fs.existsSync(htmlPath)) throw new Error(`Plugin main page does not exist: ${htmlPath}`);
+    if (!fs.existsSync(preloadPath)) throw new Error(`Plugin preload script does not exist: ${preloadPath}`);
+
+    const { BrowserWindow } = require('electron');
+    const win = new BrowserWindow({
+      show: false,
+      webPreferences: {
+        preload: preloadPath,
+        nodeIntegration: false,
+        contextIsolation: true
+      }
+    });
+    await win.loadFile(htmlPath);
+    const info = { window: win, status: 'idle', meta };
+    this.processes.set(pluginName, info);
+    // 监听插件窗口消息
+    win.webContents.on('ipc-message', (event, channel, ...args) => {
+      logger.info(`[${pluginName}] IPC message: ${channel}`, args);
+    });
+    win.on('closed', () => {
+      this.processes.delete(pluginName);
+    });
+    logger.info(`Plugin process created successfully: ${pluginName}`);
+    return info;
+  }
+
   async executePlugin(pluginName, action, ...args) {
-    return await this.pluginProcessPool.executePlugin(pluginName, action, ...args);
+    const info = await this.getProcess(pluginName);
+    info.status = 'busy';
+    info.window.webContents.send('plugin-execute', { action, args });
+    if (info.window && !info.window.isVisible()) {
+      info.window.show();
+    }
+    info.status = 'idle';
+    return { success: true };
+  }
+
+  getPoolStatus() {
+    return Array.from(this.processes.keys());
   }
 
   /**
@@ -237,26 +285,21 @@ class PluginManager extends BaseManager {
       pluginsDir: this.pluginsDir,
       watcherActive: !!this.watcher,
       mainWindowActive: !!(this.mainWindow && !this.mainWindow.isDestroyed()),
-      pluginProcessPoolActive: !!this.pluginProcessPool,
-      resultWindowManagerActive: !!this.resultWindowManager
+      pluginProcessPoolActive: !!this.processes.size,
     };
   }
 
   async startPlugin(pluginName) {
-    await this.pluginProcessPool.getProcess(pluginName);
-    this.logger.log(`Plugin started: ${pluginName}`);
+    await this.getProcess(pluginName);
+    logger.info(`Plugin started: ${pluginName}`);
   }
 
   async stopPlugin(pluginName) {
-    const info = this.pluginProcessPool.processes.get(pluginName);
+    const info = this.processes.get(pluginName);
     if (info && info.window && !info.window.isDestroyed()) {
       info.window.close();
-      this.logger.log(`Plugin stopped: ${pluginName}`);
+      logger.info(`Plugin stopped: ${pluginName}`);
     }
-  }
-
-  getPoolStatus() {
-    return this.pluginProcessPool.getPoolStatus();
   }
 }
 

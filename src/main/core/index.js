@@ -7,13 +7,10 @@
 const BaseManager = require('./base-manager');
 
 // Logger System
-const Logger = require('./logger');
+const logger = require('../utils/logger');
 
 // Configuration Management
 const ConfigManager = require('./config-manager');
-
-// Error Handler
-const ErrorHandler = require('./error-handler');
 
 // Application Manager
 const { AppManager } = require('./app-manager');
@@ -24,13 +21,10 @@ module.exports = {
   BaseManager,
   
   // Logger System
-  Logger,
+  logger,
   
   // Configuration Management
   ConfigManager,
-  
-  // Error Handler
-  ErrorHandler,
   
   // Application Manager
   AppManager

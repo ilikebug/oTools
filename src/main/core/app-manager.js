@@ -1,9 +1,7 @@
 const BaseManager = require('./base-manager');
-const Logger = require('./logger');
 const ConfigManager = require('./config-manager');
-const ErrorHandler = require('./error-handler');
-const PluginProcessPool = require('../plugin-manager/process-pool');
-const PluginManager = require('../plugin-manager/manager');
+const PluginManager = require('./plugin-manager');
+const logger = require('../utils/logger');
 
 /**
  * Application Manager - Unify all core components
@@ -13,12 +11,9 @@ class AppManager extends BaseManager {
     super('AppManager');
     
     // Core components
-    this.logger = null;
     this.configManager = null;
-    this.errorHandler = null;
     
     // Plugin related components
-    this.pluginProcessPool = null;
     this.pluginManager = null;
     
     // Application status
@@ -42,7 +37,7 @@ class AppManager extends BaseManager {
    */
   registerComponent(name, componentInstance) {
     if (this.components.has(name)) {
-      this.getComponent('logger')?.log(`Component ${name} has been overwritten registered`, 'warn');
+      logger.warn(`Component ${name} has been overwritten registered`);
     }
     this.components.set(name, componentInstance);
   }
@@ -55,35 +50,12 @@ class AppManager extends BaseManager {
       this.startTime = Date.now();
       this.appStatus.status = 'initializing';
       
-      // 1. Initialize logger system
-      this.logger = new Logger();
-      await this.logger.initialize(options.logging || {});
-      this.registerComponent('logger', this.logger);
-      
       // 2. Initialize configuration manager
       this.configManager = new ConfigManager();
       await this.configManager.initialize({
         configDir: options.configDir,
-        logger: this.logger
       });
       this.registerComponent('configManager', this.configManager);
-      
-      // 4. Initialize error handler
-      this.errorHandler = new ErrorHandler();
-      await this.errorHandler.initialize({
-        logger: this.logger,
-        configManager: this.configManager
-      });
-      this.registerComponent('errorHandler', this.errorHandler);
-      
-      
-      // 6. Initialize plugin process pool
-      this.pluginProcessPool = new PluginProcessPool(this);
-      await this.pluginProcessPool.initialize({
-        macTools: options.macTools,
-        resultWindowManager: options.resultWindowManager
-      });
-      this.registerComponent('pluginProcessPool', this.pluginProcessPool);
       
       // 7. Initialize plugin manager
       this.pluginManager = new PluginManager(this);
@@ -91,8 +63,7 @@ class AppManager extends BaseManager {
         macTools: options.macTools,
         mainWindow: options.mainWindow,
         resultWindowManager: options.resultWindowManager,
-        enableWatch: options.enablePluginWatch !== false,
-        pluginProcessPool: this.pluginProcessPool
+        enableWatch: options.enablePluginWatch !== false
       });
       this.registerComponent('pluginManager', this.pluginManager);
       
@@ -102,14 +73,14 @@ class AppManager extends BaseManager {
       this.appStatus.componentCount = this.getComponentCount();
       this.isInitialized = true;
       
-      this.logger.log('Application Manager initialization completed');
+      logger.info('Application Manager initialization completed');
       
     } catch (error) {
       this.appStatus.status = 'error';
       this.appStatus.lastError = error.message;
       
-      if (this.logger) {
-        this.logger.log(`Application Manager initialization failed: ${error.message}`, 'error');
+      if (logger) {
+        logger.error(`Application Manager initialization failed: ${error.message}`);
       } else {
         console.error('Application Manager initialization failed:', error);
       }
@@ -124,17 +95,12 @@ class AppManager extends BaseManager {
   async destroy() {
     try {
       this.appStatus.status = 'shutting_down';
-      this.logger.log('Application Manager start destroying');
+      logger.info('Application Manager start destroying');
       
       // Destroy components in reverse order
       const destroyOrder = [
-        'pluginManager', 
-        'pluginProcessPool',
-        'messageHandler',
-        'messageRouter',
-        'errorHandler',
+        'pluginManager',
         'configManager',
-        'logger'
       ];
       
       for (const componentName of destroyOrder) {
@@ -142,9 +108,9 @@ class AppManager extends BaseManager {
         if (component && typeof component.destroy === 'function') {
           try {
             await component.destroy();
-            this.logger.log(`${componentName} has been destroyed`);
+            logger.info(`${componentName} has been destroyed`);
           } catch (error) {
-            this.logger.log(`${componentName} destroy failed: ${error.message}`, 'error');
+            logger.error(`${componentName} destroy failed: ${error.message}`);
           }
         }
       }
@@ -200,102 +166,6 @@ class AppManager extends BaseManager {
     };
   }
 
-  /**
-   * Get detailed status information
-   */
-  getDetailedStatus() {
-    const status = this.getAppStatus();
-    
-    // Add detailed status of each component
-    const components = this.getAllComponents();
-    for (const [name, component] of Object.entries(components)) {
-      if (component && typeof component.getStatus === 'function') {
-        try {
-          status.components[name].details = component.getStatus();
-        } catch (error) {
-          status.components[name].details = { error: error.message };
-        }
-      }
-    }
-    
-    return status;
-  }
-
-  /**
-   * Health check
-   */
-  async healthCheck() {
-    const health = {
-      status: 'healthy',
-      timestamp: new Date().toISOString(),
-      components: {},
-      issues: []
-    };
-    
-    const components = this.getAllComponents();
-    
-    for (const [name, component] of Object.entries(components)) {
-      try {
-        if (!component) {
-          health.components[name] = { status: 'missing', error: 'Component not initialized' };
-          health.issues.push(`${name}: Component not initialized`);
-          continue;
-        }
-        
-        // Check if the component has health check method
-        if (typeof component.healthCheck === 'function') {
-          const componentHealth = await component.healthCheck();
-          health.components[name] = componentHealth;
-          
-          if (componentHealth.status !== 'healthy') {
-            health.issues.push(`${name}: ${componentHealth.error || 'Unknown error'}`);
-          }
-        } else {
-          // Basic check
-          health.components[name] = { 
-            status: 'unknown', 
-            message: 'No health check method available' 
-          };
-        }
-        
-      } catch (error) {
-        health.components[name] = { 
-          status: 'error', 
-          error: error.message 
-        };
-        health.issues.push(`${name}: ${error.message}`);
-      }
-    }
-    
-    // If there are issues, update overall status
-    if (health.issues.length > 0) {
-      health.status = 'unhealthy';
-    }
-    
-    return health;
-  }
-
-  /**
-   * Broadcast message to all components
-   */
-  async broadcastMessage(message) {
-    const results = {};
-    const components = this.getAllComponents();
-    
-    for (const [name, component] of Object.entries(components)) {
-      if (component && typeof component.handleMessage === 'function') {
-        try {
-          results[name] = await component.handleMessage(message);
-        } catch (error) {
-          results[name] = { error: error.message };
-        }
-      } else {
-        results[name] = { error: 'Component does not support message handling' };
-      }
-    }
-    
-    return results;
-  }
 }
 
 module.exports = { AppManager }; 

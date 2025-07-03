@@ -1,6 +1,7 @@
 const { app, BrowserWindow, globalShortcut, ipcMain, Notification } = require('electron');
 const path = require('node:path');
 const Store = require('electron-store');
+const logger = require('./utils/logger');
 
 // Import new core components
 const { AppManager } = require('./core');
@@ -99,9 +100,9 @@ function registerGlobalShortcuts() {
   });
   
   if (!ret) {
-    appManager.getComponent('logger').log('Global shortcut registration failed', 'error');
+    logger.error('Global shortcut registration failed');
   } else {
-    appManager.getComponent('logger').log(`Global shortcut registered: ${shortcut}`);
+    logger.info(`Global shortcut registered: ${shortcut}`);
   }
 }
 
@@ -133,8 +134,7 @@ async function initializeApp() {
       resultWindowManager: null // Set later
     });
 
-    const logger = appManager.getComponent('logger');
-    logger.log('App manager initialized');
+    logger.info('App manager initialized');
     
     // Set up IPC and result window manager
     const setupIPC = require('./ipc');
@@ -149,7 +149,7 @@ async function initializeApp() {
     // Register global shortcuts
     registerGlobalShortcuts();
     
-    logger.log('Application started');
+    logger.info('Application started');
     
   } catch (error) {
     console.error('Application initialization failed:', error);

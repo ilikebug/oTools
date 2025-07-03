@@ -2,6 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const chokidar = require('chokidar');
 const BaseManager = require('./base-manager');
+const logger = require('../utils/logger');
 
 /**
  * Configuration Manager
@@ -33,7 +34,7 @@ class ConfigManager extends BaseManager {
     // Set up configuration watchers
     this.setupConfigWatchers();
     
-    this.log('Configuration manager initialized');
+    logger.info('Configuration manager initialized');
   }
 
   /**
@@ -46,7 +47,7 @@ class ConfigManager extends BaseManager {
     }
     this.watchers.clear();
     
-    this.log('Configuration manager destroyed');
+    logger.info('Configuration manager destroyed');
   }
 
   /**
@@ -63,9 +64,9 @@ class ConfigManager extends BaseManager {
       // Validate all configurations
       this.validateAllConfigurations();
       
-      this.log(`Loaded ${this.configs.size} configuration files`);
+      logger.info(`Loaded ${this.configs.size} configuration files`);
     } catch (error) {
-      this.log(`Failed to load configuration: ${error.message}`, 'error');
+      logger.error(`Failed to load configuration: ${error.message}`);
       throw error;
     }
   }
@@ -89,7 +90,7 @@ class ConfigManager extends BaseManager {
     }
     
     this.configs.set('main', config);
-    this.log('Main configuration loaded');
+    logger.info('Main configuration loaded');
   }
 
   /**
@@ -144,9 +145,9 @@ class ConfigManager extends BaseManager {
         try {
           const config = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
           this.configs.set(`plugin:${pluginName}`, config);
-          this.log(`Plugin configuration loaded: ${pluginName}`);
+          logger.info(`Plugin configuration loaded: ${pluginName}`);
         } catch (error) {
-          this.log(`Failed to load plugin configuration ${pluginName}: ${error.message}`, 'error');
+          logger.error(`Failed to load plugin configuration ${pluginName}: ${error.message}`);
         }
       }
     }
@@ -190,12 +191,12 @@ class ConfigManager extends BaseManager {
         await this.reloadPluginConfig(pluginName);
       }
       
-      this.log(`Configuration reloaded: ${configName}`);
+      logger.info(`Configuration reloaded: ${configName}`);
       
       // Notify configuration change
       this.notifyConfigChange(configName);
     } catch (error) {
-      this.log(`Failed to reload configuration ${configName}: ${error.message}`, 'error');
+      logger.error(`Failed to reload configuration ${configName}: ${error.message}`);
     }
   }
 
@@ -245,10 +246,10 @@ class ConfigManager extends BaseManager {
       
       if (filePath) {
         fs.writeFileSync(filePath, JSON.stringify(config, null, 2));
-        this.log(`Configuration saved: ${configName}`);
+        logger.info(`Configuration saved: ${configName}`);
       }
     } catch (error) {
-      this.log(`Failed to save configuration ${configName}: ${error.message}`, 'error');
+      logger.error(`Failed to save configuration ${configName}: ${error.message}`);
     }
   }
 
@@ -290,7 +291,7 @@ class ConfigManager extends BaseManager {
       try {
         this.validateConfiguration(config);
       } catch (error) {
-        this.log(`Configuration validation failed ${name}: ${error.message}`, 'error');
+        logger.error(`Configuration validation failed ${name}: ${error.message}`);
       }
     }
   }
@@ -301,7 +302,7 @@ class ConfigManager extends BaseManager {
   notifyConfigChange(configName) {
     // Other components can be notified via event system here
     // Temporarily use simple log
-    this.log(`Configuration change notification: ${configName}`);
+    logger.info(`Configuration change notification: ${configName}`);
   }
 
   /**

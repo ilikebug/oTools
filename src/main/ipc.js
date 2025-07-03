@@ -1,6 +1,7 @@
 const { ipcMain, dialog, shell, BrowserWindow, Notification } = require('electron');
 const path = require('path');
 const MacTools = require('./utils/mac-tools');
+const logger = require('./utils/logger');
 
 
 // Global variable to store result window
@@ -13,13 +14,11 @@ let pluginsDir = null;
  * @param {AppManager} appManager Application manager
  */
 function setupIPC(mainWindow, appManager) {
-  const logger = appManager.getComponent('logger');
-  
+  logger.info('IPC communication module initialization started');
+
   // Set plugin directory path
   pluginsDir = path.join(__dirname, '..', '..', '..', 'plugins');
   
-  logger.log('IPC communication module initialization started');
-
   // Plugin-related IPC handling
   setupPluginIPC(mainWindow, appManager);
   
@@ -37,8 +36,6 @@ function setupIPC(mainWindow, appManager) {
  * Set up plugin-related IPC handling
  */
 function setupPluginIPC(mainWindow, appManager) {
-  const logger = appManager.getComponent('logger');
-  const errorHandler = appManager.getComponent('errorHandler');
   const pluginManager = appManager.getComponent('pluginManager')
 
   // Get plugin list
@@ -47,7 +44,6 @@ function setupPluginIPC(mainWindow, appManager) {
       const plugins = await pluginManager.getPluginsList();
       return plugins;
     } catch (error) {
-      await errorHandler.handleError(error, { operation: 'get_plugins' });
       return [];
     }
   });
@@ -58,7 +54,7 @@ function setupPluginIPC(mainWindow, appManager) {
       // Before executing the plugin, hide the main window
       if (mainWindow && !mainWindow.isDestroyed()) {
         mainWindow.hide();
-        logger.log(`Executing plugin ${pluginName} before hiding main window`);
+        logger.info(`Executing plugin ${pluginName} before hiding main window`);
       }
       
       const result = await pluginManager.executePlugin(pluginName, 'default', ...args);
@@ -69,12 +65,6 @@ function setupPluginIPC(mainWindow, appManager) {
         message: `Plugin ${pluginName} executed successfully`
       };
     } catch (error) {
-      await errorHandler.handleError(error, { 
-        pluginName, 
-        operation: 'execute_plugin',
-        args 
-      });
-      
       return {
         success: false,
         result: null,
@@ -89,7 +79,6 @@ function setupPluginIPC(mainWindow, appManager) {
       await pluginManager.startPlugin(pluginName);
       return { success: true, message: `Plugin ${pluginName} started successfully` };
     } catch (error) {
-      await errorHandler.handleError(error, { pluginName, operation: 'start_plugin' });
       return { success: false, message: error.message };
     }
   });
@@ -99,7 +88,6 @@ function setupPluginIPC(mainWindow, appManager) {
       await pluginManager.stopPlugin(pluginName);
       return { success: true, message: `Plugin ${pluginName} stopped successfully` };
     } catch (error) {
-      await errorHandler.handleError(error, { pluginName, operation: 'stop_plugin' });
       return { success: false, message: error.message };
     }
   });
@@ -116,8 +104,6 @@ function setupPluginIPC(mainWindow, appManager) {
  * Set up window control IPC handling
  */
 function setupWindowIPC(mainWindow, appManager) {
-  const logger = appManager.getComponent('logger');
-
   ipcMain.handle('minimize-window', () => {
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.minimize();
@@ -141,10 +127,7 @@ function setupWindowIPC(mainWindow, appManager) {
 /**
  * Set up file operation IPC handling
  */
-function setupFileIPC(mainWindow, appManager) {
-  const logger = appManager.getComponent('logger');
-  const errorHandler = appManager.getComponent('errorHandler');
-
+function setupFileIPC(mainWindow) {
   ipcMain.handle('open-file-dialog', async (event, options = {}) => {
     try {
       const result = await dialog.showOpenDialog(mainWindow, {
@@ -157,7 +140,6 @@ function setupFileIPC(mainWindow, appManager) {
       });
       return result;
     } catch (error) {
-      await errorHandler.handleError(error, { operation: 'open_file_dialog' });
       return { canceled: true, error: error.message };
     }
   });
@@ -167,7 +149,6 @@ function setupFileIPC(mainWindow, appManager) {
       await shell.openExternal(url);
       return { success: true };
     } catch (error) {
-      await errorHandler.handleError(error, { operation: 'open_external', url });
       return { success: false, error: error.message };
     }
   });
@@ -177,7 +158,6 @@ function setupFileIPC(mainWindow, appManager) {
  * Set up system feature IPC handling
  */
 function setupSystemIPC(mainWindow, appManager) {
-  const errorHandler = appManager.getComponent('errorHandler');
   const configManager = appManager.getComponent('configManager');
 
   // Get application status
@@ -196,7 +176,6 @@ function setupSystemIPC(mainWindow, appManager) {
       configManager.setConfig(configName, config);
       return { success: true, message: 'Configuration updated successfully' };
     } catch (error) {
-      await errorHandler.handleError(error, { operation: 'set_config', configName });
       return { success: false, message: error.message };
     }
   });
@@ -224,7 +203,6 @@ function setupSystemIPC(mainWindow, appManager) {
         message: 'Screenshot redone successfully'
       };
     } catch (error) {
-      await errorHandler.handleError(error, { operation: 'new_screenshot' });
       return {
         success: false,
         message: error.message

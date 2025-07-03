@@ -2,11 +2,12 @@
  * Base Manager Class
  * Provides basic functions and common methods for all managers
  */
+const logger = require('../utils/logger');
+
 class BaseManager {
   constructor(name) {
     this.name = name;
     this.isInitialized = false;
-    this.logger = null;
     this.config = null;
   }
 
@@ -20,15 +21,14 @@ class BaseManager {
     }
 
     try {
-      this.logger = options.logger;
       this.config = options.config;
       
       await this.onInitialize(options);
       this.isInitialized = true;
       
-      this.log(`Initialization succeeded`);
+      logger.info(`Initialization succeeded`);
     } catch (error) {
-      this.log(`Initialization failed: ${error.message}`, 'error');
+      logger.error(`Initialization failed: ${error.message}`);
       throw error;
     }
   }
@@ -44,9 +44,9 @@ class BaseManager {
     try {
       await this.onDestroy();
       this.isInitialized = false;
-      this.log(`Destruction succeeded`);
+      logger.info(`Destruction succeeded`);
     } catch (error) {
-      this.log(`Destruction failed: ${error.message}`, 'error');
+      logger.error(`Destruction failed: ${error.message}`);
       throw error;
     }
   }
@@ -67,36 +67,13 @@ class BaseManager {
   }
 
   /**
-   * Log messages
-   * @param {string} message Log message
-   * @param {string} level Log level
-   */
-  log(message, level = 'info') {
-    if (this.logger) {
-      this.logger.log(level, `[${this.name}] ${message}`);
-    } else {
-      console.log(`[${this.name}] ${message}`);
-    }
-  }
-
-  /**
-   * Check if the manager has been initialized
-   */
-  checkInitialized() {
-    if (!this.isInitialized) {
-      throw new Error(`${this.name} has not been initialized`);
-    }
-  }
-
-  /**
    * Get manager status
    */
   getStatus() {
     return {
       name: this.name,
       isInitialized: this.isInitialized,
-      config: this.config ? true : false,
-      logger: this.logger ? true : false
+      config: this.config ? true : false
     };
   }
 }

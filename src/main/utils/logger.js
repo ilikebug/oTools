@@ -1,6 +1,5 @@
 const fs = require('fs');
 const path = require('path');
-const BaseManager = require('./base-manager');
 
 /**
  * Log level enumeration
@@ -26,10 +25,8 @@ const LogLevelNames = {
  * Unified logger manager
  * Provides console, file, remote, and other logging outputs
  */
-class Logger extends BaseManager {
+class Logger {
   constructor() {
-    super('Logger');
-    
     this.logLevel = LogLevel.INFO;
     this.logFile = null;
     this.maxFileSize = 10 * 1024 * 1024; // 10MB
@@ -321,4 +318,19 @@ class Logger extends BaseManager {
   }
 }
 
-module.exports = Logger; 
+// 创建全局唯一 logger 实例
+const logger = new Logger();
+
+// 便捷方法：logger.info(...), logger.error(...), logger.warn(...), logger.debug(...)
+['info', 'error', 'warn', 'debug'].forEach(level => {
+  logger[level] = function(message, data = null) {
+    this.log(message, level, data);
+  };
+});
+
+// 便捷初始化方法
+logger.init = function(options = {}) {
+  return this.initialize(options);
+};
+
+module.exports = logger; 
