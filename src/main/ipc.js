@@ -2,6 +2,7 @@ const { ipcMain, BrowserWindow, Notification } = require('electron');
 const path = require('path');
 const MacTools = require('./utils/mac-tools');
 const logger = require('./utils/logger');
+const { setAutoStart } = require('./utils/auto-start');
 
 
 /**
@@ -110,6 +111,10 @@ function setupSystemIPC(appManager) {
   ipcMain.handle('set-config', async (event, configName, config) => {
     try {
       configManager.setConfig(configName, config);
+      if (configName === 'main' && config.app && 
+        typeof config.app.autoStart !== 'undefined') {
+        setAutoStart(!!config.app.autoStart);
+      }
       return { success: true, message: 'Configuration updated successfully' };
     } catch (error) {
       return { success: false, message: error.message };

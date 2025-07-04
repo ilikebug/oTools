@@ -395,7 +395,7 @@ class oToolsApp {
     // Helper: convert Set to shortcut string
     function getShortcutString(keys) {
       // Ensure modifier key order
-      const order = ['CommandOrControl', 'Ctrl', 'Meta', 'Alt', 'Shift'];
+      const order = ['Meta', 'Ctrl', 'Alt', 'Shift'];
       let arr = [];
       for (let o of order) {
         if (keys.has(o)) arr.push(o);
@@ -404,11 +404,17 @@ class oToolsApp {
       for (let k of keys) {
         if (!order.includes(k)) arr.push(k);
       }
-      return arr.join('+');
+  
+      const isMac = /mac/i.test(navigator.userAgent);
+      return arr.map(k => {
+        if (k === 'Meta') return isMac ? 'Command' : 'Win';
+        return k;
+      }).join('+');
     }
 
     function normalizeKey(e) {
-      if (e.key === 'Control' || e.key === 'Meta') return 'CommandOrControl';
+      if (e.key === 'Control') return 'Ctrl';
+      if (e.key === 'Meta') return 'Meta';
       if (e.key === 'Alt') return 'Alt';
       if (e.key === 'Shift') return 'Shift';
       // Use event.code for physical key, not affected by modifiers
@@ -421,7 +427,7 @@ class oToolsApp {
     }
 
     function isValidShortcut(keys) {
-      const modifiers = ['CommandOrControl', 'Ctrl', 'Meta', 'Alt', 'Shift'];
+      const modifiers = ['Meta', 'Ctrl', 'Alt', 'Shift'];
       return [...keys].some(k => !modifiers.includes(k));
     }
 
