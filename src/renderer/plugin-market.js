@@ -1,10 +1,8 @@
-// 插件市场窗口渲染逻辑
 (async function() {
   const repo = 'ilikebug/oTools-Plugins';
   const apiUrl = `https://api.github.com/repos/${repo}/contents/`;
   const listDiv = document.getElementById('pluginMarketList');
 
-  // 带重试的fetch
   async function fetchWithRetry(url, options = {}, retries = 3, delay = 300) {
     for (let i = 0; i < retries; i++) {
       try {
@@ -44,7 +42,21 @@
           <div class="plugin-desc">${plugin.description || ''}</div>
           <div class="plugin-author">${plugin.author || ''}</div>
         </div>
+        <button class="plugin-download-btn" title="Download" data-folder="${plugin.folder}">
+          <i class="fa fa-download"></i>
+        </button>
       `;
+      const downloadBtn = div.querySelector('.plugin-download-btn');
+      if (downloadBtn) {
+        downloadBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          if (window.electron && window.electron.ipcRenderer) {
+            window.electron.ipcRenderer.send('download-plugin', plugin.folder);
+          } else if (window.ipcRenderer) {
+            window.ipcRenderer.send('download-plugin', plugin.folder);
+          }
+        });
+      }
       listDiv.appendChild(div);
     });
   }
@@ -56,7 +68,6 @@
     const data = await res.json();
     const dirs = data.filter(item => item.type === 'dir');
 
-    // 并发请求所有 plugin.json，带重试
     const pluginPromises = dirs.map(async (dir) => {
       const pluginJsonUrl = `https://api.github.com/repos/${repo}/contents/${dir.name}/plugin.json`;
       try {
