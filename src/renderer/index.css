@@ -134,7 +134,8 @@ body {
 
 /* Top bar buttons */
 .status-btn,
-.settings-btn {
+.settings-btn,
+.plugins-btn {
   width: 36px;
   height: 36px;
   border: none;
@@ -151,14 +152,16 @@ body {
 }
 
 .status-btn:hover,
-.settings-btn:hover {
+.settings-btn:hover,
+.plugins-btn:hover {
   background: #e6eaff;
   color: #4b5ae2;
   transform: translateY(-1px);
 }
 
 .status-btn:active,
-.settings-btn:active {
+.settings-btn:active,
+.plugins-btn:active {
   transform: translateY(0);
 }
 
