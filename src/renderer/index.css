@@ -866,7 +866,6 @@ body {
   flex-direction: row;
   align-items: center;
   gap: 18px;
-  position: relative;
 }
 .plugin-market-item:hover {
   box-shadow: 0 4px 16px rgba(102,126,234,0.08);
@@ -985,28 +984,4 @@ body {
   font-weight: 500;
   background: transparent;
   z-index: 1;
-}
-
-.plugin-download-btn {
-  position: absolute;
-  right: 18px;
-  bottom: 14px;
-  width: 32px;
-  height: 32px;
-  border: none;
-  background: #e6eaff;
-  color: #4b5ae2;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  font-size: 16px;
-  box-shadow: 0 1px 4px rgba(102,126,234,0.08);
-  transition: background 0.2s, color 0.2s;
-  z-index: 2;
-}
-.plugin-download-btn:hover {
-  background: #d1d9ff;
-  color: #222;
 }
