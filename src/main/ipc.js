@@ -87,6 +87,24 @@ function setupPluginIPC(appManager) {
       win.show();
     }
   });
+
+  // 新增：打开插件市场窗口
+  ipcMain.on('open-plugin-market', () => {
+    const win = new BrowserWindow({
+      width: 900,
+      height: 700,
+      resizable: true,
+      frame: true,
+      webPreferences: {
+        preload: path.join(__dirname, '../renderer/preload.js'),
+        nodeIntegration: false,
+        contextIsolation: true,
+        enableRemoteModule: false
+      }
+    });
+    win.setMenuBarVisibility(true);
+    win.loadFile(path.join(__dirname, '../renderer/plugin-market.html'));
+  });
 }
 
 /**

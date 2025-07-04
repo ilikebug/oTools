@@ -37,6 +37,11 @@ contextBridge.exposeInMainWorld('oToolsAPI', {
     ipcRenderer.on('result-data', (event, data) => callback(data));
   },
 
+  // Open plugin market
+  openPluginMarket: () => {
+    ipcRenderer.send('open-plugin-market');
+  },
+
   // General invoke method
   invoke: (channel, ...args) => ipcRenderer.invoke(channel, ...args)
 });

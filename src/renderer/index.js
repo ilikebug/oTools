@@ -76,6 +76,16 @@ class oToolsApp {
         });
       }
 
+      // Plugins market button
+      const pluginsBtn = document.getElementById('pluginsBtn');
+      if (pluginsBtn) {
+        pluginsBtn.addEventListener('click', () => {
+          if (window.oToolsAPI) {
+            window.oToolsAPI.openPluginMarket();
+          }
+        });
+      }
+
     } catch (error) {
       console.error('Error binding events:', error);
     }
@@ -299,7 +309,7 @@ class oToolsApp {
     this.hideAllPanels();
     const panel = document.getElementById(panelId);
     if (panel) {
-      panel.style.display = 'flex';
+      panel.style.display = 'block';
       this.currentPanel = panelId;
     }
   }
@@ -308,9 +318,7 @@ class oToolsApp {
     const panel = document.getElementById(panelId);
     if (panel) {
       panel.style.display = 'none';
-      if (this.currentPanel === panelId) {
-        this.currentPanel = null;
-      }
+      if (this.currentPanel === panelId) this.currentPanel = null;
     }
   }
 
