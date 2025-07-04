@@ -452,6 +452,7 @@ body {
   display: none;
   flex-direction: column !important;
   transform: none !important;
+  -webkit-app-region: no-drag !important;
 }
 
 @keyframes panelSlideIn {
@@ -473,6 +474,7 @@ body {
   border-bottom: 1px solid #e5e7eb;
   background: #f9fafb;
   border-radius: 0;
+  flex: 0 0 auto;
 }
 
 .panel-header h3 {
@@ -502,8 +504,7 @@ body {
 }
 
 .panel-content {
-  flex: 1 1 auto !important;
-  height: 100% !important;
+  flex: 1 1 0 !important;
   min-height: 0 !important;
   max-height: 100% !important;
   overflow-y: auto !important;
@@ -849,7 +850,8 @@ body {
   background: transparent;
 }
 
-/* 插件市场面板样式 */
+
+/* plugins market panel */
 #pluginMarketPanel .panel-content {
   padding: 18px 12px 12px 12px;
   max-height: 60vh;
@@ -894,7 +896,6 @@ body {
   gap: 2px;
 }
 
-/* 插件市场新窗口样式优化 */
 .plugin-market-container {
   width: 100%;
   height: 100vh;
