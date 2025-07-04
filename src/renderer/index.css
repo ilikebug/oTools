@@ -244,6 +244,8 @@ body {
   overflow-y: auto !important;
   overflow-x: hidden !important;
   max-height: 320px !important;
+  min-height: 220px !important;
+  position: relative !important;
 }
 
 .action-btn {
@@ -824,4 +826,22 @@ body {
 
 .status-value.unknown {
   color: #9ca3af;
+}
+
+.no-plugins-tip {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  margin: auto;
+  width: 100%;
+  height: 120px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 2;
+  background: transparent;
 }

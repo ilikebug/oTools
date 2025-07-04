@@ -136,6 +136,25 @@ class oToolsApp {
     }
     
     actionGrid.innerHTML = '';
+    if (!this.plugins || this.plugins.length === 0) {
+      const emptyDiv = document.createElement('div');
+      emptyDiv.className = 'no-plugins-tip';
+      emptyDiv.innerHTML = '<i class="fas fa-box-open" style="font-size:32px;color:#c1c1c1;"></i><div style="margin-top:8px;color:#999;font-size:15px;">No plugins available</div>';
+      // emptyDiv.style.display = 'flex';
+      // emptyDiv.style.flexDirection = 'column';
+      // emptyDiv.style.alignItems = 'center';
+      // emptyDiv.style.justifyContent = 'center';
+      // emptyDiv.style.width = '100%';
+      // emptyDiv.style.height = '100%';
+      // emptyDiv.style.position = 'absolute';
+      // emptyDiv.style.top = '0';
+      // emptyDiv.style.left = '0';
+      // emptyDiv.style.right = '0';
+      // emptyDiv.style.bottom = '0';
+      // actionGrid.style.position = 'relative';
+      actionGrid.appendChild(emptyDiv);
+      return;
+    }
     this.plugins.forEach((plugin, index) => {
       const actionBtn = document.createElement('button');
       actionBtn.className = 'action-btn';
