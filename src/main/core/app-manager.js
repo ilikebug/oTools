@@ -63,6 +63,7 @@ class AppManager {
 
       // Iiitialize logger
       logger.initialize(mainConfig.logger)
+      this.registerComponent('logger', logger);
       
       // Initialize plugin manager
       this.pluginManager = new PluginManager();
@@ -74,14 +75,19 @@ class AppManager {
 
       // Initialize keyboard manager
       this.keyboardManager = new KeyboardManager()
-      this.keyboardManager.initialize({configManager: this.configManager})
+      this.keyboardManager.initialize(
+        {
+          configManager: this.configManager,
+          mainWindow: this.mainWindow
+        }
+      )
       this.registerComponent('keyboardManager', this.keyboardManager);
 
       // Set IPC
       setupIPC(this);
 
       // Register global shortcuts
-      this.registerGlobalShortcuts() 
+      this.keyboardManager.registerShortcutsFromConfig()
       
       // Update application status
       this.appStatus.status = consts.APP_STATUS.RUNNING;
@@ -111,7 +117,9 @@ class AppManager {
       // Destroy components in reverse order
       const destroyOrder = [
         'pluginManager',
+        'keyboardManager',
         'configManager',
+        'logger'
       ];
       
       for (const componentName of destroyOrder) {
@@ -131,30 +139,6 @@ class AppManager {
     } catch (error) {
       console.error('Application Manager destroy failed:', error);
       throw error;
-    }
-  }
-
-  /**
- * Register global shortcuts
- */
- registerGlobalShortcuts() {
-  const config = this.configManager.getConfig('main');
-  const shortcut = config?.shortcuts?.toggle || 'Alt+Space';
-  
-  const ret = globalShortcut.register(shortcut, () => {
-    if (this.mainWindow) {
-      if (this.mainWindow.isVisible()) {
-        this.mainWindow.hide();
-      } else {
-        this.mainWindow.show();
-        this.mainWindow.focus();
-      }
-    }
-   });
-    if (!ret) {
-      logger.error('Global shortcut registration failed');
-    } else {
-      logger.info(`Global shortcut registered: ${shortcut}`);
     }
   }
 

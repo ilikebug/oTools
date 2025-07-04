@@ -6,11 +6,13 @@ class KeyboardManager {
     this.shortcuts = new Map(); 
 
     this.configManager = null;
+    this.mainWindow = null
   }
 
 
   async initialize(options = {}) {
     this.configManager = options.configManager
+    this.mainWindow = options.mainWindow
   }
 
   /**
@@ -27,7 +29,6 @@ class KeyboardManager {
     const ret = globalShortcut.register(accelerator, callback);
     if (ret) {
       this.shortcuts.set(accelerator, { callback, pluginName });
-      logger.info(`Registered shortcut: ${accelerator}${pluginName ? ' (plugin: ' + pluginName + ')' : ''}`);
     } else {
       logger.error(`Failed to register shortcut: ${accelerator}`);
     }
@@ -62,10 +63,15 @@ class KeyboardManager {
     const mainConfig = this.configManager.getConfig('main');
     if (mainConfig?.shortcuts?.toggle) {
       this.registerShortcut(mainConfig.shortcuts.toggle, () => {
-        if (pluginMap['__main__'] && pluginMap['__main__'].onToggle) {
-          pluginMap['__main__'].onToggle();
-        }
-      }, '__main__');
+        if (this.mainWindow) {
+          if (this.mainWindow.isVisible()) {
+            this.mainWindow.hide();
+          } else {
+            this.mainWindow.show();
+            this.mainWindow.focus();
+          }
+        }  
+      }, 'main');
     }
     // Plugin shortcuts
     for (const [pluginName, plugin] of Object.entries(pluginMap)) {
@@ -77,6 +83,15 @@ class KeyboardManager {
         }, pluginName);
       }
     }
+  }
+
+  /**
+   * Destroy the keyboard manager 
+   */
+  destroy() {
+    this.unregisterAll();
+    this.configManager = null;
+    this.mainWindow = null;
   }
 }
 

@@ -4,7 +4,7 @@ const MacTools = require('./utils/mac-tools');
 const logger = require('./utils/logger');
 const { setAutoStart } = require('./utils/auto-start');
 const { globalShortcut } = require('electron');
-const mainJs = require('./main');
+const KeyboardManager = require('./core/keyboard-manager');
 
 
 
@@ -94,6 +94,7 @@ function setupPluginIPC(appManager) {
  */
 function setupSystemIPC(appManager) {
   const configManager = appManager.getComponent('configManager');
+  const keyboardManager = appManager.getComponent('keyboardManager')
 
   // Get application status
   ipcMain.handle('get-app-status', () => {
@@ -142,15 +143,9 @@ function setupSystemIPC(appManager) {
   // Refresh global shortcut
   ipcMain.handle('refresh-shortcut', async () => {
     try {
-      const appManager = global.appManager ? global.appManager() : null;
-      if (appManager && appManager.getComponent) {
-        if (mainJs && mainJs.registerGlobalShortcuts) {
-          globalShortcut.unregisterAll();
-          mainJs.registerGlobalShortcuts();
+          keyboardManager.unregisterAll();
+          keyboardManager.registerShortcutsFromConfig();
           return { success: true };
-        }
-      }
-      return { success: false, message: 'AppManager or registerGlobalShortcuts not found' };
     } catch (e) {
       return { success: false, message: e.message };
     }

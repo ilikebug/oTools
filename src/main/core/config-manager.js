@@ -284,6 +284,13 @@ class ConfigManager {
   getConfigNames() {
     return Array.from(this.configs.keys());
   }
+
+  /**
+   * Destroy the configuration manager (public API)
+   */
+  async destroy() {
+    await this.onDestroy();
+  }
 }
 
 module.exports = ConfigManager; 
