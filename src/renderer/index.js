@@ -297,7 +297,7 @@ class oToolsApp {
     this.hideAllPanels();
     const panel = document.getElementById(panelId);
     if (panel) {
-      panel.style.display = 'block';
+      panel.style.display = 'flex';
       this.currentPanel = panelId;
     }
   }
