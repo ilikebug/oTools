@@ -1,7 +1,6 @@
 const fs = require('fs');
 const path = require('path');
 const chokidar = require('chokidar');
-const logger = require('../utils/logger');
 const {GetPluginDir, GetConfigDir} = require('../comm')
 
 /**
@@ -33,7 +32,6 @@ class ConfigManager {
     // Set up configuration watchers
     this.setupConfigWatchers();
     
-    logger.info('Configuration manager initialized');
   }
 
   /**
@@ -45,8 +43,6 @@ class ConfigManager {
       watcher.close();
     }
     this.watchers.clear();
-    
-    logger.info('Configuration manager destroyed');
   }
 
   /**
@@ -62,10 +58,7 @@ class ConfigManager {
       
       // Validate all configurations
       this.validateAllConfigurations();
-      
-      logger.info(`Loaded ${this.configs.size} configuration files`);
     } catch (error) {
-      logger.error(`Failed to load configuration: ${error.message}`);
       throw error;
     }
   }
@@ -87,7 +80,6 @@ class ConfigManager {
     }
     
     this.configs.set('main', config);
-    logger.info('Main configuration loaded');
   }
 
   /**
@@ -112,10 +104,11 @@ class ConfigManager {
         maxProcesses: 5,
         timeout: 30000
       },
-      logging: {
+      logger: {
         level: 'info',
         enableFile: true,
-        logFile: 'otools.log'
+        logFile: 'otools.log',
+        enableConsole: false
       },
       shortcuts: {
         toggle: 'Alt+Space'
@@ -144,11 +137,8 @@ class ConfigManager {
           config.configPath = configPath;
           this.configs.set(`plugin:${pluginName}`, config);
         } catch (error) {
-          logger.error(`Failed to load plugin configuration ${pluginName}: ${error.message}`);
+          throw error
         }
-      } else {
-        // 没有配置文件可以跳过或设置默认配置
-        logger.info(`No config found for plugin: ${pluginName}`);
       }
     }
   }
@@ -189,12 +179,9 @@ class ConfigManager {
       } else if (configName.startsWith('plugin:')) {
         const pluginName = configName.replace('plugin:', '');
         await this.reloadPluginConfig(pluginName);
-      }
-      
-      logger.info(`Configuration reloaded: ${configName}`);
-      
+      }      
     } catch (error) {
-      logger.error(`Failed to reload configuration ${configName}: ${error.message}`);
+      throw error
     }
   }
 
@@ -242,10 +229,9 @@ class ConfigManager {
       
       if (filePath) {
         fs.writeFileSync(filePath, JSON.stringify(config, null, 2));
-        logger.info(`Configuration saved: ${configName}`);
       }
     } catch (error) {
-      logger.error(`Failed to save configuration ${configName}: ${error.message}`);
+      throw error
     }
   }
 
@@ -287,7 +273,7 @@ class ConfigManager {
       try {
         this.validateConfiguration(config);
       } catch (error) {
-        logger.error(`Configuration validation failed ${name}: ${error.message}`);
+        throw error
       }
     }
   }

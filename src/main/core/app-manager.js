@@ -59,16 +59,16 @@ class AppManager {
       // Initialize configuration manager
       this.configManager = options.configManager
       this.registerComponent('configManager', this.configManager);
+      const mainConfig = this.configManager.getConfig('main')
 
       // Iiitialize logger
-      logger.initialize(this.configManager.getConfig('main').logger)
+      logger.initialize(mainConfig.logger)
       
       // Initialize plugin manager
       this.pluginManager = new PluginManager();
       await this.pluginManager.initialize({
-        macTools: this.macTools,
         mainWindow: this.mainWindow,
-        enableWatch: options.enablePluginWatch !== false
+        ...mainConfig.plugins
       });
       this.registerComponent('pluginManager', this.pluginManager);
 

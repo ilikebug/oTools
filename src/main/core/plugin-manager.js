@@ -10,8 +10,8 @@ class PluginManager {
     this.plugins = new Map();
     this.pluginsDir = GetPluginDir();
     
-    this.maxProcesses = 10;
-    this.processes = new Map(); // name -> { window, status, ... }
+    this.maxProcesses = null;
+    this.processes = new Map(); 
 
     this.watcher = null;
     this.mainWindow = null;
@@ -23,12 +23,13 @@ class PluginManager {
   async initialize(options = {}) {
     try {
       this.mainWindow = options.mainWindow;
+      this.maxProcesses = options.maxProcesses
 
       // Load plugins
       await this.loadPlugins();
       
       // Set up plugin watcher
-      if (options.enableWatch !== false) {
+      if (options.autoLoad !== false) {
         this.watchPlugins();
       }
       
@@ -154,7 +155,6 @@ class PluginManager {
     try {
       if (this.mainWindow && !this.mainWindow.isDestroyed()) {
         this.mainWindow.webContents.send('plugins-changed', this.getPluginsList());
-        logger.info('Notification sent to render process about plugin list change');
       }
     } catch (error) {
       logger.info(`Error in notifyPluginsChanged: ${error.message}`);
@@ -197,7 +197,7 @@ class PluginManager {
   }
 
   /**
-   * 插件进程池相关方法
+   * get running plugin
    */
   async getProcess(pluginName, forceNew = false) {
     if (!forceNew && this.processes.has(pluginName)) {
@@ -235,13 +235,15 @@ class PluginManager {
     await win.loadFile(htmlPath);
     const info = { window: win, status: 'idle', meta };
     this.processes.set(pluginName, info);
-    // 监听插件窗口消息
+    
     win.webContents.on('ipc-message', (event, channel, ...args) => {
       logger.info(`[${pluginName}] IPC message: ${channel}`, args);
     });
+
     win.on('closed', () => {
       this.processes.delete(pluginName);
     });
+
     logger.info(`Plugin process created successfully: ${pluginName}`);
     return info;
   }
@@ -259,32 +261,6 @@ class PluginManager {
 
   getPoolStatus() {
     return Array.from(this.processes.keys());
-  }
-
-  /**
-   * Get plugin manager status
-   */
-  getStatus() {
-    return {
-      pluginCount: this.plugins.size,
-      pluginsDir: this.pluginsDir,
-      watcherActive: !!this.watcher,
-      mainWindowActive: !!(this.mainWindow && !this.mainWindow.isDestroyed()),
-      pluginProcessPoolActive: !!this.processes.size,
-    };
-  }
-
-  async startPlugin(pluginName) {
-    await this.getProcess(pluginName);
-    logger.info(`Plugin started: ${pluginName}`);
-  }
-
-  async stopPlugin(pluginName) {
-    const info = this.processes.get(pluginName);
-    if (info && info.window && !info.window.isDestroyed()) {
-      info.window.close();
-      logger.info(`Plugin stopped: ${pluginName}`);
-    }
   }
 }
 

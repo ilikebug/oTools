@@ -654,7 +654,9 @@ body {
   color: #6b7280;
   background: #f9fafb;
   width: 150px;
+  -webkit-app-region: no-drag;
 }
+
 /* Status bar */
 .status-bar {
   position: fixed;
