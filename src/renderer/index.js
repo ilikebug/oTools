@@ -172,14 +172,10 @@ class oToolsApp {
         throw new Error('oToolsAPI not injected or executePlugin does not exist');
       }
       const result = await window.oToolsAPI.executePlugin(pluginName);
-      this.hideLoading();
-      if (result && result.success) {
-        this.showNotification(`Plugin execution succeeded: ${result.message}`, 'success');
-      } else if (result) {
+      if (!result && !result.success) {
         this.showNotification(`Plugin execution failed: ${result.message}`, 'error');
       }
     } catch (error) {
-      this.hideLoading();
       this.showNotification(`Plugin execution error: ${error.message}`, 'error');
     }
   }
@@ -233,7 +229,6 @@ class oToolsApp {
       }
     } catch (error) {
       console.error('Failed to display status panel:', error);
-      this.showNotification('Unable to load status information', 'error');
     }
   }
 
@@ -315,13 +310,6 @@ class oToolsApp {
     }
   }
 
-  hideLoading() {
-    const loading = document.getElementById('loading');
-    if (loading) {
-      loading.style.display = 'none';
-    }
-  }
-
   showNotification(message, type = 'info') {
     if (window.oToolsAPI && window.oToolsAPI.showSystemNotification) {
       let title = 'Notification';
@@ -355,7 +343,21 @@ class oToolsApp {
     if (autoLoadPlugins) autoLoadPlugins.checked = !!config.plugins?.autoLoad;
     // Shortcut
     const toggleShortcut = document.getElementById('toggleShortcut');
-    if (toggleShortcut) toggleShortcut.value = config.shortcuts?.toggle || '';
+    if (toggleShortcut) {
+      const shortcut = config.shortcuts?.toggle || '';
+      if (shortcut) {
+        // Format for display
+        const isMac = /mac/i.test(navigator.userAgent);
+        const displayShortcut = shortcut.split('+').map(k => {
+          if (k === 'Meta') return isMac ? 'Command' : 'Win';
+          if (k === 'Alt') return isMac ? 'Option' : 'Alt';
+          return k;
+        }).join('+');
+        toggleShortcut.value = displayShortcut;
+      } else {
+        toggleShortcut.value = '';
+      }
+    }
   }
 
   bindSettingsEvents() {
@@ -385,12 +387,15 @@ class oToolsApp {
 
   captureShortcutInput(inputId, configPath) {
     const input = document.getElementById(inputId);
-    if (!input) return;
+    if (!input) {
+      console.error('Input element not found:', inputId);
+      return;
+    }
     let lastValue = input.value;
     let pressedKeys = new Set();
     let displayKeys = [];
     let keyOrder = [];
-    let keydownListener, keyupListener;
+    let keydownListener;
 
     // Helper: convert Set to shortcut string
     function getShortcutString(keys) {
@@ -404,10 +409,15 @@ class oToolsApp {
       for (let k of keys) {
         if (!order.includes(k)) arr.push(k);
       }
-  
+      return arr.join('+');
+    }
+
+    // Helper: format shortcut for display
+    function formatShortcutForDisplay(shortcut) {
       const isMac = /mac/i.test(navigator.userAgent);
-      return arr.map(k => {
+      return shortcut.split('+').map(k => {
         if (k === 'Meta') return isMac ? 'Command' : 'Win';
+        if (k === 'Alt') return isMac ? 'Option' : 'Alt';
         return k;
       }).join('+');
     }
@@ -440,17 +450,23 @@ class oToolsApp {
       }
       // Keep unique order
       displayKeys = keyOrder.filter((k, i) => keyOrder.indexOf(k) === i);
-      input.value = getShortcutString(new Set(displayKeys));
+      input.value = formatShortcutForDisplay(getShortcutString(new Set(displayKeys)));
     };
 
-    keyupListener = (e) => {
-      const key = normalizeKey(e);
-      pressedKeys.delete(key);
-      // Save when all keys are released
-      if (pressedKeys.size === 0 && displayKeys.length > 0) {
+    input.addEventListener('focus', () => {
+      lastValue = input.value;
+      input.value = 'Press shortcut...';
+      pressedKeys.clear();
+      displayKeys = [];
+      keyOrder = [];
+      document.addEventListener('keydown', keydownListener);
+    });
+    
+    input.addEventListener('blur', () => {
+      if (pressedKeys.size > 0 && displayKeys.length > 0) {
         if (isValidShortcut(displayKeys)) {
           const shortcut = getShortcutString(new Set(displayKeys));
-          input.value = shortcut;
+          input.value = formatShortcutForDisplay(shortcut);
           // Save to config
           window.oToolsAPI.getConfig('main').then(config => {
             let obj = config;
@@ -463,34 +479,20 @@ class oToolsApp {
               if (window.oToolsAPI.refreshShortcut) {
                 window.oToolsAPI.refreshShortcut();
               }
+            document.removeEventListener('keydown', keydownListener);
+            }).catch(err => {
+              console.error('Failed to save config:', err);
             });
+          }).catch(err => {
+            console.error('Failed to get config:', err);
           });
-          // Remove listeners
-          window.removeEventListener('keydown', keydownListener);
-          window.removeEventListener('keyup', keyupListener);
-          input.blur();
         } else {
           // Only modifier keys, do not save, restore last value
           input.value = lastValue;
-          window.removeEventListener('keydown', keydownListener);
-          window.removeEventListener('keyup', keyupListener);
+          document.removeEventListener('keydown', keydownListener);
         }
       }
-    };
-
-    input.addEventListener('focus', () => {
-      lastValue = input.value;
-      input.value = 'Press shortcut...';
-      pressedKeys.clear();
-      displayKeys = [];
-      keyOrder = [];
-      window.addEventListener('keydown', keydownListener);
-      window.addEventListener('keyup', keyupListener);
-    });
-    input.addEventListener('blur', () => {
       if (input.value === 'Press shortcut...') input.value = lastValue;
-      window.removeEventListener('keydown', keydownListener);
-      window.removeEventListener('keyup', keyupListener);
     });
   }
 }

@@ -3,6 +3,9 @@ const path = require('path');
 const MacTools = require('./utils/mac-tools');
 const logger = require('./utils/logger');
 const { setAutoStart } = require('./utils/auto-start');
+const { globalShortcut } = require('electron');
+const mainJs = require('./main');
+
 
 
 /**
@@ -141,12 +144,8 @@ function setupSystemIPC(appManager) {
     try {
       const appManager = global.appManager ? global.appManager() : null;
       if (appManager && appManager.getComponent) {
-        const mainJs = require('./main');
         if (mainJs && mainJs.registerGlobalShortcuts) {
-          // 先注销所有快捷键
-          const { globalShortcut } = require('electron');
           globalShortcut.unregisterAll();
-          // 重新注册
           mainJs.registerGlobalShortcuts();
           return { success: true };
         }
