@@ -90,7 +90,7 @@ async function initializeApp() {
     const mainConfig  = configManager.getConfig('main')
     // Create main window
     createWindow(mainConfig);
-    // 新增：启动时同步一次自启动
+    // set auto start
     if (mainConfig && mainConfig.app && 
       typeof mainConfig.app.autoStart !== 'undefined') {
       setAutoStart(!!mainConfig.app.autoStart);

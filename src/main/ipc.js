@@ -171,7 +171,9 @@ function setupPluginIPC(appManager) {
       }
       await downloadDir(apiBase, pluginPath);
       await pluginManager.loadPlugins();
-      event.reply('download-plugin-result', { success: true, message: '插件下载并安装成功', folder: folder });
+      // Notify main window about plugin changes
+      pluginManager.notifyPluginsChanged();
+      event.reply('download-plugin-result', { success: true, message: 'Plugin downloaded and installed successfully', folder: folder });
       notification("success", `${folder} download success`)
     } catch (e) {
       event.reply('download-plugin-result', { success: false, message: e.message, folder: folder });

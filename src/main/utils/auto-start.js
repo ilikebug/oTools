@@ -1,43 +1,25 @@
 const { app } = require('electron');
-const logger = require('./logger')
+const logger = require('./logger');
 
-let AutoLaunch;
-try {
-  AutoLaunch = require('auto-launch');
-} catch (e) {
-  AutoLaunch = null;
-}
-
-const appName = app.getName ? app.getName() : 'oTools';
-logger.info("auto start name", appName)
-
-let autoLauncher = null;
-if (AutoLaunch) {
-  autoLauncher = new AutoLaunch({
-    name: appName,
-    path: app.getPath('exe'),
-    isHidden: true
-  });
-}
-
-async function setAutoStart(enable) {
-  if (!autoLauncher) return;
+function setAutoStart(enable) {
   try {
-    if (enable) {
-      await autoLauncher.enable();
-    } else {
-      await autoLauncher.disable();
-    }
+    app.setLoginItemSettings({
+      openAtLogin: enable,
+      path: app.getPath('exe'),
+      args: []
+    });
   } catch (e) {
+    logger.error('Failed to set auto start:', e);
     throw e;
   }
 }
 
-async function isAutoStartEnabled() {
-  if (!autoLauncher) return false;
+function isAutoStartEnabled() {
   try {
-    return await autoLauncher.isEnabled();
+    const settings = app.getLoginItemSettings();
+    return settings.openAtLogin;
   } catch (e) {
+    logger.error('Failed to get auto start status:', e);
     return false;
   }
 }
