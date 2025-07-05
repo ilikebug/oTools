@@ -54,7 +54,7 @@ class MacTools {
   }
 
   /**
-   * Use Mac system's OCR to recognize text in image
+   * Use OCR to recognize text in image
    * @param {Buffer} imageBuffer - Image buffer data
    * @returns {Promise<string>} OCR result
    */
@@ -67,22 +67,14 @@ class MacTools {
       // Write buffer to temp file
       fs.writeFileSync(tempFile, imageBuffer);
       
-      // Try Mac native OCR first, then fallback to Tesseract
       try {
-        // First try using Mac system OCR (if available)
-        const result = await this.useMacOCR(tempFile);
+        // Use local Tesseract for OCR
+        const result = await this.useLocalTesseract(tempFile);
         fs.unlinkSync(tempFile);
         return result;
-      } catch (macError) {
-        try {
-          // Finally try using local Tesseract
-          const result = await this.useLocalTesseract(tempFile);
-          fs.unlinkSync(tempFile);
-          return result;
-        } catch (tesseractError) {
-          fs.unlinkSync(tempFile);
-          throw new Error('All OCR services are unavailable');
-        }
+      } catch (tesseractError) {
+        fs.unlinkSync(tempFile);
+        throw new Error('OCR service is unavailable. Please ensure tesseract is installed.');
       }
     } catch (error) {
       console.error('OCR recognition failed:', error);
@@ -90,25 +82,10 @@ class MacTools {
     }
   }
 
-  /**
-   * Use Mac system's OCR
-   * @param {string} imagePath - Image path
-   * @returns {Promise<string>} OCR result
-   */
-  async useMacOCR(imagePath) {
-    try {
-      // Use Mac's vision command (if available)
-      // Note: This command may not be supported on all Mac systems
-      const command = `vision -i "${imagePath}" -o -`;
-      const { stdout } = await execAsync(command);
-      return stdout.trim();
-    } catch (error) {
-      throw new Error('Mac system OCR not available');
-    }
-  }
+
 
   /**
-   * Use local Tesseract for OCR
+   * Use Tesseract for OCR
    * @param {string} imagePath - Image path
    * @returns {Promise<string>} OCR result
    */

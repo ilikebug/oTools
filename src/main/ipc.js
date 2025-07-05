@@ -215,8 +215,8 @@ function setupSystemIPC(appManager) {
     }
   });
 
-  // New: Plugin-specific screenshot + OCR
-  ipcMain.handle('captureAndOCR', async () => {
+  // Plugin-specific screenshot + OCR
+  ipcMain.handle('capture-and-ocr', async () => {
     try {
       const macTools = new MacTools();
       const imageBuffer = await macTools.captureScreenRegion();
