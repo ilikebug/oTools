@@ -4,7 +4,8 @@ const {app} = require('electron')
 const APP_STATUS = {
   INITIALIZING: 'initializing',
   RUNNING: 'running',
-  STOPPED: 'stopped'
+  SHUTTING_DOWN: 'shutting_down',
+  ERROR: 'error'
 };
 
 const GetPluginDir = () =>  {

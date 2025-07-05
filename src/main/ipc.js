@@ -38,6 +38,7 @@ function setupPluginIPC(appManager) {
       const plugins = await pluginManager.getPluginsList();
       return plugins;
     } catch (error) {
+      logger.error(`get-plugins error: ${error}`)
       return [];
     }
   });
@@ -48,7 +49,24 @@ function setupPluginIPC(appManager) {
       // Before executing the plugin, hide the main window
       if (appManager.mainWindowIsDestoryed()) {
         appManager.mainWindowHide()
-        logger.info(`Executing plugin ${pluginName} before hiding main window`);
+      }
+      
+      // Check if plugin exists
+      const pluginInfo = pluginManager.getPluginInfo(pluginName);
+      if (!pluginInfo) {
+        return { success: false, message: `Plugin ${pluginName} not found` };
+      }
+
+      // For dependent plugins, ensure process exists
+      if (pluginInfo.startupMode === 'dependent') {
+        const status = pluginManager.getPluginWindowStatus(pluginName);
+        if (!status.exists) {
+          try {
+            await pluginManager.getProcess(pluginName);
+          } catch (error) {
+            return { success: false, message: `Failed to create plugin process: ${error.message}` };
+          }
+        }
       }
       
       const result = await pluginManager.executePlugin(pluginName, 'default', ...args);
@@ -56,7 +74,8 @@ function setupPluginIPC(appManager) {
       return {
         success: true,
         result: result,
-        message: `Plugin ${pluginName} executed successfully`
+        message: `Plugin ${pluginName} executed successfully`,
+        startupMode: pluginInfo.startupMode
       };
     } catch (error) {
       return {
@@ -96,8 +115,39 @@ function setupPluginIPC(appManager) {
   // Show plugin window by name
   ipcMain.handle('show-plugin-window-by-name', async (event, pluginName) => {
     try {
+      // First check if plugin exists
+      const pluginInfo = pluginManager.getPluginInfo(pluginName);
+      if (!pluginInfo) {
+        return { success: false, message: `Plugin ${pluginName} not found` };
+      }
+
+      // Check if plugin process exists
+      const status = pluginManager.getPluginWindowStatus(pluginName);
+      
+      if (!status.exists) {
+        // If process doesn't exist, try to create it (for dependent plugins)
+        try {
+          await pluginManager.getProcess(pluginName);
+        } catch (error) {
+          return { success: false, message: `Failed to create plugin process: ${error.message}` };
+        }
+      }
+
+      // Now try to show window
       const result = pluginManager.showPluginWindow(pluginName);
-      return { success: result, message: result ? `Plugin window shown: ${pluginName}` : `Plugin window not found or already visible: ${pluginName}` };
+      if (result) {
+        return { 
+          success: true, 
+          message: `Plugin window shown: ${pluginName}`,
+          startupMode: status.startupMode
+        };
+      } else {
+        return { 
+          success: false, 
+          message: `Failed to show plugin window: ${pluginName}`,
+          startupMode: status.startupMode
+        };
+      }
     } catch (error) {
       return { success: false, message: error.message };
     }
@@ -196,7 +246,7 @@ function setupPluginIPC(appManager) {
     async function downloadFile(url, dest) {
       return new Promise((resolve, reject) => {
         https.get(url, { headers }, (res) => {
-          if (res.statusCode !== 200) return reject(new Error('下载失败: ' + url));
+          if (res.statusCode !== 200) return reject(new Error('Download failed: ' + url));
           const fileStream = fs.createWriteStream(dest);
           res.pipe(fileStream);
           fileStream.on('finish', () => fileStream.close(resolve));

@@ -14,7 +14,6 @@ class PluginManager {
     this.processes = new Map(); 
 
     this.watcher = null;
-    this.mainWindow = null;
   }
 
   /**
@@ -22,7 +21,6 @@ class PluginManager {
    */
   async initialize(options = {}) {
     try {
-      this.mainWindow = options.mainWindow;
       this.maxProcesses = options.maxProcesses;
 
       // Load plugins
@@ -32,8 +30,8 @@ class PluginManager {
       if (options.autoLoad !== false) {
         this.watchPlugins();
       }
-      
-      logger.info('Plugin manager initialization completed');
+      // Auto-start dependent plugins
+      await this.autoStartDependentPlugins();
       
     } catch (error) {
       throw error;
@@ -51,7 +49,6 @@ class PluginManager {
       }
       
       this.plugins.clear();
-      logger.info('Plugin manager destroyed');
       
     } catch (error) {
       throw error;
@@ -121,18 +118,15 @@ class PluginManager {
       
       this.watcher
         .on('addDir', async (dirPath) => {
-          logger.info(`New plugin directory detected: ${dirPath}`);
           await this.loadPlugins();
           this.notifyPluginsChanged();
         })
         .on('unlinkDir', async (dirPath) => {
-          logger.info(`Plugin directory deleted: ${dirPath}`);
           await this.loadPlugins();
           this.notifyPluginsChanged();
         })
         .on('change', async (filePath) => {
           if (filePath.endsWith('plugin.json')) {
-            logger.info(`Plugin configuration changed: ${filePath}`);
             await this.loadPlugins();
             this.notifyPluginsChanged();
           }
@@ -140,8 +134,6 @@ class PluginManager {
         .on('error', (error) => {
           throw error;
         });
-      
-      logger.info('Plugin watcher started');
       
     } catch (error) {
       throw error;
@@ -153,11 +145,9 @@ class PluginManager {
    */
   notifyPluginsChanged() {
     try {
-      if (this.mainWindow && !this.mainWindow.isDestroyed()) {
-        this.mainWindow.webContents.send('plugins-changed', this.getPluginsList());
-      }
+      this.mainWindow.webContents.send('plugins-changed', this.getPluginsList());
     } catch (error) {
-      logger.info(`Error in notifyPluginsChanged: ${error.message}`);
+      logger.error(`Error in notifyPluginsChanged: ${error.message}`);
     }
   }
 
@@ -227,20 +217,25 @@ class PluginManager {
     const { BrowserWindow } = require('electron');
     const win = new BrowserWindow({
       show: false,
+      alwaysOnTop: true,
+      skipTaskbar: true,
+      resizable: true,
+      frame: true,
       webPreferences: {
         preload: preloadPath,
         nodeIntegration: false,
         contextIsolation: true
       }
     });
+    
+    // Set window level to ensure it appears above other applications
+    win.setAlwaysOnTop(true, 'screen-saver');
+    win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+    
     await win.loadFile(htmlPath);
     const info = { window: win, status: 'idle', meta };
     this.processes.set(pluginName, info);
     
-    win.webContents.on('ipc-message', (event, channel, ...args) => {
-      logger.info(`[${pluginName}] IPC message: ${channel}`, args);
-    });
-
     win.on('closed', () => {
       this.processes.delete(pluginName);
     });
@@ -252,29 +247,39 @@ class PluginManager {
       if (startupMode === 'dependent') {
         event.preventDefault();
         win.hide();
-        logger.info(`Plugin window hidden (dependent mode): ${pluginName}`);
-      } else {
-        logger.info(`Plugin process closed (independent mode): ${pluginName}`);
       }
     });
 
-    logger.info(`Plugin process created successfully: ${pluginName}`);
     return info;
   }
 
-  async executePlugin(pluginName, action, ...args) {
-    const info = await this.getProcess(pluginName);
-    info.status = 'busy';
-    info.window.webContents.send('plugin-execute', { action, args });
-    if (info.window && !info.window.isVisible()) {
-      info.window.show();
+  /**
+   * Auto-start dependent plugins
+   */
+  async autoStartDependentPlugins() {
+    try {      
+      for (const [pluginName, pluginInfo] of this.plugins) {
+        // Check if plugin is enabled and has dependent startup mode
+        if (pluginInfo.enabled !== false && pluginInfo.startupMode === 'dependent') {          
+          try {
+            // For dependent plugins, create process but don't show window
+            // This allows plugins to run in background while keeping UI hidden
+            const process = await this.createProcess(pluginName);
+            if (process && process.window) {
+              // Ensure window is hidden but process continues running
+              process.window.hide();
+              // Mark as dependent mode
+              process.startupMode = 'dependent';
+            }
+          } catch (error) {
+            logger.error(`Failed to auto-start dependent plugin ${pluginName}: ${error.message}`);
+          }
+        }
+      }
+      
+    } catch (error) {
+      logger.error(`Error in autoStartDependentPlugins: ${error.message}`);
     }
-    info.status = 'idle';
-    return { success: true };
-  }
-
-  getPoolStatus() {
-    return Array.from(this.processes.keys());
   }
 
   /**
@@ -286,10 +291,35 @@ class PluginManager {
       if (!processInfo.window.isVisible()) {
         processInfo.window.show();
         processInfo.window.focus();
+        // Ensure window is on top
+        processInfo.window.setAlwaysOnTop(true, 'screen-saver');
+        // Restore normal level after short delay
+        setTimeout(() => {
+          if (processInfo.window && !processInfo.window.isDestroyed()) {
+            processInfo.window.setAlwaysOnTop(true, 'normal');
+          }
+        }, 100);
+        return true;
+      } else {
+        // If window is already visible, ensure it gets focus
+        processInfo.window.focus();
+        processInfo.window.setAlwaysOnTop(true, 'screen-saver');
+        setTimeout(() => {
+          if (processInfo.window && !processInfo.window.isDestroyed()) {
+            processInfo.window.setAlwaysOnTop(true, 'normal');
+          }
+        }, 100);
         return true;
       }
+    } else {
+      // If process doesn't exist, try to create it (for dependent plugins)
+      const pluginInfo = this.plugins.get(pluginName);
+      if (pluginInfo && pluginInfo.startupMode === 'dependent') {
+        // Return false to let IPC layer handle process creation
+        return false;
+      }
+      return false;
     }
-    return false;
   }
 
   /**
@@ -300,7 +330,6 @@ class PluginManager {
     if (processInfo && processInfo.window && !processInfo.window.isDestroyed()) {
       if (processInfo.window.isVisible()) {
         processInfo.window.hide();
-        logger.info(`Plugin window hidden: ${pluginName}`);
         return true;
       }
     }
@@ -316,14 +345,51 @@ class PluginManager {
       return {
         exists: true,
         visible: processInfo.window.isVisible(),
-        destroyed: processInfo.window.isDestroyed()
+        destroyed: processInfo.window.isDestroyed(),
+        startupMode: this.plugins.get(pluginName)?.startupMode || 'independent'
       };
     }
     return {
       exists: false,
       visible: false,
-      destroyed: true
+      destroyed: true,
+      startupMode: this.plugins.get(pluginName)?.startupMode || 'independent'
     };
+  }
+
+  /**
+   * Execute plugin with improved dependent plugin handling
+   */
+  async executePlugin(pluginName, action, ...args) {
+    try {
+      const info = await this.getProcess(pluginName);
+      info.status = 'busy';
+      info.window.webContents.send('plugin-execute', { action, args });
+      
+      // All plugins should show window when executed
+      if (info.window && !info.window.isVisible()) {
+        info.window.show();
+        info.window.focus();
+        // Ensure window is on top
+        info.window.setAlwaysOnTop(true, 'screen-saver');
+        // Restore normal level after short delay
+        setTimeout(() => {
+          if (info.window && !info.window.isDestroyed()) {
+            info.window.setAlwaysOnTop(true, 'normal');
+          }
+        }, 100);
+      }
+      
+      info.status = 'idle';
+      return { success: true };
+    } catch (error) {
+      logger.error(`Error executing plugin ${pluginName}: ${error.message}`);
+      return { success: false, error: error.message };
+    }
+  }
+
+  getPoolStatus() {
+    return Array.from(this.processes.keys());
   }
 }
 

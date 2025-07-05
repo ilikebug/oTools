@@ -6,6 +6,7 @@ const { AppManager } = require('./core');
 const { getSavedWindowPosition, saveWindowPosition } = require('./comm');
 const ConfigManager = require('./core/config-manager');
 const { setAutoStart } = require('./utils/auto-start');
+const PluginManager = require('./core/plugin-manager')
 
 
 if (require('electron-squirrel-startup')) {
@@ -85,9 +86,15 @@ async function initializeApp() {
   try {
     // Initialize basic components
     store = new Store();
+    // init config manager
     const configManager = new ConfigManager();
     await configManager.initialize();
     const mainConfig  = configManager.getConfig('main')
+    // init plugin manager
+    const pluginManager = new PluginManager();
+      await pluginManager.initialize({
+        maxProcesses: mainConfig.plugins.maxProcesses
+      });
     // Create main window
     createWindow(mainConfig);
     // set auto start
@@ -100,10 +107,12 @@ async function initializeApp() {
     await appManager.initialize(
       {
         configManager: configManager,
+        pluginManager: pluginManager,
         mainWindow: mainWindow,
         store: store
       }
     );
+
     logger.info('Application started');
     
   } catch (error) {
@@ -123,8 +132,9 @@ app.on('window-all-closed', () => {
 
 app.on('activate', () => {
   if (BrowserWindow.getAllWindows().length === 0) {
-
-    createWindow();
+    const configManager = appManager.getComponent('configManager')
+    const mainConfig = configManager.getConfig('main')
+    createWindow(mainConfig);
   }
 });
 
@@ -142,3 +152,7 @@ app.on('before-quit', async () => {
     console.error('Error occurred during application exit:', error);
   }
 });
+
+module.exports = {
+  mainWindow: mainWindow
+}

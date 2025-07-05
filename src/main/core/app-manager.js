@@ -1,6 +1,5 @@
 const { globalShortcut } = require('electron');
 
-const PluginManager = require('./plugin-manager');
 const KeyboardManager = require('./keyboard-manager')
 const MacTools = require('../utils/mac-tools');
 const logger = require('../utils/logger');
@@ -48,7 +47,6 @@ class AppManager {
   async initialize(options = {}) {
     try {
       this.startTime = Date.now();
-      this.appStatus.status = consts.APP_STATUS.INITIALIZING;
 
       this.macTools = new MacTools()
       this.store = options.store
@@ -59,16 +57,12 @@ class AppManager {
       this.registerComponent('configManager', this.configManager);
       const mainConfig = this.configManager.getConfig('main')
 
-      // Iiitialize logger
+      // Initialize logger
       logger.initialize(mainConfig.logger)
       this.registerComponent('logger', logger);
       
       // Initialize plugin manager
-      this.pluginManager = new PluginManager();
-      await this.pluginManager.initialize({
-        mainWindow: this.mainWindow,
-        ...mainConfig.plugins
-      });
+      this.pluginManager = options.pluginManager
       this.registerComponent('pluginManager', this.pluginManager);
 
       // Initialize keyboard manager
@@ -81,16 +75,20 @@ class AppManager {
       )
       this.registerComponent('keyboardManager', this.keyboardManager);
 
-      // Set IPC
-      setupIPC(this);
-
       // Register global shortcuts
       this.keyboardManager.registerShortcutsFromConfig()
+
+      // Set IPC 
+      setupIPC(this);
       
       // Update application status
-      this.appStatus.status = consts.APP_STATUS.RUNNING;      
+      this.appStatus.status = consts.APP_STATUS.RUNNING;
+      // send on completed to main page
+      if (this.mainWindow && !this.mainWindow.isDestroyed()) {
+        this.mainWindow.webContents.send('app-init-completed');
+      }
     } catch (error) {
-      this.appStatus.status = 'error';
+      this.appStatus.status = consts.APP_STATUS.ERROR;
       
       if (logger) {
         logger.error(`Application Manager initialization failed: ${error.message}`);
@@ -107,9 +105,6 @@ class AppManager {
    */
   async destroy() {
     try {
-      this.appStatus.status = 'shutting_down';
-      logger.info('Application Manager start destroying');
-      
       // Destroy components in reverse order
       const destroyOrder = [
         'pluginManager',
@@ -123,14 +118,12 @@ class AppManager {
         if (component && typeof component.destroy === 'function') {
           try {
             await component.destroy();
-            logger.info(`${componentName} has been destroyed`);
           } catch (error) {
             logger.error(`${componentName} destroy failed: ${error.message}`);
           }
         }
       }
-      
-      this.appStatus.status = consts.APP_STATUS.STOPPED;
+      this.appStatus.status = consts.APP_STATUS.SHUTTING_DOWN;
             
     } catch (error) {
       console.error('Application Manager destroy failed:', error);

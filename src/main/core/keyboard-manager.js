@@ -42,7 +42,6 @@ class KeyboardManager {
   unregisterShortcut(accelerator) {
     globalShortcut.unregister(accelerator);
     this.shortcuts.delete(accelerator);
-    logger.info(`Unregistered shortcut: ${accelerator}`);
   }
 
   /**
@@ -51,7 +50,6 @@ class KeyboardManager {
   unregisterAll() {
     globalShortcut.unregisterAll();
     this.shortcuts.clear();
-    logger.info('Unregistered all shortcuts');
   }
 
   /**

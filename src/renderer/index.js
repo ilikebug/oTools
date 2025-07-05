@@ -13,6 +13,7 @@ class oToolsApp {
       panel.style.display = 'none';
     });
     this.bindEvents();
+    this.setAppCompleteWatcher();
     await this.loadAppStatus();
     await this.loadPlugins();
     this.setupPluginWatcher();
@@ -126,6 +127,18 @@ class oToolsApp {
     } catch (error) {
       console.error('Failed to load plugins:', error);
     }
+  }
+
+  setAppCompleteWatcher() {
+    if (!window.mainWindow || !window.mainWindow.onPluginsChanged) {
+      console.error('mainWindow not injected or onAppInitCompleted does not exist');
+      return;
+    }
+    window.mainWindow.onAppInitCompleted(async () => {
+      await this.loadAppStatus();
+      await this.loadPlugins();
+      this.updateStatusDisplay();
+    });
   }
 
   setupPluginWatcher() {
@@ -330,15 +343,6 @@ class oToolsApp {
 
     closeBtn.addEventListener('click', closeDialog);
     cancelBtn.addEventListener('click', closeDialog);
-    
-    // 添加测试点击事件
-    saveBtn.addEventListener('click', () => {
-      console.log('Save button clicked!');
-    });
-    
-    cancelBtn.addEventListener('click', () => {
-      console.log('Cancel button clicked!');
-    });
 
     saveBtn.addEventListener('click', async () => {
       try {

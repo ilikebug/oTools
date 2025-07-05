@@ -28,6 +28,10 @@ contextBridge.exposeInMainWorld('mainWindow', {
     ipcRenderer.on('plugins-changed', (event, plugins) => callback(plugins));
   },
   
+  onAppInitCompleted: (callback) => {
+    ipcRenderer.on('app-init-completed', () => callback());
+  },
+  
   // Refresh shortcut
   refreshShortcut: () => ipcRenderer.invoke('refresh-shortcut'),
   
