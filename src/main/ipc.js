@@ -217,18 +217,73 @@ function setupSystemIPC(appManager) {
     }
   });
 
-  // Plugin-specific screenshot + OCR
+  // Screenshot capture
+  ipcMain.handle('capture-screen', async () => {
+    try {
+      const macTools = new MacTools();
+      const imageBuffer = await macTools.captureScreenRegion();
+      return {
+        success: true,
+        imageData: imageBuffer.toString('base64'),
+        message: 'Screenshot captured successfully'
+      };
+    } catch (error) {
+      return { 
+        success: false, 
+        imageData: null, 
+        message: error.message 
+      };
+    }
+  });
+
+  // OCR text recognition
+  ipcMain.handle('perform-ocr', async (event, imageData) => {
+    try {
+      const macTools = new MacTools();
+      let imageBuffer;
+      
+      if (imageData) {
+        // If imageData is provided, use it directly
+        imageBuffer = Buffer.from(imageData, 'base64');
+      } else {
+        // Otherwise capture screen first
+        imageBuffer = await macTools.captureScreenRegion();
+      }
+      
+      const ocrResult = await macTools.performOCR(imageBuffer);
+      return {
+        success: true,
+        text: ocrResult,
+        message: 'OCR performed successfully'
+      };
+    } catch (error) {
+      return { 
+        success: false, 
+        text: '', 
+        message: error.message 
+      };
+    }
+  });
+
+  // Combined screenshot + OCR (for backward compatibility)
   ipcMain.handle('capture-and-ocr', async () => {
     try {
       const macTools = new MacTools();
       const imageBuffer = await macTools.captureScreenRegion();
       const ocrResult = await macTools.performOCR(imageBuffer);
       return {
+        success: true,
         imageData: imageBuffer.toString('base64'),
-        text: ocrResult
+        text: ocrResult,
+        message: 'Screenshot and OCR completed successfully'
       };
     } catch (error) {
-      return { imageData: null, text: '', error: error.message };
+      return { 
+        success: false, 
+        imageData: null, 
+        text: '', 
+        message: error.message 
+      };
     }
   });
 
