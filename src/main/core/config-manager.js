@@ -209,7 +209,7 @@ class ConfigManager {
   /**
    * Validate configuration
    */
-  validateConfiguration(config, schema) {
+  validateConfiguration(config) {
     // Simple configuration validation
     if (!config || typeof config !== 'object') {
       throw new Error('Configuration must be an object');

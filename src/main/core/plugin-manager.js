@@ -4,6 +4,8 @@ const fs = require('fs');
 const chokidar = require('chokidar');
 const logger = require('../utils/logger');
 const { GetPluginDir } = require('../comm');
+const { BrowserWindow } = require('electron');
+
 
 class PluginManager {
   constructor() {
@@ -224,7 +226,6 @@ class PluginManager {
     if (!fs.existsSync(htmlPath)) throw new Error(`Plugin main page does not exist: ${htmlPath}`);
     if (!fs.existsSync(preloadPath)) throw new Error(`Plugin preload script does not exist: ${preloadPath}`);
 
-    const { BrowserWindow } = require('electron');
     const win = new BrowserWindow({
       show: false,
       alwaysOnTop: true,
@@ -374,7 +375,6 @@ class PluginManager {
     try {
       const info = await this.getProcess(pluginName);
       info.status = 'busy';
-      info.window.webContents.send('plugin-execute', { action, args });
       
       // All plugins should show window when executed
       if (info.window && !info.window.isVisible()) {

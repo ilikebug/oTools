@@ -25,7 +25,6 @@ class AppManager {
     this.components = new Map(); 
 
     this.mainWindow = null;
-    this.macTools = null;
     this.store = null
   }
 
@@ -48,7 +47,6 @@ class AppManager {
     try {
       this.startTime = Date.now();
 
-      this.macTools = new MacTools()
       this.store = options.store
       this.mainWindow = options.mainWindow
       

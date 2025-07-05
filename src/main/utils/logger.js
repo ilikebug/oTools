@@ -14,16 +14,6 @@ const LogLevel = {
 };
 
 /**
- * Log level name mapping
- */
-const LogLevelNames = {
-  [LogLevel.ERROR]: 'ERROR',
-  [LogLevel.WARN]: 'WARN',
-  [LogLevel.INFO]: 'INFO',
-  [LogLevel.DEBUG]: 'DEBUG'
-};
-
-/**
  * Unified logger manager
  * Provides console, file, remote, and other logging outputs
  */

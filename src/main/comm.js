@@ -33,8 +33,6 @@ function saveWindowPosition(store, x, y) {
   store.set('windowPosition', { x, y });
 }
 
-module.exports = {  }; 
-
 module.exports = {
   APP_STATUS,
 

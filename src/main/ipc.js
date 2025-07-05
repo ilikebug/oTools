@@ -533,7 +533,6 @@ function setupSystemIPC(appManager) {
 
   ipcMain.handle('get-app-version', () => {
     try {
-      const { app } = require('electron');
       return { success: true, version: app.getVersion() };
     } catch (error) {
       return { success: false, message: error.message };
