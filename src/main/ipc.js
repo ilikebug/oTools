@@ -1,13 +1,13 @@
 const { ipcMain, BrowserWindow, Notification } = require('electron');
 const path = require('path');
+const https = require('https');
+const fs = require('fs');
+
 const MacTools = require('./utils/mac-tools');
 const logger = require('./utils/logger');
 const { setAutoStart } = require('./utils/auto-start');
-const KeyboardManager = require('./core/keyboard-manager');
 const { GetPluginDir } = require('./comm');
-const { config } = require('process');
-const https = require('https');
-const fs = require('fs');
+
 
 
 /**
@@ -91,7 +91,7 @@ function setupPluginIPC(appManager) {
     }
   });
 
-  
+  // plugin market   
   ipcMain.on('open-plugin-market', () => {
     const win = new BrowserWindow({
       width: 900,
@@ -178,7 +178,6 @@ function setupPluginIPC(appManager) {
     }
   });
 }
-
 
 /**
  * Set up system feature IPC handling
