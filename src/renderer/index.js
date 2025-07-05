@@ -158,26 +158,27 @@ class oToolsApp {
       actionBtn.className = 'action-btn';
       actionBtn.id = `${plugin.name.replace(/\s+/g, '')}Btn`;
       actionBtn.title = plugin.description;
-      
-      // Set style based on plugin status
       const isEnabled = plugin.enabled !== false;
       if (!isEnabled) {
         actionBtn.classList.add('disabled');
       }
-      
-      // Set button content
+      let iconHtml = '';
+      if (plugin.icon && (plugin.icon.endsWith('.png') || plugin.icon.endsWith('.jpg') || plugin.icon.endsWith('.jpeg') || plugin.icon.endsWith('.svg'))) {
+        iconHtml = `<img class="plugin-icon" src="${plugin.icon}" onerror="this.style.display='none';this.parentNode.innerHTML='<i class='fas fa-puzzle-piece'></i>';" />`;
+      }
       actionBtn.innerHTML = `
-        <i class="${plugin.icon || 'fas fa-puzzle-piece'}"></i>
+        <div class="plugin-icon-wrap">${iconHtml}</div>
         <span>${plugin.shortName || plugin.name}</span>
       `;
-      
-      // Add click event
+      actionBtn.style.flexDirection = 'row';
+      actionBtn.style.justifyContent = 'flex-start';
+      actionBtn.style.alignItems = 'center';
+      actionBtn.querySelector('span').style.marginLeft = '20px';
       actionBtn.addEventListener('click', () => {
         if (isEnabled) {
           this.executePlugin(plugin.name);
         }
       });
-      
       actionGrid.appendChild(actionBtn);
     });
   }

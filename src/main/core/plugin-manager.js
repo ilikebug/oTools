@@ -171,11 +171,11 @@ class PluginManager {
         description: plugin.description,
         version: plugin.version,
         author: plugin.author,
-        icon: plugin.icon || 'fas fa-puzzle-piece',
+        icon: path.join(plugin.dir, plugin.icon),
         shortName: plugin.shortName || plugin.name,
         type: plugin.type || 'custom',
         enabled: plugin.enabled !== false,
-        loadedAt: plugin.loadedAt
+        loadedAt: plugin.loadedAt,
       }));
     } catch (error) {
       return [];

@@ -73,8 +73,10 @@ class ConfigManager {
     const mainConfigPath = path.join(this.configDir, 'main.json');
     const defaultConfig = this.getDefaultMainConfig();
     let config;
+    
     if (fs.existsSync(mainConfigPath)) {
-      config = JSON.parse(fs.readFileSync(mainConfigPath, 'utf-8'));
+      const fileConfig = JSON.parse(fs.readFileSync(mainConfigPath, 'utf-8'));
+      config = this.mergeConfigs(defaultConfig, fileConfig);
     } else {
       config = defaultConfig;
     }
@@ -101,7 +103,7 @@ class ConfigManager {
       },
       plugins: {
         autoLoad: true,
-        maxProcesses: 5,
+        maxProcesses: 10,
         timeout: 30000
       },
       logger: {
@@ -112,6 +114,9 @@ class ConfigManager {
       },
       shortcuts: {
         toggle: 'Alt+Space'
+      },
+      pluginMarket: {
+        devTools: false
       }
     };
   }
@@ -222,7 +227,7 @@ class ConfigManager {
         filePath = path.join(this.configDir, 'main.json');
       } else if (configName.startsWith('plugin:')) {
         const pluginName = configName.replace('plugin:', '');
-        filePath = path.join(this.pluginsDir, pluginName, 'plug.json');
+        filePath = path.join(this.pluginsDir, pluginName, 'plugin.json');
         const config = this.getConfig(configName)
         filePath = config.configPath
       }
@@ -240,7 +245,6 @@ class ConfigManager {
    */
   mergeConfigs(defaultConfig, userConfig) {
     const merged = { ...defaultConfig };
-    
     for (const [key, value] of Object.entries(userConfig)) {
       if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
         merged[key] = this.mergeConfigs(merged[key] || {}, value);

@@ -80,7 +80,7 @@
           downloadBtn.disabled = false;
           downloadBtn.title = 'Download';
          
-          alert(`下载失败: ${result.message}`);
+          alert(`Download Failed: ${result.message}`);
         }
       }
     });

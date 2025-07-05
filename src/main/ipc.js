@@ -4,8 +4,10 @@ const MacTools = require('./utils/mac-tools');
 const logger = require('./utils/logger');
 const { setAutoStart } = require('./utils/auto-start');
 const KeyboardManager = require('./core/keyboard-manager');
-const { GetPluginDir } = require('./comm')
-
+const { GetPluginDir } = require('./comm');
+const { config } = require('process');
+const https = require('https');
+const fs = require('fs');
 
 
 /**
@@ -26,6 +28,7 @@ function setupIPC(appManager) {
  */
 function setupPluginIPC(appManager) {
   const pluginManager = appManager.getComponent('pluginManager')
+  const configManager = appManager.getComponent('configManager')
 
   // Get plugin list
   ipcMain.handle('get-plugins', async () => {
@@ -104,14 +107,13 @@ function setupPluginIPC(appManager) {
     });
     win.setMenuBarVisibility(true);
     win.loadFile(path.join(__dirname, '../renderer/plugin-market.html'));
-    win.webContents.openDevTools();
+    const mainConfig = configManager.getConfig('main')
+    if (mainConfig && mainConfig.pluginMarket.devTools) {
+      win.webContents.openDevTools();
+    }
   });
 
   ipcMain.on('download-plugin', async (event, { folder }) => {
-    console.log('111111111111')
-    const https = require('https');
-    const fs = require('fs');
-    const path = require('path');
     const pluginManager = appManager.getComponent('pluginManager');
     const pluginsDir = GetPluginDir();
     const pluginPath = path.join(pluginsDir, folder);
