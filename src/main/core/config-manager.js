@@ -96,8 +96,8 @@ class ConfigManager {
         autoStart: true
       },
       window: {
-        width: 480,
-        height: 420,
+        width: 400,
+        height: 380,
         alwaysOnTop: true,
         skipTaskbar: true
       },
