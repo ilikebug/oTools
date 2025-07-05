@@ -114,12 +114,15 @@ function setupPluginIPC(appManager) {
   });
 
   ipcMain.on('download-plugin', async (event, { folder }) => {
-    const pluginManager = appManager.getComponent('pluginManager');
     const pluginsDir = GetPluginDir();
     const pluginPath = path.join(pluginsDir, folder);
     const repo = 'ilikebug/oTools-Plugins';
     const apiBase = `https://api.github.com/repos/${repo}/contents/${folder}`;
     const headers = { 'User-Agent': 'oTools' };
+    const mainConfig = configManager.getConfig('main')
+    if (mainConfig && mainConfig.githubToken) {
+      headers['Authorization'] = `token ${mainConfig.githubToken}`;
+    }
     async function fetchJson(url) {
       return new Promise((resolve, reject) => {
         https.get(url, { headers }, (res) => {
