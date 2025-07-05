@@ -80,8 +80,8 @@ class oToolsApp {
       const pluginsBtn = document.getElementById('pluginsBtn');
       if (pluginsBtn) {
         pluginsBtn.addEventListener('click', () => {
-          if (window.oToolsAPI) {
-            window.oToolsAPI.openPluginMarket();
+          if (window.mainWindow) {
+            window.mainWindow.openPluginMarket();
           }
         });
       }
@@ -93,9 +93,9 @@ class oToolsApp {
           const input = document.getElementById('githubTokenInput');
           if (input) {
             const token = input.value.trim();
-            let config = await window.oToolsAPI.getConfig('main') || {};
+            let config = await window.mainWindow.getConfig('main') || {};
             config.githubToken = token;
-            await window.oToolsAPI.setConfig('main', config);
+            await window.mainWindow.setConfig('main', config);
             alert('GitHub Token saved!');
           }
         });
@@ -107,10 +107,10 @@ class oToolsApp {
 
   async loadAppStatus() {
     try {
-      if (!window.oToolsAPI || !window.oToolsAPI.getAppStatus) {
-        throw new Error('oToolsAPI not injected or getAppStatus does not exist');
+      if (!window.mainWindow || !window.mainWindow.getAppStatus) {
+        throw new Error('mainWindow not injected or getAppStatus does not exist');
       }
-      this.appStatus = await window.oToolsAPI.getAppStatus();
+      this.appStatus = await window.mainWindow.getAppStatus();
     } catch (error) {
       console.error('Failed to load application status:', error);
     }
@@ -118,10 +118,10 @@ class oToolsApp {
 
   async loadPlugins() {
     try {
-      if (!window.oToolsAPI || !window.oToolsAPI.getPlugins) {
-        throw new Error('oToolsAPI not injected or getPlugins does not exist');
+      if (!window.mainWindow || !window.mainWindow.getPlugins) {
+        throw new Error('mainWindow not injected or getPlugins does not exist');
       }
-      this.plugins = await window.oToolsAPI.getPlugins();
+      this.plugins = await window.mainWindow.getPlugins();
       this.renderPluginButtons();
     } catch (error) {
       console.error('Failed to load plugins:', error);
@@ -129,11 +129,11 @@ class oToolsApp {
   }
 
   setupPluginWatcher() {
-    if (!window.oToolsAPI || !window.oToolsAPI.onPluginsChanged) {
-      console.error('oToolsAPI not injected or onPluginsChanged does not exist');
+    if (!window.mainWindow || !window.mainWindow.onPluginsChanged) {
+      console.error('mainWindow not injected or onPluginsChanged does not exist');
       return;
     }
-    window.oToolsAPI.onPluginsChanged((plugins) => {
+    window.mainWindow.onPluginsChanged((plugins) => {
       this.plugins = plugins;
       this.renderPluginButtons();
     });
@@ -197,10 +197,10 @@ class oToolsApp {
   // General plugin execution logic
   async executePlugin(pluginName) {
     try {
-      if (!window.oToolsAPI || !window.oToolsAPI.executePlugin) {
-        throw new Error('oToolsAPI not injected or executePlugin does not exist');
+      if (!window.mainWindow || !window.mainWindow.executePlugin) {
+        throw new Error('mainWindow not injected or executePlugin does not exist');
       }
-      const result = await window.oToolsAPI.executePlugin(pluginName);
+      const result = await window.mainWindow.executePlugin(pluginName);
       if (!result && !result.success) {
         this.showNotification(`Plugin execution failed: ${result.message}`, 'error');
       }
@@ -338,12 +338,12 @@ class oToolsApp {
   }
 
   showNotification(message, type = 'info') {
-    if (window.oToolsAPI && window.oToolsAPI.showSystemNotification) {
+    if (window.mainWindow && window.mainWindow.showSystemNotification) {
       let title = 'Notification';
       if (type === 'success') title = 'Success';
       if (type === 'error') title = 'Error';
       if (type === 'warning') title = 'Warning';
-      window.oToolsAPI.showSystemNotification(title, message);
+      window.mainWindow.showSystemNotification(title, message);
       return;
     }
   }
@@ -359,8 +359,8 @@ class oToolsApp {
   }
 
   async loadSettingsFromConfig() {
-    if (!window.oToolsAPI || !window.oToolsAPI.getConfig) return;
-    const config = await window.oToolsAPI.getConfig('main');
+    if (!window.mainWindow || !window.mainWindow.getConfig) return;
+    const config = await window.mainWindow.getConfig('main');
     if (!config) return;
     // Auto start
     const autoStart = document.getElementById('autoStart');
@@ -392,20 +392,20 @@ class oToolsApp {
     const autoStart = document.getElementById('autoStart');
     if (autoStart) {
       autoStart.addEventListener('change', async (e) => {
-        const config = await window.oToolsAPI.getConfig('main');
+        const config = await window.mainWindow.getConfig('main');
         config.app = config.app || {};
         config.app.autoStart = !!e.target.checked;
-        await window.oToolsAPI.setConfig('main', config);
+        await window.mainWindow.setConfig('main', config);
       });
     }
     // Auto load plugins
     const autoLoadPlugins = document.getElementById('autoLoadPlugins');
     if (autoLoadPlugins) {
       autoLoadPlugins.addEventListener('change', async (e) => {
-        const config = await window.oToolsAPI.getConfig('main');
+        const config = await window.mainWindow.getConfig('main');
         config.plugins = config.plugins || {};
         config.plugins.autoLoad = !!e.target.checked;
-        await window.oToolsAPI.setConfig('main', config);
+        await window.mainWindow.setConfig('main', config);
       });
     }
     // Shortcut capture
@@ -495,16 +495,16 @@ class oToolsApp {
           const shortcut = getShortcutString(new Set(displayKeys));
           input.value = formatShortcutForDisplay(shortcut);
           // Save to config
-          window.oToolsAPI.getConfig('main').then(config => {
+          window.mainWindow.getConfig('main').then(config => {
             let obj = config;
             for (let i = 0; i < configPath.length - 1; i++) {
               if (!obj[configPath[i]]) obj[configPath[i]] = {};
               obj = obj[configPath[i]];
             }
             obj[configPath[configPath.length - 1]] = shortcut;
-            window.oToolsAPI.setConfig('main', config).then(() => {
-              if (window.oToolsAPI.refreshShortcut) {
-                window.oToolsAPI.refreshShortcut();
+            window.mainWindow.setConfig('main', config).then(() => {
+              if (window.mainWindow.refreshShortcut) {
+                window.mainWindow.refreshShortcut();
               }
             document.removeEventListener('keydown', keydownListener);
             }).catch(err => {

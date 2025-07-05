@@ -1,7 +1,9 @@
-const { ipcMain, BrowserWindow, Notification } = require('electron');
+const { ipcMain, BrowserWindow, Notification, dialog, clipboard, shell, app, screen } = require('electron');
 const path = require('path');
 const https = require('https');
 const fs = require('fs');
+const os = require('os');
+const crypto = require('crypto');
 
 const MacTools = require('./utils/mac-tools');
 const logger = require('./utils/logger');
@@ -301,6 +303,527 @@ function setupSystemIPC(appManager) {
   // Show system notification
   ipcMain.on('show-system-notification', (event, { title, body }) => {
     notification(title, body);
+  });
+
+  // File dialog operations
+  ipcMain.handle('show-open-dialog', async (event, options) => {
+    try {
+      const result = await dialog.showOpenDialog(options);
+      return {
+        success: true,
+        canceled: result.canceled,
+        filePaths: result.filePaths
+      };
+    } catch (error) {
+      return { success: false, message: error.message };
+    }
+  });
+
+  ipcMain.handle('show-save-dialog', async (event, options) => {
+    try {
+      const result = await dialog.showSaveDialog(options);
+      return {
+        success: true,
+        canceled: result.canceled,
+        filePath: result.filePath
+      };
+    } catch (error) {
+      return { success: false, message: error.message };
+    }
+  });
+
+  // Clipboard operations
+  ipcMain.handle('read-clipboard', () => {
+    try {
+      const text = clipboard.readText();
+      return { success: true, text };
+    } catch (error) {
+      return { success: false, message: error.message };
+    }
+  });
+
+  ipcMain.handle('write-clipboard', (event, text) => {
+    try {
+      clipboard.writeText(text);
+      return { success: true, message: 'Text copied to clipboard' };
+    } catch (error) {
+      return { success: false, message: error.message };
+    }
+  });
+
+  ipcMain.handle('read-clipboard-image', () => {
+    try {
+      const image = clipboard.readImage();
+      if (image.isEmpty()) {
+        return { success: false, message: 'No image in clipboard' };
+      }
+      return { success: true, imageData: image.toDataURL() };
+    } catch (error) {
+      return { success: false, message: error.message };
+    }
+  });
+
+  ipcMain.handle('write-clipboard-image', (event, imageData) => {
+    try {
+      const image = clipboard.readImage();
+      clipboard.writeImage(image);
+      return { success: true, message: 'Image copied to clipboard' };
+    } catch (error) {
+      return { success: false, message: error.message };
+    }
+  });
+
+  // File system operations
+  ipcMain.handle('read-file', async (event, filePath) => {
+    try {
+      const content = fs.readFileSync(filePath, 'utf8');
+      return { success: true, content };
+    } catch (error) {
+      return { success: false, message: error.message };
+    }
+  });
+
+  ipcMain.handle('write-file', async (event, filePath, content) => {
+    try {
+      fs.writeFileSync(filePath, content, 'utf8');
+      return { success: true, message: 'File written successfully' };
+    } catch (error) {
+      return { success: false, message: error.message };
+    }
+  });
+
+  ipcMain.handle('file-exists', (event, filePath) => {
+    try {
+      const exists = fs.existsSync(filePath);
+      return { success: true, exists };
+    } catch (error) {
+      return { success: false, message: error.message };
+    }
+  });
+
+  ipcMain.handle('create-directory', async (event, dirPath) => {
+    try {
+      fs.mkdirSync(dirPath, { recursive: true });
+      return { success: true, message: 'Directory created successfully' };
+    } catch (error) {
+      return { success: false, message: error.message };
+    }
+  });
+
+  // System operations
+  ipcMain.handle('open-external', async (event, url) => {
+    try {
+      await shell.openExternal(url);
+      return { success: true, message: 'Opened external link' };
+    } catch (error) {
+      return { success: false, message: error.message };
+    }
+  });
+
+  ipcMain.handle('show-item-in-folder', async (event, filePath) => {
+    try {
+      shell.showItemInFolder(filePath);
+      return { success: true, message: 'Showed item in folder' };
+    } catch (error) {
+      return { success: false, message: error.message };
+    }
+  });
+
+  ipcMain.handle('get-app-version', () => {
+    try {
+      const { app } = require('electron');
+      return { success: true, version: app.getVersion() };
+    } catch (error) {
+      return { success: false, message: error.message };
+    }
+  });
+
+  // Window operations
+  ipcMain.handle('get-window-info', (event) => {
+    try {
+      const win = BrowserWindow.fromWebContents(event.sender);
+      if (win) {
+        return {
+          success: true,
+          isVisible: win.isVisible(),
+          isMinimized: win.isMinimized(),
+          isMaximized: win.isMaximized(),
+          bounds: win.getBounds()
+        };
+      }
+      return { success: false, message: 'Window not found' };
+    } catch (error) {
+      return { success: false, message: error.message };
+    }
+  });
+
+  ipcMain.handle('minimize-window', (event) => {
+    try {
+      const win = BrowserWindow.fromWebContents(event.sender);
+      if (win) {
+        win.minimize();
+        return { success: true, message: 'Window minimized' };
+      }
+      return { success: false, message: 'Window not found' };
+    } catch (error) {
+      return { success: false, message: error.message };
+    }
+  });
+
+  ipcMain.handle('maximize-window', (event) => {
+    try {
+      const win = BrowserWindow.fromWebContents(event.sender);
+      if (win) {
+        if (win.isMaximized()) {
+          win.unmaximize();
+          return { success: true, message: 'Window unmaximized' };
+        } else {
+          win.maximize();
+          return { success: true, message: 'Window maximized' };
+        }
+      }
+      return { success: false, message: 'Window not found' };
+    } catch (error) {
+      return { success: false, message: error.message };
+    }
+  });
+
+  // System information
+  ipcMain.handle('get-system-info', () => {
+    try {
+      return {
+        success: true,
+        platform: os.platform(),
+        arch: os.arch(),
+        version: os.version(),
+        hostname: os.hostname(),
+        homedir: os.homedir(),
+        tmpdir: os.tmpdir(),
+        cpus: os.cpus().length,
+        totalmem: os.totalmem(),
+        freemem: os.freemem(),
+        uptime: os.uptime()
+      };
+    } catch (error) {
+      return { success: false, message: error.message };
+    }
+  });
+
+  // Process management
+  ipcMain.handle('get-process-info', () => {
+    try {
+      const process = require('process');
+      return {
+        success: true,
+        pid: process.pid,
+        version: process.version,
+        platform: process.platform,
+        arch: process.arch,
+        memoryUsage: process.memoryUsage(),
+        uptime: process.uptime()
+      };
+    } catch (error) {
+      return { success: false, message: error.message };
+    }
+  });
+
+  // File system extended operations
+  ipcMain.handle('list-directory', async (event, dirPath) => {
+    try {
+      const items = fs.readdirSync(dirPath, { withFileTypes: true });
+      const result = items.map(item => ({
+        name: item.name,
+        isDirectory: item.isDirectory(),
+        isFile: item.isFile(),
+        isSymbolicLink: item.isSymbolicLink()
+      }));
+      return { success: true, items: result };
+    } catch (error) {
+      return { success: false, message: error.message };
+    }
+  });
+
+  ipcMain.handle('get-file-info', (event, filePath) => {
+    try {
+      const stats = fs.statSync(filePath);
+      return {
+        success: true,
+        size: stats.size,
+        isDirectory: stats.isDirectory(),
+        isFile: stats.isFile(),
+        isSymbolicLink: stats.isSymbolicLink(),
+        created: stats.birthtime,
+        modified: stats.mtime,
+        accessed: stats.atime
+      };
+    } catch (error) {
+      return { success: false, message: error.message };
+    }
+  });
+
+  ipcMain.handle('delete-file', async (event, filePath) => {
+    try {
+      const stats = fs.statSync(filePath);
+      if (stats.isDirectory()) {
+        fs.rmSync(filePath, { recursive: true, force: true });
+      } else {
+        fs.unlinkSync(filePath);
+      }
+      return { success: true, message: 'File deleted successfully' };
+    } catch (error) {
+      return { success: false, message: error.message };
+    }
+  });
+
+  ipcMain.handle('copy-file', async (event, sourcePath, destPath) => {
+    try {
+      fs.copyFileSync(sourcePath, destPath);
+      return { success: true, message: 'File copied successfully' };
+    } catch (error) {
+      return { success: false, message: error.message };
+    }
+  });
+
+  ipcMain.handle('move-file', async (event, sourcePath, destPath) => {
+    try {
+      fs.renameSync(sourcePath, destPath);
+      return { success: true, message: 'File moved successfully' };
+    } catch (error) {
+      return { success: false, message: error.message };
+    }
+  });
+
+  // Database operations (simple key-value storage)
+  ipcMain.handle('set-db-value', async (event, key, value) => {
+    try {
+      const dbPath = path.join(app.getPath('userData'), 'plugin-db.json');
+      let db = {};
+      if (fs.existsSync(dbPath)) {
+        db = JSON.parse(fs.readFileSync(dbPath, 'utf8'));
+      }
+      db[key] = value;
+      fs.writeFileSync(dbPath, JSON.stringify(db, null, 2));
+      return { success: true, message: 'Value stored successfully' };
+    } catch (error) {
+      return { success: false, message: error.message };
+    }
+  });
+
+  ipcMain.handle('get-db-value', async (event, key) => {
+    try {
+      const dbPath = path.join(app.getPath('userData'), 'plugin-db.json');
+      if (!fs.existsSync(dbPath)) {
+        return { success: true, value: null };
+      }
+      const db = JSON.parse(fs.readFileSync(dbPath, 'utf8'));
+      return { success: true, value: db[key] || null };
+    } catch (error) {
+      return { success: false, message: error.message };
+    }
+  });
+
+  ipcMain.handle('delete-db-value', async (event, key) => {
+    try {
+      const dbPath = path.join(app.getPath('userData'), 'plugin-db.json');
+      if (!fs.existsSync(dbPath)) {
+        return { success: true, message: 'Key not found' };
+      }
+      const db = JSON.parse(fs.readFileSync(dbPath, 'utf8'));
+      delete db[key];
+      fs.writeFileSync(dbPath, JSON.stringify(db, null, 2));
+      return { success: true, message: 'Value deleted successfully' };
+    } catch (error) {
+      return { success: false, message: error.message };
+    }
+  });
+
+  // Screen and display operations
+  ipcMain.handle('get-screen-info', () => {
+    try {
+      const displays = screen.getAllDisplays();
+      const primaryDisplay = screen.getPrimaryDisplay();
+      return {
+        success: true,
+        displays: displays.map(display => ({
+          id: display.id,
+          bounds: display.bounds,
+          workArea: display.workArea,
+          scaleFactor: display.scaleFactor,
+          rotation: display.rotation,
+          internal: display.internal,
+          size: display.size
+        })),
+        primaryDisplay: {
+          id: primaryDisplay.id,
+          bounds: primaryDisplay.bounds,
+          workArea: primaryDisplay.workArea,
+          scaleFactor: primaryDisplay.scaleFactor
+        }
+      };
+    } catch (error) {
+      return { success: false, message: error.message };
+    }
+  });
+
+  // Crypto operations
+  ipcMain.handle('hash-string', (event, algorithm, data) => {
+    try {
+      const hash = crypto.createHash(algorithm);
+      hash.update(data);
+      return { success: true, hash: hash.digest('hex') };
+    } catch (error) {
+      return { success: false, message: error.message };
+    }
+  });
+
+  ipcMain.handle('generate-uuid', () => {
+    try {
+      const uuid = crypto.randomUUID();
+      return { success: true, uuid };
+    } catch (error) {
+      return { success: false, message: error.message };
+    }
+  });
+
+  ipcMain.handle('encrypt-text', (event, text, password) => {
+    try {
+      const algorithm = 'aes-256-cbc';
+      const key = crypto.scryptSync(password, 'salt', 32);
+      const iv = crypto.randomBytes(16);
+      const cipher = crypto.createCipher(algorithm, key);
+      let encrypted = cipher.update(text, 'utf8', 'hex');
+      encrypted += cipher.final('hex');
+      return { success: true, encrypted, iv: iv.toString('hex') };
+    } catch (error) {
+      return { success: false, message: error.message };
+    }
+  });
+
+  ipcMain.handle('decrypt-text', (event, encrypted, password, iv) => {
+    try {
+      const algorithm = 'aes-256-cbc';
+      const key = crypto.scryptSync(password, 'salt', 32);
+      const decipher = crypto.createDecipher(algorithm, key);
+      let decrypted = decipher.update(encrypted, 'hex', 'utf8');
+      decrypted += decipher.final('utf8');
+      return { success: true, decrypted };
+    } catch (error) {
+      return { success: false, message: error.message };
+    }
+  });
+
+  // Time and date operations
+  ipcMain.handle('get-current-time', () => {
+    try {
+      const now = new Date();
+      return {
+        success: true,
+        timestamp: now.getTime(),
+        isoString: now.toISOString(),
+        localString: now.toString(),
+        year: now.getFullYear(),
+        month: now.getMonth() + 1,
+        day: now.getDate(),
+        hour: now.getHours(),
+        minute: now.getMinutes(),
+        second: now.getSeconds()
+      };
+    } catch (error) {
+      return { success: false, message: error.message };
+    }
+  });
+
+  ipcMain.handle('format-date', (event, timestamp, format) => {
+    try {
+      const date = new Date(timestamp);
+      let result = format;
+      
+      // Simple format replacement
+      result = result.replace('YYYY', date.getFullYear());
+      result = result.replace('MM', String(date.getMonth() + 1).padStart(2, '0'));
+      result = result.replace('DD', String(date.getDate()).padStart(2, '0'));
+      result = result.replace('HH', String(date.getHours()).padStart(2, '0'));
+      result = result.replace('mm', String(date.getMinutes()).padStart(2, '0'));
+      result = result.replace('ss', String(date.getSeconds()).padStart(2, '0'));
+      
+      return { success: true, formatted: result };
+    } catch (error) {
+      return { success: false, message: error.message };
+    }
+  });
+
+  // Text processing operations
+  ipcMain.handle('text-to-base64', (event, text) => {
+    try {
+      const base64 = Buffer.from(text, 'utf8').toString('base64');
+      return { success: true, base64 };
+    } catch (error) {
+      return { success: false, message: error.message };
+    }
+  });
+
+  ipcMain.handle('base64-to-text', (event, base64) => {
+    try {
+      const text = Buffer.from(base64, 'base64').toString('utf8');
+      return { success: true, text };
+    } catch (error) {
+      return { success: false, message: error.message };
+    }
+  });
+
+  ipcMain.handle('generate-random-string', (event, length = 16, charset = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789') => {
+    try {
+      let result = '';
+      for (let i = 0; i < length; i++) {
+        result += charset.charAt(Math.floor(Math.random() * charset.length));
+      }
+      return { success: true, randomString: result };
+    } catch (error) {
+      return { success: false, message: error.message };
+    }
+  });
+
+  // File compression utilities
+  ipcMain.handle('compress-file', async (event, sourcePath, destPath) => {
+    try {
+      const zlib = require('zlib');
+      const input = fs.createReadStream(sourcePath);
+      const output = fs.createWriteStream(destPath);
+      const gzip = zlib.createGzip();
+      
+      return new Promise((resolve) => {
+        input.pipe(gzip).pipe(output);
+        output.on('finish', () => {
+          resolve({ success: true, message: 'File compressed successfully' });
+        });
+        output.on('error', (error) => {
+          resolve({ success: false, message: error.message });
+        });
+      });
+    } catch (error) {
+      return { success: false, message: error.message };
+    }
+  });
+
+  ipcMain.handle('decompress-file', async (event, sourcePath, destPath) => {
+    try {
+      const zlib = require('zlib');
+      const input = fs.createReadStream(sourcePath);
+      const output = fs.createWriteStream(destPath);
+      const gunzip = zlib.createGunzip();
+      
+      return new Promise((resolve) => {
+        input.pipe(gunzip).pipe(output);
+        output.on('finish', () => {
+          resolve({ success: true, message: 'File decompressed successfully' });
+        });
+        output.on('error', (error) => {
+          resolve({ success: false, message: error.message });
+        });
+      });
+    } catch (error) {
+      return { success: false, message: error.message };
+    }
   });
 }
 

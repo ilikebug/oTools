@@ -4,8 +4,8 @@
   const listDiv = document.getElementById('pluginMarketList');
 
   async function fetchWithGithubToken(url, options = {}) {
-    if (window.oToolsAPI && window.oToolsAPI.getConfig) {
-      const config = await window.oToolsAPI.getConfig('main');
+    if (window.mainWindow && window.mainWindow.getConfig) {
+      const config = await window.mainWindow.getConfig('main');
       const token = config && config.githubToken;
       options.headers = options.headers || {};
       if (token) {
@@ -49,12 +49,12 @@
       if (downloadBtn) {
         downloadBtn.addEventListener('click', (e) => {
           e.stopPropagation();
-          if (window.oToolsAPI && window.oToolsAPI.downloadPlugin) {
+          if (window.mainWindow && window.mainWindow.downloadPlugin) {
             downloadBtn.innerHTML = '<i class="fa fa-spinner fa-spin"></i>';
             downloadBtn.disabled = true;
             downloadBtn.title = 'Downloading...';
             
-            window.oToolsAPI.downloadPlugin({
+            window.mainWindow.downloadPlugin({
               folder: plugin.folder,
               name: plugin.name
             });
@@ -65,8 +65,8 @@
     });
   }
 
-  if (window.oToolsAPI && window.oToolsAPI.onDownloadPluginResult) {
-    window.oToolsAPI.onDownloadPluginResult((result) => {
+  if (window.mainWindow && window.mainWindow.onDownloadPluginResult) {
+    window.mainWindow.onDownloadPluginResult((result) => {
     
       const downloadBtn = document.querySelector(`[data-folder="${result.folder}"]`);
       if (downloadBtn) {
