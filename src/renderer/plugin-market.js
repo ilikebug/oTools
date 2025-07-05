@@ -50,14 +50,39 @@
       if (downloadBtn) {
         downloadBtn.addEventListener('click', (e) => {
           e.stopPropagation();
-          if (window.electron && window.electron.ipcRenderer) {
-            window.electron.ipcRenderer.send('download-plugin', plugin.folder);
-          } else if (window.ipcRenderer) {
-            window.ipcRenderer.send('download-plugin', plugin.folder);
+          if (window.oToolsAPI && window.oToolsAPI.downloadPlugin) {
+            downloadBtn.innerHTML = '<i class="fa fa-spinner fa-spin"></i>';
+            downloadBtn.disabled = true;
+            downloadBtn.title = 'Downloading...';
+            
+            window.oToolsAPI.downloadPlugin({
+              folder: plugin.folder,
+              name: plugin.name
+            });
           }
         });
       }
       listDiv.appendChild(div);
+    });
+  }
+
+  if (window.oToolsAPI && window.oToolsAPI.onDownloadPluginResult) {
+    window.oToolsAPI.onDownloadPluginResult((result) => {
+    
+      const downloadBtn = document.querySelector(`[data-folder="${result.folder}"]`);
+      if (downloadBtn) {
+        if (result.success) {
+          downloadBtn.innerHTML = '<i class="fa fa-check"></i>';
+          downloadBtn.title = 'Downloaded';
+          downloadBtn.style.color = '#4CAF50';
+        } else {
+          downloadBtn.innerHTML = '<i class="fa fa-download"></i>';
+          downloadBtn.disabled = false;
+          downloadBtn.title = 'Download';
+         
+          alert(`下载失败: ${result.message}`);
+        }
+      }
     });
   }
 
@@ -81,7 +106,6 @@
         }
       } catch (e) {
         console.error("request plugins error:", e)
-        // 跳过无效插件
       }
       return null;
     });

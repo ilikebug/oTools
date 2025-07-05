@@ -3,8 +3,8 @@ const path = require('path');
 const MacTools = require('./utils/mac-tools');
 const logger = require('./utils/logger');
 const { setAutoStart } = require('./utils/auto-start');
-const { globalShortcut } = require('electron');
 const KeyboardManager = require('./core/keyboard-manager');
+const { GetPluginDir } = require('./comm')
 
 
 
@@ -88,7 +88,7 @@ function setupPluginIPC(appManager) {
     }
   });
 
-  // 新增：打开插件市场窗口
+  
   ipcMain.on('open-plugin-market', () => {
     const win = new BrowserWindow({
       width: 900,
@@ -104,8 +104,76 @@ function setupPluginIPC(appManager) {
     });
     win.setMenuBarVisibility(true);
     win.loadFile(path.join(__dirname, '../renderer/plugin-market.html'));
+    win.webContents.openDevTools();
+  });
+
+  ipcMain.on('download-plugin', async (event, { folder }) => {
+    console.log('111111111111')
+    const https = require('https');
+    const fs = require('fs');
+    const path = require('path');
+    const pluginManager = appManager.getComponent('pluginManager');
+    const pluginsDir = GetPluginDir();
+    const pluginPath = path.join(pluginsDir, folder);
+    const repo = 'ilikebug/oTools-Plugins';
+    const apiBase = `https://api.github.com/repos/${repo}/contents/${folder}`;
+    const headers = { 'User-Agent': 'oTools' };
+    async function fetchJson(url) {
+      return new Promise((resolve, reject) => {
+        https.get(url, { headers }, (res) => {
+          let data = '';
+          res.on('data', chunk => data += chunk);
+          res.on('end', () => {
+            try {
+              resolve(JSON.parse(data));
+            } catch (e) {
+              reject(e);
+            }
+          });
+        }).on('error', reject);
+      });
+    }
+
+    async function downloadFile(url, dest) {
+      return new Promise((resolve, reject) => {
+        https.get(url, { headers }, (res) => {
+          if (res.statusCode !== 200) return reject(new Error('下载失败: ' + url));
+          const fileStream = fs.createWriteStream(dest);
+          res.pipe(fileStream);
+          fileStream.on('finish', () => fileStream.close(resolve));
+          fileStream.on('error', reject);
+        }).on('error', reject);
+      });
+    }
+
+    async function downloadDir(apiUrl, localDir) {
+      if (!fs.existsSync(localDir)) fs.mkdirSync(localDir, { recursive: true });
+      const list = await fetchJson(apiUrl);
+      for (const item of list) {
+        if (item.type === 'file') {
+          const rawUrl = item.download_url;
+          const filePath = path.join(localDir, item.name);
+          await downloadFile(rawUrl, filePath);
+        } else if (item.type === 'dir') {
+          await downloadDir(item.url, path.join(localDir, item.name));
+        }
+      }
+    }
+
+    try {
+      if (fs.existsSync(pluginPath)) {
+        fs.rmSync(pluginPath, { recursive: true, force: true });
+      }
+      await downloadDir(apiBase, pluginPath);
+      await pluginManager.loadPlugins();
+      event.reply('download-plugin-result', { success: true, message: '插件下载并安装成功', folder: folder });
+      notification("success", `${folder} download success`)
+    } catch (e) {
+      event.reply('download-plugin-result', { success: false, message: e.message, folder: folder });
+    }
   });
 }
+
 
 /**
  * Set up system feature IPC handling
@@ -171,8 +239,12 @@ function setupSystemIPC(appManager) {
 
   // Show system notification
   ipcMain.on('show-system-notification', (event, { title, body }) => {
-    new Notification({ title, body }).show();
+    notification(title, body);
   });
+}
+
+function notification(title, body) {
+  new Notification({ title, body }).show();
 }
 
 module.exports = { setupIPC }; 
