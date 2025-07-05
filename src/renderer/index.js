@@ -254,10 +254,11 @@ class oToolsApp {
     try {
       const settingsPanel = document.getElementById('settingsPanel');
       if (settingsPanel) {
+        await this.loadSettingsFromConfig();
         this.showPanel('settingsPanel');
       }
     } catch (error) {
-      console.error('Failed to display status panel:', error);
+      console.error('Failed to display settings panel:', error);
     }
   }
 
@@ -368,6 +369,11 @@ class oToolsApp {
     // Auto load plugins
     const autoLoadPlugins = document.getElementById('autoLoadPlugins');
     if (autoLoadPlugins) autoLoadPlugins.checked = !!config.plugins?.autoLoad;
+    // GitHub Token
+    const githubTokenInput = document.getElementById('githubTokenInput');
+    if (githubTokenInput) {
+      githubTokenInput.value = config.githubToken || '';
+    }
     // Shortcut
     const toggleShortcut = document.getElementById('toggleShortcut');
     if (toggleShortcut) {
