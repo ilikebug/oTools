@@ -238,8 +238,8 @@ class oToolsApp {
             <span class="status-value">${this.formatUptime(this.appStatus?.uptime || 0)}</span>
           </div>
           <div class="status-item">
-            <label>Component count:</label>
-            <span class="status-value">${this.appStatus?.componentCount || 0}</span>
+            <label>Running plugins:</label>
+            <span class="status-value">${this.appStatus?.runningPluginsCount || 0}</span>
           </div>
           <div class="status-item">
             <label>Plugin count:</label>

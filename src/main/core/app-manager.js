@@ -21,8 +21,6 @@ class AppManager {
       version: '1.0.0',
       status: consts.APP_STATUS.INITIALIZING,
       uptime: 0,
-      componentCount: 0,
-      lastError: null
     };
 
     this.components = new Map(); 
@@ -90,11 +88,9 @@ class AppManager {
       this.keyboardManager.registerShortcutsFromConfig()
       
       // Update application status
-      this.appStatus.status = consts.APP_STATUS.RUNNING;
-      this.appStatus.componentCount = this.getComponentCount();      
+      this.appStatus.status = consts.APP_STATUS.RUNNING;      
     } catch (error) {
       this.appStatus.status = 'error';
-      this.appStatus.lastError = error.message;
       
       if (logger) {
         logger.error(`Application Manager initialization failed: ${error.message}`);
@@ -149,8 +145,16 @@ class AppManager {
     if (this.startTime) {
       this.appStatus.uptime = Date.now() - this.startTime;
     }
+    
+    // Get running plugins count from plugin manager
+    let runningPluginsCount = 0;
+    if (this.pluginManager) {
+      runningPluginsCount = this.pluginManager.processes.size;
+    }
+    
     return {
       ...this.appStatus,
+      runningPluginsCount,
       components: [...this.components.entries()].reduce((acc, [name, component]) => {
         acc[name] = {
           active: !!component,
@@ -175,13 +179,6 @@ class AppManager {
    */
   getAllComponents() {
     return this.components;
-  }
-
-  /**
-   * Get component count
-   */
-  getComponentCount() {
-    return this.components.size;
   }
 
   /**
