@@ -86,6 +86,20 @@ class oToolsApp {
         });
       }
 
+      // GitHub Token save button
+      const saveBtn = document.getElementById('saveGithubTokenBtn');
+      if (saveBtn) {
+        saveBtn.addEventListener('click', async () => {
+          const input = document.getElementById('githubTokenInput');
+          if (input) {
+            const token = input.value.trim();
+            let config = await window.oToolsAPI.getConfig('main') || {};
+            config.githubToken = token;
+            await window.oToolsAPI.setConfig('main', config);
+            alert('GitHub Token saved!');
+          }
+        });
+      }
     } catch (error) {
       console.error('Error binding events:', error);
     }
@@ -170,10 +184,7 @@ class oToolsApp {
         <div class="plugin-icon-wrap">${iconHtml}</div>
         <span>${plugin.shortName || plugin.name}</span>
       `;
-      actionBtn.style.flexDirection = 'row';
-      actionBtn.style.justifyContent = 'flex-start';
-      actionBtn.style.alignItems = 'center';
-      actionBtn.querySelector('span').style.marginLeft = '20px';
+ 
       actionBtn.addEventListener('click', () => {
         if (isEnabled) {
           this.executePlugin(plugin.name);

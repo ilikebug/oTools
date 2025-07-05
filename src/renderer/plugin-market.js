@@ -3,17 +3,16 @@
   const apiUrl = `https://api.github.com/repos/${repo}/contents/`;
   const listDiv = document.getElementById('pluginMarketList');
 
-  async function fetchWithRetry(url, options = {}, retries = 3, delay = 300) {
-    for (let i = 0; i < retries; i++) {
-      try {
-        const res = await fetch(url, options);
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        return res;
-      } catch (e) {
-        if (i === retries - 1) throw e;
-        await new Promise(resolve => setTimeout(resolve, delay));
+  async function fetchWithGithubToken(url, options = {}) {
+    if (window.oToolsAPI && window.oToolsAPI.getConfig) {
+      const config = await window.oToolsAPI.getConfig('main');
+      const token = config && config.githubToken;
+      options.headers = options.headers || {};
+      if (token) {
+        options.headers['Authorization'] = `token ${token}`;
       }
     }
+    return fetch(url, options);
   }
 
   function getPluginIconUrl(plugin) {
@@ -89,14 +88,14 @@
   listDiv.innerHTML = '<div class="plugin-market-loading">Loading plugin list...</div>';
 
   try {
-    const res = await fetch(apiUrl);
+    const res = await fetchWithGithubToken(apiUrl);
     const data = await res.json();
     const dirs = data.filter(item => item.type === 'dir');
 
     const pluginPromises = dirs.map(async (dir) => {
       const pluginJsonUrl = `https://api.github.com/repos/${repo}/contents/${dir.name}/plugin.json`;
       try {
-        const res2 = await fetchWithRetry(pluginJsonUrl);
+        const res2 = await fetchWithGithubToken(pluginJsonUrl);
         const data2 = await res2.json();
         if (data2 && data2.content) {
           const jsonStr = atob(data2.content.replace(/\n/g, ''));
