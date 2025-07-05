@@ -78,6 +78,7 @@ class ConfigManager {
       const fileConfig = JSON.parse(fs.readFileSync(mainConfigPath, 'utf-8'));
       config = this.mergeConfigs(defaultConfig, fileConfig);
     } else {
+      this.saveConfig('main', defaultConfig)
       config = defaultConfig;
     }
     
@@ -97,14 +98,15 @@ class ConfigManager {
       },
       window: {
         width: 400,
-        height: 380,
+        height: 360,
         alwaysOnTop: true,
         skipTaskbar: true
       },
       plugins: {
         autoLoad: true,
         maxProcesses: 10,
-        timeout: 30000
+        timeout: 30000,
+        debug: false
       },
       logger: {
         level: 'info',
@@ -116,7 +118,7 @@ class ConfigManager {
         toggle: 'Alt+Space'
       },
       pluginMarket: {
-        devTools: false
+        debug: false
       }
     };
   }

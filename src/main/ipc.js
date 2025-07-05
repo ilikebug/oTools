@@ -108,7 +108,7 @@ function setupPluginIPC(appManager) {
     win.setMenuBarVisibility(true);
     win.loadFile(path.join(__dirname, '../renderer/plugin-market.html'));
     const mainConfig = configManager.getConfig('main')
-    if (mainConfig && mainConfig.pluginMarket.devTools) {
+    if (mainConfig && mainConfig.pluginMarket.debug) {
       win.webContents.openDevTools();
     }
   });

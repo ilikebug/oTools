@@ -73,7 +73,7 @@ const createWindow = (conf) => {
   });
 
   // Open dev tools in development mode
-  if (process.env.NODE_ENV === 'otools') {
+  if (conf.app.debug) {
     mainWindow.webContents.openDevTools();
   }
 };
