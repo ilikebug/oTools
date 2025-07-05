@@ -253,6 +253,7 @@ class oToolsApp {
               console.log(result.message);
             } else {
               console.error(result.message)
+              this.showNotification(result.message, 'warning')
             }
           }
           break;
@@ -263,6 +264,7 @@ class oToolsApp {
               console.log(result.message);
             } else {
               console.error(result.message)
+              this.showNotification(result.message, 'warning')
             }
           }
           break;

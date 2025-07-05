@@ -1083,6 +1083,7 @@ body {
   transform: translateY(-10px);
   transition: all 0.2s ease;
   z-index: 100;
+  -webkit-app-region: no-drag !important;
 }
 
 .plugin-config-dropdown:hover .dropdown-content,
