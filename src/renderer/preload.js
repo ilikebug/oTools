@@ -18,6 +18,10 @@ contextBridge.exposeInMainWorld('mainWindow', {
   executePlugin: (pluginName, ...args) => ipcRenderer.invoke('execute-plugin', pluginName, ...args),
   startPlugin: (pluginName) => ipcRenderer.invoke('start-plugin', pluginName),
   stopPlugin: (pluginName) => ipcRenderer.invoke('stop-plugin', pluginName),
+  showPluginWindow: (pluginName) => ipcRenderer.invoke('show-plugin-window-by-name', pluginName),
+  hidePluginWindow: (pluginName) => ipcRenderer.invoke('hide-plugin-window-by-name', pluginName),
+  getPluginWindowStatus: (pluginName) => ipcRenderer.invoke('get-plugin-window-status', pluginName),
+  setPluginConfig: (pluginName, config) => ipcRenderer.invoke('set-plugin-config', pluginName, config),
   
   // Event listeners
   onPluginsChanged: (callback) => {

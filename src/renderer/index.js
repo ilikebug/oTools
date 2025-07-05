@@ -183,6 +183,20 @@ class oToolsApp {
       actionBtn.innerHTML = `
         <div class="plugin-icon-wrap">${iconHtml}</div>
         <span>${plugin.shortName || plugin.name}</span>
+        <div class="plugin-config-dropdown">
+          <i class="fas fa-ellipsis-v"></i>
+          <div class="dropdown-content">
+            <div class="dropdown-item" data-action="configure" data-plugin="${plugin.name}">
+              <i class="fas fa-cog"></i> Configure
+            </div>
+            <div class="dropdown-item" data-action="show" data-plugin="${plugin.name}">
+              <i class="fas fa-eye"></i> Show Window
+            </div>
+            <div class="dropdown-item" data-action="hide" data-plugin="${plugin.name}">
+              <i class="fas fa-eye-slash"></i> Hide Window
+            </div>
+          </div>
+        </div>
       `;
  
       actionBtn.addEventListener('click', () => {
@@ -190,6 +204,23 @@ class oToolsApp {
           this.executePlugin(plugin.name);
         }
       });
+
+      const dropdown = actionBtn.querySelector('.plugin-config-dropdown');
+      if (dropdown) {
+        dropdown.addEventListener('click', (e) => {
+          e.stopPropagation(); 
+        });
+
+        const dropdownItems = dropdown.querySelectorAll('.dropdown-item');
+        dropdownItems.forEach(item => {
+          item.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const action = item.dataset.action;
+            const pluginName = item.dataset.plugin;
+            this.handlePluginAction(action, pluginName);
+          });
+        });
+      }
       actionGrid.appendChild(actionBtn);
     });
   }
@@ -207,6 +238,156 @@ class oToolsApp {
     } catch (error) {
       this.showNotification(`Plugin execution error: ${error.message}`, 'error');
     }
+  }
+
+  async handlePluginAction(action, pluginName) {
+    try {
+      switch (action) {
+        case 'configure':
+          this.showPluginConfigDialog(pluginName);
+          break;
+        case 'show':
+          if (window.mainWindow && window.mainWindow.showPluginWindow) {
+            const result = await window.mainWindow.showPluginWindow(pluginName);
+            if (result.success) {
+              console.log(result.message);
+            } else {
+              console.error(result.message)
+            }
+          }
+          break;
+        case 'hide':
+          if (window.mainWindow && window.mainWindow.hidePluginWindow) {
+            const result = await window.mainWindow.hidePluginWindow(pluginName);
+            if (result.success) {
+              console.log(result.message);
+            } else {
+              console.error(result.message)
+            }
+          }
+          break;
+        default:
+          console.warn('Unknown plugin action:', action);
+      }
+    } catch (error) {
+      console.error('Plugin action failed:', error);
+      this.showNotification(`Plugin action failed: ${error.message}`, 'error');
+    }
+  }
+
+  showPluginConfigDialog(pluginName) {
+    const plugin = this.plugins.find(p => p.name === pluginName);
+    if (!plugin) {
+      this.showNotification(`Plugin ${pluginName} not found`, 'error');
+      return;
+    }
+
+    const dialog = document.createElement('div');
+    dialog.className = 'plugin-config-dialog';
+    dialog.innerHTML = `
+      <div class="dialog-overlay"></div>
+      <div class="dialog-content">
+        <div class="dialog-header">
+          <h3>Configure ${plugin.name}</h3>
+          <button class="dialog-close-btn">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        <div class="dialog-body">
+          <div class="settings-section">
+            <h4>Plugin Settings</h4>
+            <div class="setting-item">
+              <label>Startup Mode:</label>
+              <select id="pluginStartupMode_${pluginName}">
+                <option value="independent" ${plugin.startupMode === 'independent' ? 'selected' : ''}>Independent (Close on X)</option>
+                <option value="dependent" ${plugin.startupMode === 'dependent' ? 'selected' : ''}>Dependent (Follow Main App)</option>
+              </select>
+            </div>
+            <div class="setting-item">
+              <label>Enabled:</label>
+              <input type="checkbox" id="pluginEnabled_${pluginName}" ${plugin.enabled !== false ? 'checked' : ''} />
+            </div>
+          </div>
+        </div>
+        <div class="dialog-footer">
+          <button class="dialog-save-btn">Save</button>
+          <button class="dialog-cancel-btn">Cancel</button>
+        </div>
+      </div>
+    `;
+
+    const closeBtn = dialog.querySelector('.dialog-close-btn');
+    const cancelBtn = dialog.querySelector('.dialog-cancel-btn');
+    const saveBtn = dialog.querySelector('.dialog-save-btn');
+
+    console.log('Buttons found:', { closeBtn, cancelBtn, saveBtn });
+
+    const closeDialog = () => {
+      document.body.removeChild(dialog);
+    };
+
+    closeBtn.addEventListener('click', closeDialog);
+    cancelBtn.addEventListener('click', closeDialog);
+    
+    // 添加测试点击事件
+    saveBtn.addEventListener('click', () => {
+      console.log('Save button clicked!');
+    });
+    
+    cancelBtn.addEventListener('click', () => {
+      console.log('Cancel button clicked!');
+    });
+
+    saveBtn.addEventListener('click', async () => {
+      try {
+        console.log('Save button clicked for plugin:', pluginName);
+        
+        const startupModeSelect = dialog.querySelector(`#pluginStartupMode_${pluginName}`);
+        const enabledCheckbox = dialog.querySelector(`#pluginEnabled_${pluginName}`);
+        
+        if (!startupModeSelect) {
+          console.error('Startup mode select not found');
+          this.showNotification('Configuration element not found', 'error');
+          return;
+        }
+        
+        if (!enabledCheckbox) {
+          console.error('Enabled checkbox not found');
+          this.showNotification('Configuration element not found', 'error');
+          return;
+        }
+        
+        const startupMode = startupModeSelect.value;
+        const enabled = enabledCheckbox.checked;
+        
+        console.log('Config values:', { startupMode, enabled });
+
+        if (window.mainWindow && window.mainWindow.setPluginConfig) {
+          const result = await window.mainWindow.setPluginConfig(pluginName, {
+            startupMode,
+            enabled
+          });
+          console.log('Save result:', result);
+          
+          if (result.success) {
+            this.showNotification('Plugin configuration saved successfully!', 'success');
+            await this.loadPlugins();
+            this.renderPluginButtons();
+          } else {
+            this.showNotification(result.message, 'error');
+          }
+        } else {
+          console.error('setPluginConfig method not available');
+          this.showNotification('Plugin configuration method not available', 'error');
+        }
+        closeDialog();
+      } catch (error) {
+        console.error('Failed to save plugin config:', error);
+        this.showNotification(`Failed to save configuration: ${error.message}`, 'error');
+      }
+    });
+
+    document.body.appendChild(dialog);
   }
 
   async showStatusPanel() {
@@ -369,6 +550,7 @@ class oToolsApp {
     // Auto load plugins
     const autoLoadPlugins = document.getElementById('autoLoadPlugins');
     if (autoLoadPlugins) autoLoadPlugins.checked = !!config.plugins?.autoLoad;
+
     // GitHub Token
     const githubTokenInput = document.getElementById('githubTokenInput');
     if (githubTokenInput) {
@@ -414,6 +596,7 @@ class oToolsApp {
         await window.mainWindow.setConfig('main', config);
       });
     }
+
     // Shortcut capture
     this.captureShortcutInput('toggleShortcut', ['shortcuts', 'toggle']);
   }

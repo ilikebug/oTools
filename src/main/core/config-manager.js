@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const chokidar = require('chokidar');
-const {GetPluginDir, GetConfigDir} = require('../comm')
+const {GetConfigDir} = require('../comm')
 
 /**
  * Configuration Manager
@@ -14,7 +14,6 @@ class ConfigManager {
     this.validators = new Map();
 
     this.configDir = GetConfigDir();  
-    this.pluginsDir = GetPluginDir();
   }
 
   /**
@@ -52,9 +51,6 @@ class ConfigManager {
     try {
       // Load main configuration
       await this.loadMainConfig();
-      
-      // Load plugin configurations
-      await this.loadPluginConfigs();
       
       // Validate all configurations
       this.validateAllConfigurations();
@@ -124,33 +120,6 @@ class ConfigManager {
   }
 
   /**
-   * Load plugin configurations
-   */
-  async loadPluginConfigs() {
-    if (!fs.existsSync(this.pluginsDir)) {
-      fs.mkdirSync(this.pluginsDir, { recursive: true });
-    }
-
-    const pluginFolders = fs.readdirSync(this.pluginsDir).filter(file => {
-      const fullPath = path.join(this.pluginsDir, file);
-      return fs.statSync(fullPath).isDirectory();
-    });
-
-    for (const pluginName of pluginFolders) {
-      const configPath = path.join(this.pluginsDir, pluginName, `plugin.json`);
-      if (fs.existsSync(configPath)) {
-        try {
-          const config = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
-          config.configPath = configPath;
-          this.configs.set(`plugin:${pluginName}`, config);
-        } catch (error) {
-          throw error
-        }
-      }
-    }
-  }
-
-  /**
    * Set up configuration file watchers
    */
   setupConfigWatchers() {
@@ -183,24 +152,9 @@ class ConfigManager {
     try {
       if (configName === 'main') {
         await this.loadMainConfig();
-      } else if (configName.startsWith('plugin:')) {
-        const pluginName = configName.replace('plugin:', '');
-        await this.reloadPluginConfig(pluginName);
-      }      
+      }     
     } catch (error) {
       throw error
-    }
-  }
-
-  /**
-   * Reload plugin configuration
-   */
-  async reloadPluginConfig(pluginName) {
-    const configPath = path.join(this.pluginsDir, pluginName, `plug.json`);
-    
-    if (fs.existsSync(configPath)) {
-      const config = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
-      this.configs.set(`plugin:${pluginName}`, config);
     }
   }
 
@@ -227,13 +181,7 @@ class ConfigManager {
       let filePath;
       if (configName === 'main') {
         filePath = path.join(this.configDir, 'main.json');
-      } else if (configName.startsWith('plugin:')) {
-        const pluginName = configName.replace('plugin:', '');
-        filePath = path.join(this.pluginsDir, pluginName, 'plugin.json');
-        const config = this.getConfig(configName)
-        filePath = config.configPath
-      }
-      
+      }     
       if (filePath) {
         fs.writeFileSync(filePath, JSON.stringify(config, null, 2));
       }

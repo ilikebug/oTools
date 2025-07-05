@@ -93,6 +93,58 @@ function setupPluginIPC(appManager) {
     }
   });
 
+  // Show plugin window by name
+  ipcMain.handle('show-plugin-window-by-name', async (event, pluginName) => {
+    try {
+      const result = pluginManager.showPluginWindow(pluginName);
+      return { success: result, message: result ? `Plugin window shown: ${pluginName}` : `Plugin window not found or already visible: ${pluginName}` };
+    } catch (error) {
+      return { success: false, message: error.message };
+    }
+  });
+
+  // Hide plugin window by name
+  ipcMain.handle('hide-plugin-window-by-name', async (event, pluginName) => {
+    try {
+      const result = pluginManager.hidePluginWindow(pluginName);
+      return { success: result, message: result ? `Plugin window hidden: ${pluginName}` : `Plugin window not found or already hidden: ${pluginName}` };
+    } catch (error) {
+      return { success: false, message: error.message };
+    }
+  });
+
+  // Get plugin window status
+  ipcMain.handle('get-plugin-window-status', async (event, pluginName) => {
+    try {
+      const status = pluginManager.getPluginWindowStatus(pluginName);
+      return { success: true, status };
+    } catch (error) {
+      return { success: false, message: error.message };
+    }
+  });
+
+  // Set plugin configuration
+  ipcMain.handle('set-plugin-config', async (event, pluginName, config) => {
+    try {
+      const pluginInfo = pluginManager.getPluginInfo(pluginName);
+      if (!pluginInfo) {
+        return { success: false, message: `Plugin ${pluginName} not found` };
+      }
+
+      const updatedConfig = { ...pluginInfo, ...config };
+      pluginManager.plugins.set(pluginName, updatedConfig);
+
+      const pluginConfigPath = path.join(pluginInfo.dir, 'plugin.json');
+      fs.writeFileSync(pluginConfigPath, JSON.stringify(updatedConfig, null, 2));
+
+      pluginManager.notifyPluginsChanged();
+
+      return { success: true, message: `Plugin ${pluginName} configuration saved` };
+    } catch (error) {
+      return { success: false, message: error.message };
+    }
+  });
+
   // plugin market   
   ipcMain.on('open-plugin-market', () => {
     const win = new BrowserWindow({

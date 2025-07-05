@@ -23,7 +23,7 @@ class PluginManager {
   async initialize(options = {}) {
     try {
       this.mainWindow = options.mainWindow;
-      this.maxProcesses = options.maxProcesses
+      this.maxProcesses = options.maxProcesses;
 
       // Load plugins
       await this.loadPlugins();
@@ -176,6 +176,7 @@ class PluginManager {
         type: plugin.type || 'custom',
         enabled: plugin.enabled !== false,
         loadedAt: plugin.loadedAt,
+        startupMode: plugin.startupMode || 'independent',
       }));
     } catch (error) {
       return [];
@@ -244,6 +245,19 @@ class PluginManager {
       this.processes.delete(pluginName);
     });
 
+    win.on('close', (event) => {
+      const pluginInfo = this.plugins.get(pluginName);
+      const startupMode = pluginInfo?.startupMode || 'independent';
+      
+      if (startupMode === 'dependent') {
+        event.preventDefault();
+        win.hide();
+        logger.info(`Plugin window hidden (dependent mode): ${pluginName}`);
+      } else {
+        logger.info(`Plugin process closed (independent mode): ${pluginName}`);
+      }
+    });
+
     logger.info(`Plugin process created successfully: ${pluginName}`);
     return info;
   }
@@ -261,6 +275,55 @@ class PluginManager {
 
   getPoolStatus() {
     return Array.from(this.processes.keys());
+  }
+
+  /**
+   * Show plugin window if it exists and is hidden
+   */
+  showPluginWindow(pluginName) {
+    const processInfo = this.processes.get(pluginName);
+    if (processInfo && processInfo.window && !processInfo.window.isDestroyed()) {
+      if (!processInfo.window.isVisible()) {
+        processInfo.window.show();
+        processInfo.window.focus();
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
+   * Hide plugin window if it exists and is visible
+   */
+  hidePluginWindow(pluginName) {
+    const processInfo = this.processes.get(pluginName);
+    if (processInfo && processInfo.window && !processInfo.window.isDestroyed()) {
+      if (processInfo.window.isVisible()) {
+        processInfo.window.hide();
+        logger.info(`Plugin window hidden: ${pluginName}`);
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
+   * Get plugin window status
+   */
+  getPluginWindowStatus(pluginName) {
+    const processInfo = this.processes.get(pluginName);
+    if (processInfo && processInfo.window && !processInfo.window.isDestroyed()) {
+      return {
+        exists: true,
+        visible: processInfo.window.isVisible(),
+        destroyed: processInfo.window.isDestroyed()
+      };
+    }
+    return {
+      exists: false,
+      visible: false,
+      destroyed: true
+    };
   }
 }
 
