@@ -48,7 +48,6 @@ class MacTools {
       
       return imageBuffer;
     } catch (error) {
-      console.error('Region screenshot failed:', error);
       throw error;
     }
   }

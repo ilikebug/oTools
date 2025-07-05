@@ -14,6 +14,7 @@ class PluginManager {
     this.processes = new Map(); 
 
     this.watcher = null;
+    this.mainWindow = null;
   }
 
   /**
@@ -36,6 +37,13 @@ class PluginManager {
     } catch (error) {
       throw error;
     }
+  }
+
+  /**
+   * Set main window reference after window creation
+   */
+  setMainWindow(window) {
+    this.mainWindow = window;
   }
 
   /**
@@ -145,7 +153,9 @@ class PluginManager {
    */
   notifyPluginsChanged() {
     try {
-      this.mainWindow.webContents.send('plugins-changed', this.getPluginsList());
+      if (this.mainWindow && !this.mainWindow.isDestroyed() && this.mainWindow.webContents) {
+        this.mainWindow.webContents.send('plugins-changed', this.getPluginsList());
+      }
     } catch (error) {
       logger.error(`Error in notifyPluginsChanged: ${error.message}`);
     }

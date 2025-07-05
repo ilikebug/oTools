@@ -97,6 +97,8 @@ async function initializeApp() {
       });
     // Create main window
     createWindow(mainConfig);
+    // Set mainWindow reference in plugin manager after window creation
+    pluginManager.setMainWindow(mainWindow);
     // set auto start
     if (mainConfig && mainConfig.app && 
       typeof mainConfig.app.autoStart !== 'undefined') {
