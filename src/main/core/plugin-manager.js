@@ -17,6 +17,7 @@ class PluginManager {
 
     this.watcher = null;
     this.mainWindow = null;
+    this.debug = null
   }
 
   /**
@@ -25,7 +26,7 @@ class PluginManager {
   async initialize(options = {}) {
     try {
       this.maxProcesses = options.maxProcesses;
-
+      this.debug = options.debug
       // Load plugins
       await this.loadPlugins();
       
@@ -238,6 +239,10 @@ class PluginManager {
         contextIsolation: true
       }
     });
+
+    if (this.debug) {
+      win.webContents.openDevTools();
+    }
     
     // Set window level to ensure it appears above other applications
     win.setAlwaysOnTop(true, 'screen-saver');
@@ -375,6 +380,7 @@ class PluginManager {
     try {
       const info = await this.getProcess(pluginName);
       info.status = 'busy';
+      info.window.webContents.send('plugin-execute', { action, args });
       
       // All plugins should show window when executed
       if (info.window && !info.window.isVisible()) {

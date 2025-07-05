@@ -93,7 +93,7 @@ async function initializeApp() {
     // init plugin manager
     const pluginManager = new PluginManager();
       await pluginManager.initialize({
-        maxProcesses: mainConfig.plugins.maxProcesses
+        ...mainConfig.plugins
       });
     // Create main window
     createWindow(mainConfig);
