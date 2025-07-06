@@ -75,6 +75,9 @@ npm run make
 
 ## 📦 插件开发 / Plugin Development
 
+[ oTools 插件开发详细指南 ](./oTools-Plugins.md)
+
+[ oTools Plugin Development Detailed Guide](./oTools-Plugins.md)
 
 
 ## 🏗️ 技术架构 / Technical Architecture
