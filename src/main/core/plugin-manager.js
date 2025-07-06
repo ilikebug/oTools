@@ -398,7 +398,16 @@ class PluginManager {
     if (!fs.existsSync(htmlPath)) throw new Error(`Plugin main page does not exist: ${htmlPath}`);
     if (!fs.existsSync(preloadPath)) throw new Error(`Plugin preload script does not exist: ${preloadPath}`);
 
+    const defaultWidth = 900;
+    const defaultHeight = 600;
+    const winWidth = meta.ui.width || defaultWidth;
+    const winHeight = meta.ui.height || defaultHeight;
+    const winTitle = meta.ui.title || meta.shortName || meta.name || 'Plugin';
+
     const win = new BrowserWindow({
+      width: winWidth,
+      height: winHeight,
+      title: winTitle,
       show: false,
       alwaysOnTop: true,
       skipTaskbar: true,
