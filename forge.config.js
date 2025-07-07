@@ -9,6 +9,7 @@ module.exports = {
       NSUserNotificationUsageDescription: "Notification permission is required for message alerts.",
       NSScreenCaptureUsageDescription: "Screen capture permission is required for screenshot and OCR features."
     },
+    appBundleId: "com.sylvan.otools",
     // Ensure native modules and Tesseract.js files are properly handled
     ignore: [
       /^\/node_modules\/tesseract\.js\/.*\.worker\.js$/,
@@ -54,5 +55,4 @@ module.exports = {
       [FuseV1Options.OnlyLoadAppFromAsar]: true,
     }),
   ],
-  appBundleId: "com.sylvan.otools"
 };
