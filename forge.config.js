@@ -54,4 +54,5 @@ module.exports = {
       [FuseV1Options.OnlyLoadAppFromAsar]: true,
     }),
   ],
+  appBundleId: "com.sylvan.otools"
 };
