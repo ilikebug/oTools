@@ -5,6 +5,10 @@ module.exports = {
   packagerConfig: {
     asar: true,
     icon: 'assets/app',
+    extendInfo: {
+      NSUserNotificationUsageDescription: "Notification permission is required for message alerts.",
+      NSScreenCaptureUsageDescription: "Screen capture permission is required for screenshot and OCR features."
+    },
     // Ensure native modules and Tesseract.js files are properly handled
     ignore: [
       /^\/node_modules\/tesseract\.js\/.*\.worker\.js$/,

@@ -3,6 +3,14 @@ const logger = require('./logger');
 
 function setAutoStart(enable) {
   try {
+    const currentSettings = app.getLoginItemSettings();
+    const currentEnabled = currentSettings.openAtLogin;
+    
+    if (currentEnabled === enable) {
+      return;
+    }
+    
+    // 状态不一致时才执行设置
     app.setLoginItemSettings({
       openAtLogin: enable,
       path: app.getPath('exe'),
