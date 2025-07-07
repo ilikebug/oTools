@@ -58,8 +58,9 @@ class MacTools {
       // If primary engine fails, try the other one
       try {
         // Try Tesseract.js as fallback
-        const result = await this.useTesseractJS(tempFile);
+        let result = await this.useTesseractJS(tempFile);
         fs.unlinkSync(tempFile);
+        result = this.cleanOcrText(result);
         return result;
       } catch (fallbackError) {
         logger.error('Both OCR engines failed:', {
@@ -86,6 +87,38 @@ class MacTools {
       logger.error('Tesseract.js unavailable:', error);
       throw new Error('Tesseract.js unavailable');
     }
+  }
+
+  /**
+   * Clean up extra spaces in OCR result text
+   * @param {string} text
+   * @returns {string}
+   */
+  cleanOcrText(text) {
+    return text
+      // 1. Remove invisible characters and special whitespaces
+      .replace(/[\u200B-\u200D\uFEFF]/g, '')
+      // 2. Trim spaces at the start and end of each line
+      .split('\n').map(line => line.trim()).join('\n')
+      // 3. Merge consecutive spaces
+      .replace(/ {2,}/g, ' ')
+      // 4. Merge consecutive newlines
+      .replace(/\n{2,}/g, '\n')
+      // 5. Remove spaces between Chinese characters
+      .replace(/([\u4e00-\u9fa5])\s+([\u4e00-\u9fa5])/g, '$1$2')
+      // 6. Remove spaces between Chinese and punctuation
+      .replace(/([\u4e00-\u9fa5])\s+([，。！？；：""''])/g, '$1$2')
+      .replace(/([，。！？；：""''])\s+([\u4e00-\u9fa5])/g, '$1$2')
+      // 7. Remove spaces between punctuation and English
+      .replace(/([，。！？；：""''])\s+([a-zA-Z0-9])/g, '$1$2')
+      // 8. Remove spaces between English and punctuation
+      .replace(/([a-zA-Z0-9])\s+([，。！？；：""''])/g, '$1$2')
+      // 9. Remove all spaces between Chinese and English (to re-add single space)
+      .replace(/([\u4e00-\u9fa5])\s+([a-zA-Z0-9])/g, '$1$2')
+      .replace(/([a-zA-Z0-9])\s+([\u4e00-\u9fa5])/g, '$1$2')
+      // 10. Add single space between Chinese and English
+      .replace(/([\u4e00-\u9fa5])([a-zA-Z0-9])/g, '$1 $2')
+      .replace(/([a-zA-Z0-9])([\u4e00-\u9fa5])/g, '$1 $2');
   }
 
   cleanup() {
