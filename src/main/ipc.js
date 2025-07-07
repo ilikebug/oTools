@@ -4,11 +4,6 @@ const https = require('https');
 const fs = require('fs');
 const os = require('os');
 const crypto = require('crypto');
-const clipboardEvent = require('clipboard-event');
-
-// Clipboard listener variables
-let clipboardListenerStarted = false;
-let clipboardListener = null;
 
 const MacTools = require('./utils/mac-tools');
 const logger = require('./utils/logger');
@@ -813,7 +808,21 @@ function setupSystemIPC(appManager) {
   // Database operations (simple key-value storage)
   ipcMain.handle('set-db-value', async (event, key, value) => {
     try {
-      const dbPath = path.join(app.getPath('userData'), 'plugin-db.json');
+      // 自动识别插件名
+      let dbFile = 'plugin-db.json';
+      const pluginManager = appManager.getComponent && appManager.getComponent('pluginManager');
+      if (pluginManager) {
+        const win = BrowserWindow.fromWebContents(event.sender);
+        if (win && pluginManager.processes) {
+          for (const [pluginName, info] of pluginManager.processes.entries()) {
+            if (info.window && info.window.webContents && info.window.webContents.id === event.sender.id) {
+              dbFile = `plugin-db-${pluginName}.json`;
+              break;
+            }
+          }
+        }
+      }
+      const dbPath = path.join(app.getPath('userData'), dbFile);
       let db = {};
       if (fs.existsSync(dbPath)) {
         db = JSON.parse(fs.readFileSync(dbPath, 'utf8'));
@@ -828,7 +837,20 @@ function setupSystemIPC(appManager) {
 
   ipcMain.handle('get-db-value', async (event, key) => {
     try {
-      const dbPath = path.join(app.getPath('userData'), 'plugin-db.json');
+      let dbFile = 'plugin-db.json';
+      const pluginManager = appManager.getComponent && appManager.getComponent('pluginManager');
+      if (pluginManager) {
+        const win = BrowserWindow.fromWebContents(event.sender);
+        if (win && pluginManager.processes) {
+          for (const [pluginName, info] of pluginManager.processes.entries()) {
+            if (info.window && info.window.webContents && info.window.webContents.id === event.sender.id) {
+              dbFile = `plugin-db-${pluginName}.json`;
+              break;
+            }
+          }
+        }
+      }
+      const dbPath = path.join(app.getPath('userData'), dbFile);
       if (!fs.existsSync(dbPath)) {
         return { success: true, value: null };
       }
@@ -841,7 +863,20 @@ function setupSystemIPC(appManager) {
 
   ipcMain.handle('delete-db-value', async (event, key) => {
     try {
-      const dbPath = path.join(app.getPath('userData'), 'plugin-db.json');
+      let dbFile = 'plugin-db.json';
+      const pluginManager = appManager.getComponent && appManager.getComponent('pluginManager');
+      if (pluginManager) {
+        const win = BrowserWindow.fromWebContents(event.sender);
+        if (win && pluginManager.processes) {
+          for (const [pluginName, info] of pluginManager.processes.entries()) {
+            if (info.window && info.window.webContents && info.window.webContents.id === event.sender.id) {
+              dbFile = `plugin-db-${pluginName}.json`;
+              break;
+            }
+          }
+        }
+      }
+      const dbPath = path.join(app.getPath('userData'), dbFile);
       if (!fs.existsSync(dbPath)) {
         return { success: true, message: 'Key not found' };
       }
@@ -1047,6 +1082,9 @@ function setupSystemIPC(appManager) {
   ipcMain.handle('read-clipboard', () => {
     try {
       const text = clipboard.readText();
+      if (text == '') {
+        return { success: false, message: 'No text in clipboard' };
+      }
       return { success: true, text };
     } catch (error) {
       return { success: false, message: error.message };
@@ -1082,36 +1120,6 @@ function setupSystemIPC(appManager) {
     } catch (error) {
       return { success: false, message: error.message };
     }
-  });
-
-  // start clipboard listener
-  ipcMain.handle('start-clipboard-listener', (event) => {
-    if (clipboardListenerStarted) {
-      return { success: false, message: 'Clipboard listener already started' };
-    }
-    clipboardListenerStarted = true;
-    clipboardListener = clipboardEvent.on('change', () => {
-      // Send to all windows
-      BrowserWindow.getAllWindows().forEach(win => {
-        win.webContents.send('clipboard-changed');
-      });
-    });
-    return { success: true, message: 'Clipboard listener started' };
-  });
-
-  // stop clipboard listener
-  ipcMain.handle('stop-clipboard-listener', (event) => {
-    if (!clipboardListenerStarted) {
-      return { success: false, message: 'Clipboard listener not started' };
-    }
-    if (clipboardListener && clipboardListener.remove) {
-      clipboardListener.remove();
-    } else if (clipboardListener && clipboardListener.off) {
-      clipboardListener.off();
-    }
-    clipboardListenerStarted = false;
-    clipboardListener = null;
-    return { success: true, message: 'Clipboard listener stopped' };
   });
 }
 
