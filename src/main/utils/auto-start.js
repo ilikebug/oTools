@@ -10,7 +10,6 @@ function setAutoStart(enable) {
       return;
     }
     
-    // 状态不一致时才执行设置
     app.setLoginItemSettings({
       openAtLogin: enable,
       path: app.getPath('exe'),
