@@ -4,6 +4,11 @@ const https = require('https');
 const fs = require('fs');
 const os = require('os');
 const crypto = require('crypto');
+const clipboardEvent = require('clipboard-event');
+
+// Clipboard listener variables
+let clipboardListenerStarted = false;
+let clipboardListener = null;
 
 const MacTools = require('./utils/mac-tools');
 const logger = require('./utils/logger');
@@ -560,47 +565,6 @@ function setupSystemIPC(appManager) {
     }
   });
 
-  // Clipboard operations
-  ipcMain.handle('read-clipboard', () => {
-    try {
-      const text = clipboard.readText();
-      return { success: true, text };
-    } catch (error) {
-      return { success: false, message: error.message };
-    }
-  });
-
-  ipcMain.handle('write-clipboard', (event, text) => {
-    try {
-      clipboard.writeText(text);
-      return { success: true, message: 'Text copied to clipboard' };
-    } catch (error) {
-      return { success: false, message: error.message };
-    }
-  });
-
-  ipcMain.handle('read-clipboard-image', () => {
-    try {
-      const image = clipboard.readImage();
-      if (image.isEmpty()) {
-        return { success: false, message: 'No image in clipboard' };
-      }
-      return { success: true, imageData: image.toDataURL() };
-    } catch (error) {
-      return { success: false, message: error.message };
-    }
-  });
-
-  ipcMain.handle('write-clipboard-image', (event, imageData) => {
-    try {
-      const image = clipboard.readImage();
-      clipboard.writeImage(image);
-      return { success: true, message: 'Image copied to clipboard' };
-    } catch (error) {
-      return { success: false, message: error.message };
-    }
-  });
-
   // File system operations
   ipcMain.handle('read-file', async (event, filePath) => {
     try {
@@ -1077,6 +1041,77 @@ function setupSystemIPC(appManager) {
     } catch (error) {
       return { success: false, message: error.message };
     }
+  });
+
+  // Clipboard operations
+  ipcMain.handle('read-clipboard', () => {
+    try {
+      const text = clipboard.readText();
+      return { success: true, text };
+    } catch (error) {
+      return { success: false, message: error.message };
+    }
+  });
+
+  ipcMain.handle('write-clipboard', (event, text) => {
+    try {
+      clipboard.writeText(text);
+      return { success: true, message: 'Text copied to clipboard' };
+    } catch (error) {
+      return { success: false, message: error.message };
+    }
+  });
+
+  ipcMain.handle('read-clipboard-image', () => {
+    try {
+      const image = clipboard.readImage();
+      if (image.isEmpty()) {
+        return { success: false, message: 'No image in clipboard' };
+      }
+      return { success: true, imageData: image.toDataURL() };
+    } catch (error) {
+      return { success: false, message: error.message };
+    }
+  });
+
+  ipcMain.handle('write-clipboard-image', (event, imageData) => {
+    try {
+      const image = clipboard.readImage();
+      clipboard.writeImage(image);
+      return { success: true, message: 'Image copied to clipboard' };
+    } catch (error) {
+      return { success: false, message: error.message };
+    }
+  });
+
+  // start clipboard listener
+  ipcMain.handle('start-clipboard-listener', (event) => {
+    if (clipboardListenerStarted) {
+      return { success: false, message: 'Clipboard listener already started' };
+    }
+    clipboardListenerStarted = true;
+    clipboardListener = clipboardEvent.on('change', () => {
+      // Send to all windows
+      BrowserWindow.getAllWindows().forEach(win => {
+        win.webContents.send('clipboard-changed');
+      });
+    });
+    return { success: true, message: 'Clipboard listener started' };
+  });
+
+  // stop clipboard listener
+  ipcMain.handle('stop-clipboard-listener', (event) => {
+    if (!clipboardListenerStarted) {
+      return { success: false, message: 'Clipboard listener not started' };
+    }
+    if (clipboardListener && clipboardListener.remove) {
+      clipboardListener.remove();
+    } else if (clipboardListener && clipboardListener.off) {
+      clipboardListener.off();
+    }
+    clipboardListenerStarted = false;
+    clipboardListener = null;
+    return { success: true, message: 'Clipboard listener stopped' };
   });
 }
 

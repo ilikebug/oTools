@@ -63,5 +63,4 @@ contextBridge.exposeInMainWorld('mainWindow', {
     ipcRenderer.send('quit-app');
   },
 
-
 });

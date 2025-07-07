@@ -779,6 +779,13 @@ body {
   align-items: center;
   gap: 18px;
   position: relative;
+  height: 220px; /* 固定高度，保证卡片一致 */
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  position: relative;
+  overflow: visible !important;
+  z-index: 10;
 }
 .plugin-market-item:hover {
   box-shadow: 0 4px 16px rgba(102,126,234,0.08);
@@ -875,6 +882,16 @@ body {
   color: #666;
   font-size: 15px;
   margin-bottom: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  white-space: normal;
+  max-width: 100%;
+  cursor: pointer;
+  position: relative;
+  z-index: 20;
 }
 
 .plugin-market-item .plugin-author {

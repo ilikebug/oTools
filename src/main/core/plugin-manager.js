@@ -403,6 +403,10 @@ class PluginManager {
     const winWidth = meta.ui.width || defaultWidth;
     const winHeight = meta.ui.height || defaultHeight;
     const winTitle = meta.ui.title || meta.shortName || meta.name || 'Plugin';
+    let winFrame = true
+    if (meta.ui.frame != undefined) {
+      winFrame = meta.ui.frame 
+    }
 
     const win = new BrowserWindow({
       width: winWidth,
@@ -412,7 +416,7 @@ class PluginManager {
       alwaysOnTop: true,
       skipTaskbar: true,
       resizable: true,
-      frame: true,
+      frame: winFrame,
       webPreferences: {
         preload: preloadPath,
         nodeIntegration: false,
