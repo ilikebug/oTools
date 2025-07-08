@@ -349,11 +349,11 @@ window.otools.invoke('your-custom-channel', { foo: 'bar' }).then(result => { ...
 ### 10. 数据库（简单键值存储）/ Simple Key-Value Storage
 
 - 设置键值 / Set key-value  
-  `setDbValue: (key, value) => ipcRenderer.invoke('set-db-value', key, value)`
+  `setDbValue: (key, value) => ipcRenderer.invoke('set-db-value', dbName, key, value)`
 - 获取键值 / Get key-value  
-  `getDbValue: (key) => ipcRenderer.invoke('get-db-value', key)`
+  `getDbValue: (key) => ipcRenderer.invoke('get-db-value', dbName, key)`
 - 删除键值 / Delete key-value  
-  `deleteDbValue: (key) => ipcRenderer.invoke('delete-db-value', key)`
+  `deleteDbValue: (key) => ipcRenderer.invoke('delete-db-value', dbName, key)`
 
 ### 11. 屏幕与显示器 / Screen & Display
 
