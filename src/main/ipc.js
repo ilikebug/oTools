@@ -453,7 +453,7 @@ function setupSystemIPC(appManager) {
   // Screenshot capture
   ipcMain.handle('capture-screen', async () => {
     try {
-      const macTools = new MacTools();
+      const macTools = appManager.getComponent('macTools');
       const imageBuffer = await macTools.captureScreenRegion();
       return {
         success: true,
@@ -473,7 +473,7 @@ function setupSystemIPC(appManager) {
   // only support base64 image fromat
   ipcMain.handle('perform-ocr', async (event, imageData) => {
     try {
-      const macTools = new MacTools();      
+      const macTools = appManager.getComponent('macTools');    
       if (!imageData) {
         return { 
           success: false, 
@@ -503,7 +503,7 @@ function setupSystemIPC(appManager) {
   // Combined screenshot + OCR (for backward compatibility)
   ipcMain.handle('capture-and-ocr', async () => {
     try {
-      const macTools = new MacTools();
+      const macTools = appManager.getComponent('macTools');
       const imageBuffer = await macTools.captureScreenRegion();
       const ocrResult = await macTools.performOCR(imageBuffer);
       return {

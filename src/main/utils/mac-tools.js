@@ -3,8 +3,10 @@ const { promisify } = require('util');
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
-const Tesseract = require('tesseract.js');
+const { createWorker } = require('tesseract.js');
 const logger = require('./logger');
+const { app } = require('electron'); 
+const { create } = require('domain');
 
 const execAsync = promisify(exec);
 
@@ -12,13 +14,17 @@ class MacTools {
   constructor() {
     this.tempDir = path.join(os.tmpdir(), 'otools-screenshots');
     this.ensureTempDir();
-    this.localTesseractAvailable = null; // Cache local Tesseract availability
+    this.tesseractWorker = null; 
   }
 
   ensureTempDir() {
     if (!fs.existsSync(this.tempDir)) {
       fs.mkdirSync(this.tempDir, { recursive: true });
     }
+  }
+
+  async initialize() {
+      this.tesseractWorker = await createWorker();
   }
 
   /**
@@ -78,14 +84,22 @@ class MacTools {
 
   async useTesseractJS(imagePath) {
     try {
-      const result = await Tesseract.recognize(
-        imagePath,
-        'chi_sim+eng'
-      );
-      return result.data.text.trim();
+      const tessdataDir = this.getTessdataDir();
+      await this.tesseractWorker.loadLanguage('chi_sim+eng', tessdataDir);
+      await this.tesseractWorker.initialize('chi_sim+eng');
+      const { data } = await this.tesseractWorker.recognize(imagePath);
+      return data.text;
     } catch (error) {
       logger.error('Tesseract.js unavailable:', error);
       throw new Error('Tesseract.js unavailable');
+    }
+  }
+
+  getTessdataDir() {
+    if (app.isPackaged) {
+      return process.resourcesPath;
+    } else {
+      return __dirname;
     }
   }
 

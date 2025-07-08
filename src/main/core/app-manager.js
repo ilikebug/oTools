@@ -2,7 +2,8 @@ const KeyboardManager = require('./keyboard-manager')
 const logger = require('../utils/logger');
 const consts = require('../comm')
 const { setupIPC } = require('../ipc')
-const { forceMoveWindowToCurrentDisplay } = require('../comm')
+const { forceMoveWindowToCurrentDisplay } = require('../comm');
+const MacTools = require('../utils/mac-tools');
 
 /**
  * Application Manager - Unify all core components
@@ -12,6 +13,7 @@ class AppManager {
     this.configManager = null;
     this.pluginManager = null;
     this.keyboardManager = null;
+    this.macTools = null;
   
     this.startTime = null;
     this.appStatus = {
@@ -47,7 +49,7 @@ class AppManager {
 
       this.store = options.store
       this.mainWindow = options.mainWindow
-      
+
       // Initialize configuration manager
       this.configManager = options.configManager
       this.registerComponent('configManager', this.configManager);
@@ -78,6 +80,11 @@ class AppManager {
 
       // Set IPC 
       setupIPC(this);
+
+      // init mac tools
+      this.macTools = new MacTools()
+      await this.macTools.initialize();
+      this.registerComponent('macTools', this.macTools);
       
       // Auto-start dependent plugins after IPC is ready
       if (this.pluginManager && 

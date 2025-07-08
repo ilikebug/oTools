@@ -434,7 +434,7 @@ class PluginManager {
     this.processes.set(pluginName, info);
 
     win.on('show', () => {
-      // win.focus();
+      win.focus();
     });
     
     if (meta.ui && meta.ui.hideOnBlur) {

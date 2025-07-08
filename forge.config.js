@@ -1,23 +1,19 @@
 const { FusesPlugin } = require('@electron-forge/plugin-fuses');
 const { FuseV1Options, FuseVersion } = require('@electron/fuses');
+const path = require('path');
 
 module.exports = {
   packagerConfig: {
-    asar: true,
+    asar: {
+      unpack: '**/*.traineddata'
+    },
     icon: 'assets/app',
     extendInfo: {
       NSUserNotificationUsageDescription: "Notification permission is required for message alerts.",
       NSScreenCaptureUsageDescription: "Screen capture permission is required for screenshot and OCR features."
     },
     appBundleId: "com.sylvan.otools",
-    // Ensure native modules and Tesseract.js files are properly handled
-    ignore: [
-      /^\/node_modules\/tesseract\.js\/.*\.worker\.js$/,
-      /^\/node_modules\/tesseract\.js\/.*\.wasm$/,
-      /^\/node_modules\/tesseract\.js\/.*\.traineddata$/,
-      /^\/node_modules\/tesseract\.js\/.*\.js\.map$/,
-      /^\/node_modules\/tesseract\.js\/.*\.worker\.js\.map$/
-    ]
+    extraResource: ["chi_sim.traineddata", "eng.traineddata"],
   },
   rebuildConfig: {},
   makers: [
