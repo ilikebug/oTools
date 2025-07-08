@@ -9,19 +9,20 @@ const APP_STATUS = {
 };
 
 const GetPluginDir = () =>  {
-  return path.join(app.getPath('appData'), 'oTools', 'plugins');
+  return path.join(app.getPath('userData'), 'plugins');
 }
 
 const GetLoggerDir = () => {
-  return path.join(app.getPath('appData'), 'oTools', 'logs');
+  return path.join(app.getPath('userData'), 'logs');
 }
 
 const GetConfigDir = () => {
-  return path.join(app.getPath('appData'), 'oTools', 'configs');
+  return path.join(app.getPath('userData'), 'configs');
 }
 
-
-
+const GetDBDir = () => {
+  return path.join(app.getPath('userData'), 'fileDB');
+}
 
 
 /**
@@ -138,6 +139,7 @@ module.exports = {
   GetPluginDir,
   GetLoggerDir,
   GetConfigDir,
+  GetDBDir,
 
   getSavedWindowPosition, 
   saveWindowPosition,

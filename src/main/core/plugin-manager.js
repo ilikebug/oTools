@@ -435,6 +435,10 @@ class PluginManager {
     await win.loadFile(htmlPath);
     const info = { window: win, status: 'idle', meta };
     this.processes.set(pluginName, info);
+
+    win.on('show', () => {
+      win.focus();
+    });
     
     win.on('closed', () => {
       this.processes.delete(pluginName);

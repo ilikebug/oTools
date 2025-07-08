@@ -8,7 +8,7 @@ const crypto = require('crypto');
 const MacTools = require('./utils/mac-tools');
 const logger = require('./utils/logger');
 const { setAutoStart } = require('./utils/auto-start');
-const { GetPluginDir } = require('./comm');
+const { GetPluginDir, GetDBDir } = require('./comm');
 
 // 用 global 变量做全局保护
 if (!global._systemIpcRegistered) global._systemIpcRegistered = false;
@@ -806,23 +806,13 @@ function setupSystemIPC(appManager) {
   });
 
   // Database operations (simple key-value storage)
-  ipcMain.handle('set-db-value', async (event, key, value) => {
+  ipcMain.handle('set-db-value', async (event, dbName, key, value) => {
     try {
-      // 自动识别插件名
-      let dbFile = 'plugin-db.json';
-      const pluginManager = appManager.getComponent && appManager.getComponent('pluginManager');
-      if (pluginManager) {
-        const win = BrowserWindow.fromWebContents(event.sender);
-        if (win && pluginManager.processes) {
-          for (const [pluginName, info] of pluginManager.processes.entries()) {
-            if (info.window && info.window.webContents && info.window.webContents.id === event.sender.id) {
-              dbFile = `plugin-db-${pluginName}.json`;
-              break;
-            }
-          }
-        }
+      const dbDir = GetDBDir()
+      if (!fs.existsSync(dbDir)) {
+        fs.mkdirSync(dbDir, { recursive: true });
       }
-      const dbPath = path.join(app.getPath('userData'), dbFile);
+      const dbPath = path.join(dbDir, `${dbName}.json`);
       let db = {};
       if (fs.existsSync(dbPath)) {
         db = JSON.parse(fs.readFileSync(dbPath, 'utf8'));
@@ -835,22 +825,13 @@ function setupSystemIPC(appManager) {
     }
   });
 
-  ipcMain.handle('get-db-value', async (event, key) => {
+  ipcMain.handle('get-db-value', async (event, dbName, key) => {
     try {
-      let dbFile = 'plugin-db.json';
-      const pluginManager = appManager.getComponent && appManager.getComponent('pluginManager');
-      if (pluginManager) {
-        const win = BrowserWindow.fromWebContents(event.sender);
-        if (win && pluginManager.processes) {
-          for (const [pluginName, info] of pluginManager.processes.entries()) {
-            if (info.window && info.window.webContents && info.window.webContents.id === event.sender.id) {
-              dbFile = `plugin-db-${pluginName}.json`;
-              break;
-            }
-          }
-        }
+      const dbDir = GetDBDir()
+      if (!fs.existsSync(dbDir)) {
+        fs.mkdirSync(dbDir, { recursive: true });
       }
-      const dbPath = path.join(app.getPath('userData'), dbFile);
+      const dbPath = path.join(dbDir, `${dbName}.json`);
       if (!fs.existsSync(dbPath)) {
         return { success: true, value: null };
       }
@@ -861,22 +842,13 @@ function setupSystemIPC(appManager) {
     }
   });
 
-  ipcMain.handle('delete-db-value', async (event, key) => {
+  ipcMain.handle('delete-db-value', async (event, dbName, key) => {
     try {
-      let dbFile = 'plugin-db.json';
-      const pluginManager = appManager.getComponent && appManager.getComponent('pluginManager');
-      if (pluginManager) {
-        const win = BrowserWindow.fromWebContents(event.sender);
-        if (win && pluginManager.processes) {
-          for (const [pluginName, info] of pluginManager.processes.entries()) {
-            if (info.window && info.window.webContents && info.window.webContents.id === event.sender.id) {
-              dbFile = `plugin-db-${pluginName}.json`;
-              break;
-            }
-          }
-        }
+      const dbDir = GetDBDir()
+      if (!fs.existsSync(dbDir)) {
+        fs.mkdirSync(dbDir, { recursive: true });
       }
-      const dbPath = path.join(app.getPath('userData'), dbFile);
+      const dbPath = path.join(dbDir, `${dbName}.json`);
       if (!fs.existsSync(dbPath)) {
         return { success: true, message: 'Key not found' };
       }
