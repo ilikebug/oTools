@@ -4,11 +4,13 @@ const https = require('https');
 const fs = require('fs');
 const os = require('os');
 const crypto = require('crypto');
+const robot = require('robotjs'); // For simulating mouse and keyboard
 
 const MacTools = require('./utils/mac-tools');
 const logger = require('./utils/logger');
 const { setAutoStart } = require('./utils/auto-start');
 const { GetPluginDir, GetDBDir } = require('./comm');
+const { ConsoleLogLevel } = require('@nut-tree/nut-js');
 
 // 用 global 变量做全局保护
 if (!global._systemIpcRegistered) global._systemIpcRegistered = false;
@@ -1089,6 +1091,82 @@ function setupSystemIPC(appManager) {
       const image = clipboard.readImage();
       clipboard.writeImage(image);
       return { success: true, message: 'Image copied to clipboard' };
+    } catch (error) {
+      return { success: false, message: error.message };
+    }
+  });
+
+  // Simulate mouse operations
+  ipcMain.handle('simulate-mouse', async (event, action, params) => {
+    try {
+      switch (action) {
+        case 'move': {
+          // params: { x, y }
+          robot.moveMouse(params.x, params.y);
+          break;
+        }
+        case 'click': {
+          // params: { button: 'left'|'right'|'middle', double: false }
+          robot.mouseClick(params.button || 'left', params.double || false);
+          break;
+        }
+        case 'doubleClick': {
+          // params: { button: 'left'|'right'|'middle' }
+          robot.mouseClick(params.button || 'left', true);
+          break;
+        }
+        case 'scroll': {
+          // params: { x, y }
+          robot.scrollMouse(params.x || 0, params.y || 0);
+          break;
+        }
+        case 'drag': {
+          // params: { x, y }
+          robot.dragMouse(params.x, params.y);
+          break;
+        }
+        default:
+          return { success: false, message: 'Unknown mouse action' };
+      }
+      return { success: true, message: 'Mouse action performed' };
+    } catch (error) {
+      return { success: false, message: error.message };
+    }
+  });
+
+  // Simulate keyboard operations
+  ipcMain.handle('simulate-keyboard', async (event, action, params) => {
+    try {
+      switch (action) {
+        case 'type': {
+          // params: { text }
+          robot.typeString(params.text);
+          break;
+        }
+        case 'keyTap': {
+          // params: { key, modifiers }
+          robot.keyTap(params.key, params.modifiers);
+          break;
+        }
+        case 'keyToggle': {
+          // params: { key, down: 'down'|'up', modifiers }
+          robot.keyToggle(params.key, params.down, params.modifiers);
+          break;
+        }
+        default:
+          return { success: false, message: 'Unknown keyboard action' };
+      }
+      return { success: true, message: 'Keyboard action performed' };
+    } catch (error) {
+      return { success: false, message: error.message };
+    }
+  });
+
+  // Get current mouse position
+  ipcMain.handle('get-mouse-position', async () => {
+    try {
+      const pos = robot.getMousePos();
+      return { success: true, x: pos.x, y: pos.y };
     } catch (error) {
       return { success: false, message: error.message };
     }

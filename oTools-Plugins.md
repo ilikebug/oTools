@@ -403,6 +403,49 @@ window.otools.invoke('your-custom-channel', { foo: 'bar' }).then(result => { ...
 - 获取应用版本 / Get app version  
   `getAppVersion: () => ipcRenderer.invoke('get-app-version')`
 
+### 17. 鼠标与键盘模拟 / Mouse & Keyboard Simulation
+
+- 模拟鼠标操作 / Simulate mouse actions  
+  `simulateMouse: (action, params) => ipcRenderer.invoke('simulate-mouse', action, params)`
+
+  **参数说明 / Parameters:**
+  - action: 'move' | 'click' | 'doubleClick' | 'scroll' | 'drag'
+  - params: 
+    - move: { x, y }
+    - click/doubleClick: { button: 'left'|'right'|'middle', double?: boolean }
+    - scroll: { x, y }
+    - drag: { x, y }
+
+  **示例 / Example:**
+  ```js
+  // 鼠标移动到 (100, 200)
+  window.otools.invoke('simulate-mouse', 'move', { x: 100, y: 200 });
+  // 鼠标左键单击
+  window.otools.invoke('simulate-mouse', 'click', { button: 'left' });
+  // 鼠标左键双击
+  window.otools.invoke('simulate-mouse', 'doubleClick', { button: 'left' });
+  ```
+
+- 模拟键盘操作 / Simulate keyboard actions  
+  `simulateKeyboard: (action, params) => ipcRenderer.invoke('simulate-keyboard', action, params)`
+
+  **参数说明 / Parameters:**
+  - action: 'type' | 'keyTap' | 'keyToggle'
+  - params:
+    - type: { text }
+    - keyTap: { key, modifiers }
+    - keyToggle: { key, down: 'down'|'up', modifiers }
+
+  **示例 / Example:**
+  ```js
+  // 输入字符串
+  window.otools.invoke('simulate-keyboard', 'type', { text: 'Hello oTools' });
+  // 模拟 Command+V 粘贴（Mac 下）
+  window.otools.invoke('simulate-keyboard', 'keyTap', { key: 'v', modifiers: ['command'] });
+  // 按下并松开 Shift+A
+  window.otools.invoke('simulate-keyboard', 'keyTap', { key: 'a', modifiers: ['shift'] });
+  ```
+
 ---
 
 如需在 preload.js 中暴露这些方法，可参考如下写法：  
