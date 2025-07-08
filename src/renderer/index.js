@@ -455,6 +455,10 @@ class oToolsApp {
               <label>Enabled:</label>
               <input type="checkbox" id="pluginEnabled_${pluginName}" ${plugin.enabled !== false ? 'checked' : ''} />
             </div>
+            <div class="setting-item">
+              <label>Hide on Blur:</label>
+              <input type="checkbox" id="pluginHideOnBlur_${pluginName}" ${(plugin.ui && plugin.ui.hideOnBlur) ? 'checked' : ''} />
+            </div>
           </div>
         </div>
         <div class="dialog-footer">
@@ -483,6 +487,7 @@ class oToolsApp {
         
         const startupModeSelect = dialog.querySelector(`#pluginStartupMode_${pluginName}`);
         const enabledCheckbox = dialog.querySelector(`#pluginEnabled_${pluginName}`);
+        const hideOnBlurCheckbox = dialog.querySelector(`#pluginHideOnBlur_${pluginName}`);
         
         if (!startupModeSelect) {
           console.error('Startup mode select not found');
@@ -498,32 +503,30 @@ class oToolsApp {
         
         const startupMode = startupModeSelect.value;
         const enabled = enabledCheckbox.checked;
+        const hideOnBlur = hideOnBlurCheckbox ? hideOnBlurCheckbox.checked : false;
         
-        // Configuration values prepared
-
-        try {
-          const result = await this.callMainWindow('setPluginConfig', pluginName, {
-            startupMode,
-            enabled
-          });
-          // Plugin configuration saved
-          
-          if (result.success) {
-            this.showNotification('Plugin configuration saved successfully!', 'success');
-            await this.loadPlugins();
-            this.renderPluginButtons();
-          } else {
-            this.showNotification(result.message, 'error');
-          }
-        } catch (error) {
-          console.error('setPluginConfig method not available:', error);
-          this.showNotification('Plugin configuration method not available', 'error');
+        const oldUi = plugin.ui || {};
+        const ui = { ...oldUi, hideOnBlur };
+        
+        const result = await this.callMainWindow('setPluginConfig', pluginName, {
+          startupMode,
+          enabled,
+          ui
+        });
+        // Plugin configuration saved
+        
+        if (result.success) {
+          this.showNotification('Plugin configuration saved successfully!', 'success');
+          await this.loadPlugins();
+          this.renderPluginButtons();
+        } else {
+          this.showNotification(result.message, 'error');
         }
-        closeDialog();
       } catch (error) {
-        console.error('Failed to save plugin config:', error);
-        this.showNotification(`Failed to save configuration: ${error.message}`, 'error');
+        console.error('setPluginConfig method not available:', error);
+        this.showNotification('Plugin configuration method not available', 'error');
       }
+      closeDialog();
     });
 
     document.body.appendChild(dialog);

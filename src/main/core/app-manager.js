@@ -79,6 +79,12 @@ class AppManager {
       // Set IPC 
       setupIPC(this);
       
+      // Auto-start dependent plugins after IPC is ready
+      if (this.pluginManager && 
+        typeof this.pluginManager.autoStartDependentPlugins === 'function') {
+        await this.pluginManager.autoStartDependentPlugins();
+      }
+      
       // Update application status
       this.appStatus.status = consts.APP_STATUS.RUNNING;
       // send on completed to main page

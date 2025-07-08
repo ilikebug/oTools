@@ -3,7 +3,7 @@ const path = require('node:path');
 const fs = require('fs');
 const chokidar = require('chokidar');
 const logger = require('../utils/logger');
-const { GetPluginDir, forceMoveWindowToCurrentDisplay } = require('../comm');
+const { GetPluginDir, forceMoveWindowToCurrentDisplay, moveWindowToCursor } = require('../comm');
 const { BrowserWindow } = require('electron');
 
 
@@ -39,10 +39,6 @@ class PluginManager {
       if (options.autoLoad !== false) {
         this.watchPlugins();
       }
-      
-      // Auto-start dependent plugins
-      await this.autoStartDependentPlugins();
-      
     } catch (error) {
       logger.error(`Error initializing plugin manager: ${error.message}`);
       throw error;
@@ -351,6 +347,7 @@ class PluginManager {
         enabled: plugin.enabled !== false,
         loadedAt: plugin.loadedAt,
         startupMode: plugin.startupMode || 'independent',
+        ui: plugin.ui,
       }));
     } catch (error) {
       return [];
@@ -440,6 +437,12 @@ class PluginManager {
       win.focus();
     });
     
+    if (meta.ui && meta.ui.hideOnBlur) {
+      win.on('blur', () => {
+        win.hide();
+      });
+    }
+    
     win.on('closed', () => {
       this.processes.delete(pluginName);
     });
@@ -506,7 +509,12 @@ class PluginManager {
   showPluginWindow(pluginName) {
     const processInfo = this.processes.get(pluginName);
     if (processInfo && processInfo.window && !processInfo.window.isDestroyed()) {
-      forceMoveWindowToCurrentDisplay(processInfo.window);
+      const pluginInfo = this.plugins.get(pluginName);
+      if (pluginInfo && pluginInfo.popupAtCursor) {
+        moveWindowToCursor(processInfo.window, 'right');
+      } else {
+        forceMoveWindowToCurrentDisplay(processInfo.window);
+      }
       this._setWindowToTopTemporarily(processInfo.window);
       return true;
     } else {

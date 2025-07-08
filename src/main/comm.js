@@ -96,6 +96,25 @@ const forceMoveWindowToCurrentDisplay = (window) => {
   }
 };
 
+/**
+ * Move the window to the mouse cursor position
+ * @param {BrowserWindow} window Electron window object
+ * @param {string} align Alignment: 'center' or 'topleft', default is 'center'
+ */
+function moveWindowToCursor(window, align = 'center') {
+  if (!window || window.isDestroyed()) return;
+  const mouse = screen.getCursorScreenPoint();
+  const [w, h] = window.getSize();
+  let x = mouse.x, y = mouse.y;
+  if (align === 'center') {
+    x = x - Math.floor(w / 2);
+    y = y - Math.floor(h / 2);
+  }
+  window.setPosition(x, y);
+  window.show();
+  window.focus();
+}
+
 function getSavedWindowPosition(store) {
   const pos = store.get('windowPosition');
   if (pos && typeof pos.x === 'number' && typeof pos.y === 'number') {
@@ -143,5 +162,6 @@ module.exports = {
 
   getSavedWindowPosition, 
   saveWindowPosition,
-  forceMoveWindowToCurrentDisplay
+  forceMoveWindowToCurrentDisplay,
+  moveWindowToCursor
 };
