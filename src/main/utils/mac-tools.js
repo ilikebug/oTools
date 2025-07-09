@@ -5,8 +5,6 @@ const path = require('path');
 const os = require('os');
 const { createWorker } = require('tesseract.js');
 const logger = require('./logger');
-const { app } = require('electron'); 
-const { create } = require('domain');
 
 const execAsync = promisify(exec);
 
@@ -24,7 +22,7 @@ class MacTools {
   }
 
   async initialize() {
-      this.tesseractWorker = await createWorker();
+    this.tesseractWorker = await createWorker('chi_sim+eng');
   }
 
   /**
@@ -84,22 +82,11 @@ class MacTools {
 
   async useTesseractJS(imagePath) {
     try {
-      const tessdataDir = this.getTessdataDir();
-      await this.tesseractWorker.loadLanguage('chi_sim+eng', tessdataDir);
-      await this.tesseractWorker.initialize('chi_sim+eng');
       const { data } = await this.tesseractWorker.recognize(imagePath);
       return data.text;
     } catch (error) {
       logger.error('Tesseract.js unavailable:', error);
       throw new Error('Tesseract.js unavailable');
-    }
-  }
-
-  getTessdataDir() {
-    if (app.isPackaged) {
-      return process.resourcesPath;
-    } else {
-      return __dirname;
     }
   }
 
