@@ -10,1168 +10,17 @@ const logger = require('./utils/logger');
 const { setAutoStart } = require('./utils/auto-start');
 const { GetPluginDir, GetDBDir } = require('./comm');
 
-// 用 global 变量做全局保护
-if (!global._systemIpcRegistered) global._systemIpcRegistered = false;
-
-/**
- * Create standardized error response
- */
-function createErrorResponse(error, customMessage = null) {
-  const message = customMessage || error.message;
-  logger.error(`IPC Error: ${message}`, error);
-  return { success: false, message };
-}
-
-
+let functionMap = null;
 
 /**
  * Set up IPC communication
  * @param {AppManager} appManager Application manager
  */
 function setupIPC(appManager) {
-  
-  // Plugin-related IPC handling
-  setupPluginIPC(appManager);
-  
-  // System feature IPC handling
-  setupSystemIPC(appManager);
 
   functionMap = createFunctionMap(appManager);
 }
 
-/**
- * Set up plugin-related IPC handling
- */
-function setupPluginIPC(appManager) {
-  if (global._pluginIpcRegistered) return;
-  global._pluginIpcRegistered = true;
-  const pluginManager = appManager.getComponent('pluginManager')
-  const configManager = appManager.getComponent('configManager')
-
-  // Get plugin list
-  ipcMain.handle('get-plugins', async () => {
-    try {
-      const plugins = await pluginManager.getPluginsList();
-      return plugins;
-    } catch (error) {
-      logger.error(`get-plugins error: ${error.message}`);
-      return [];
-    }
-  });
-
-  // Get plugin names for shortcut configuration
-  ipcMain.handle('get-plugin-names', async () => {
-    try {
-      const plugins = await pluginManager.getPluginsList();
-      return plugins.map(plugin => ({
-        name: plugin.name,
-        shortName: plugin.shortName || plugin.name,
-        description: plugin.description || ''
-      }));
-    } catch (error) {
-      logger.error(`get-plugin-names error: ${error.message}`);
-      return [];
-    }
-  });
-
-  // Execute plugin
-  ipcMain.handle('execute-plugin', async (event, pluginName, ...args) => {
-    try {
-      // Before executing the plugin, hide the main window
-      if (appManager.mainWindowIsDestroyed()) {
-        appManager.mainWindowHide()
-      }
-      
-      // Check if plugin exists
-      const pluginInfo = pluginManager.getPluginInfo(pluginName);
-      if (!pluginInfo) {
-        return { success: false, message: `Plugin ${pluginName} not found` };
-      }
-
-      // For dependent plugins, ensure process exists
-      if (pluginInfo.startupMode === 'dependent') {
-        const status = pluginManager.getPluginWindowStatus(pluginName);
-        if (!status.exists) {
-          try {
-            await pluginManager.getProcess(pluginName);
-          } catch (error) {
-            return createErrorResponse(error, `Failed to create plugin process: ${error.message}`);
-          }
-        }
-      }
-      
-      const result = await pluginManager.executePlugin(pluginName, 'default', ...args);
-      
-      return {
-        success: true,
-        result: result,
-        message: `Plugin ${pluginName} executed successfully`,
-        startupMode: pluginInfo.startupMode
-      };
-    } catch (error) {
-      return {
-        success: false,
-        result: null,
-        message: error.message
-      };
-    }
-  });
-
-  // Plugin process management
-  ipcMain.handle('start-plugin', async (event, pluginName) => {
-    try {
-      await pluginManager.startPlugin(pluginName);
-      return { success: true, message: `Plugin ${pluginName} started successfully` };
-    } catch (error) {
-      return createErrorResponse(error);
-    }
-  });
-
-  ipcMain.handle('stop-plugin', async (event, pluginName) => {
-    try {
-      await pluginManager.stopPlugin(pluginName);
-      return { success: true, message: `Plugin ${pluginName} stopped successfully` };
-    } catch (error) {
-      return createErrorResponse(error);
-    }
-  });
-
-  ipcMain.handle('show-plugin-window', (event) => {
-    const win = BrowserWindow.fromWebContents(event.sender);
-    if (win && !win.isVisible()) {
-      win.show();
-    }
-  });
-
-  // Show plugin window by name
-  ipcMain.handle('show-plugin-window-by-name', async (event, pluginName) => {
-    try {
-      // First check if plugin exists
-      const pluginInfo = pluginManager.getPluginInfo(pluginName);
-      if (!pluginInfo) {
-        return { success: false, message: `Plugin ${pluginName} not found` };
-      }
-
-      // Check if plugin process exists
-      const status = pluginManager.getPluginWindowStatus(pluginName);
-      
-      if (!status.exists) {
-        // If process doesn't exist, try to create it (for dependent plugins)
-        try {
-          await pluginManager.getProcess(pluginName);
-        } catch (error) {
-          return createErrorResponse(error, `Failed to create plugin process: ${error.message}`);
-        }
-      }
-
-      // Now try to show window
-      const result = pluginManager.showPluginWindow(pluginName);
-      if (result) {
-        return { 
-          success: true, 
-          message: `Plugin window shown: ${pluginName}`,
-          startupMode: status.startupMode
-        };
-      } else {
-        return { 
-          success: false, 
-          message: `Failed to show plugin window: ${pluginName}`,
-          startupMode: status.startupMode
-        };
-      }
-    } catch (error) {
-      return { success: false, message: error.message };
-    }
-  });
-
-  // Hide plugin window by name
-  ipcMain.handle('hide-plugin-window-by-name', async (event, pluginName) => {
-    try {
-      const result = pluginManager.hidePluginWindow(pluginName);
-      return { success: result, message: result ? `Plugin window hidden: ${pluginName}` : `Plugin window not found or already hidden: ${pluginName}` };
-    } catch (error) {
-      return { success: false, message: error.message };
-    }
-  });
-
-  // Toggle plugin window by name (show if hidden, hide if shown)
-  ipcMain.handle('toggle-plugin-window-by-name', async (event, pluginName) => {
-    try {
-      // First check if plugin exists
-      const pluginInfo = pluginManager.getPluginInfo(pluginName);
-      if (!pluginInfo) {
-        return { success: false, message: `Plugin ${pluginName} not found` };
-      }
-
-      // Check if plugin process exists
-      const status = pluginManager.getPluginWindowStatus(pluginName);
-      
-      if (!status.exists) {
-        // If process doesn't exist, try to create it (for dependent plugins)
-        try {
-          await pluginManager.getProcess(pluginName);
-        } catch (error) {
-          return createErrorResponse(error, `Failed to create plugin process: ${error.message}`);
-        }
-      }
-
-      // Check if window is visible
-      const isVisible = status.exists && status.visible;
-      
-      if (isVisible) {
-        // Hide window
-        const result = pluginManager.hidePluginWindow(pluginName);
-        return { 
-          success: result, 
-          message: result ? `Plugin window hidden: ${pluginName}` : `Plugin window not found: ${pluginName}`,
-          action: 'hide'
-        };
-      } else {
-        // Show window
-        const result = pluginManager.showPluginWindow(pluginName);
-        return { 
-          success: result, 
-          message: result ? `Plugin window shown: ${pluginName}` : `Failed to show plugin window: ${pluginName}`,
-          action: 'show'
-        };
-      }
-    } catch (error) {
-      return { success: false, message: error.message };
-    }
-  });
-
-  // Get plugin window status
-  ipcMain.handle('get-plugin-window-status', async (event, pluginName) => {
-    try {
-      const status = pluginManager.getPluginWindowStatus(pluginName);
-      return { success: true, status };
-    } catch (error) {
-      return { success: false, message: error.message };
-    }
-  });
-
-  // Uninstall plugin
-  ipcMain.handle('uninstall-plugin', async (event, pluginName, removeFiles = true) => {
-    try {
-      const result = await pluginManager.uninstallPlugin(pluginName, removeFiles);
-      return result;
-    } catch (error) {
-      return createErrorResponse(error, `Failed to uninstall plugin: ${error.message}`);
-    }
-  });
-
-  // Set plugin configuration
-  ipcMain.handle('set-plugin-config', async (event, pluginName, config) => {
-    try {
-      const pluginInfo = pluginManager.getPluginInfo(pluginName);
-      if (!pluginInfo) {
-        return { success: false, message: `Plugin ${pluginName} not found` };
-      }
-
-      const updatedConfig = { ...pluginInfo, ...config };
-      pluginManager.plugins.set(pluginName, updatedConfig);
-
-      const pluginConfigPath = path.join(pluginInfo.dir, 'plugin.json');
-      fs.writeFileSync(pluginConfigPath, JSON.stringify(updatedConfig, null, 2));
-
-      pluginManager.notifyPluginsChanged();
-
-      return { success: true, message: `Plugin ${pluginName} configuration saved` };
-    } catch (error) {
-      return { success: false, message: error.message };
-    }
-  });
-
-  // Custom shortcut management
-  ipcMain.handle('get-custom-shortcuts', async () => {
-    try {
-      const config = configManager.getConfig('main');
-      return config.customShortcuts || [];
-    } catch (error) {
-      logger.error(`get-custom-shortcuts error: ${error.message}`);
-      return [];
-    }
-  });
-
-  ipcMain.handle('set-custom-shortcuts', async (event, shortcuts) => {
-    try {
-      const config = configManager.getConfig('main');
-      config.customShortcuts = shortcuts;
-      configManager.setConfig('main', config);
-      
-      // Refresh keyboard shortcuts
-      const keyboardManager = appManager.getComponent('keyboardManager');
-      if (keyboardManager) {
-        keyboardManager.refreshShortcuts();
-      }
-      
-      return { success: true, message: 'Custom shortcuts saved' };
-    } catch (error) {
-      return createErrorResponse(error);
-    }
-  });
-
-  // plugin market   
-  ipcMain.on('open-plugin-market', () => {
-    const win = new BrowserWindow({
-      width: 900,
-      height: 700,
-      resizable: true,
-      frame: true,
-      webPreferences: {
-        preload: path.join(__dirname, '../renderer/preload.js'),
-        nodeIntegration: false,
-        contextIsolation: true,
-        enableRemoteModule: false
-      }
-    });
-    win.setMenuBarVisibility(true);
-    win.loadFile(path.join(__dirname, '../renderer/plugin-market.html'));
-    const mainConfig = configManager.getConfig('main')
-    if (mainConfig && mainConfig.pluginMarket.debug) {
-      win.webContents.openDevTools();
-    }
-  });
-
-  ipcMain.on('download-plugin', async (event, { folder }) => {
-    const pluginsDir = GetPluginDir();
-    const pluginPath = path.join(pluginsDir, folder);
-    const repo = 'ilikebug/oTools-Plugins';
-    const apiBase = `https://api.github.com/repos/${repo}/contents/${folder}`;
-    const headers = { 'User-Agent': 'oTools' };
-    const mainConfig = configManager.getConfig('main')
-    if (mainConfig && mainConfig.githubToken) {
-      headers['Authorization'] = `token ${mainConfig.githubToken}`;
-    }
-    async function fetchJson(url) {
-      return new Promise((resolve, reject) => {
-        https.get(url, { headers }, (res) => {
-          let data = '';
-          res.on('data', chunk => data += chunk);
-          res.on('end', () => {
-            try {
-              resolve(JSON.parse(data));
-            } catch (e) {
-              reject(e);
-            }
-          });
-        }).on('error', reject);
-      });
-    }
-
-    async function downloadFile(url, dest) {
-      return new Promise((resolve, reject) => {
-        https.get(url, { headers }, (res) => {
-          if (res.statusCode !== 200) return reject(new Error('Download failed: ' + url));
-          const fileStream = fs.createWriteStream(dest);
-          res.pipe(fileStream);
-          fileStream.on('finish', () => fileStream.close(resolve));
-          fileStream.on('error', reject);
-        }).on('error', reject);
-      });
-    }
-
-    async function downloadDir(apiUrl, localDir) {
-      if (!fs.existsSync(localDir)) fs.mkdirSync(localDir, { recursive: true });
-      const list = await fetchJson(apiUrl);
-      for (const item of list) {
-        if (item.type === 'file') {
-          const rawUrl = item.download_url;
-          const filePath = path.join(localDir, item.name);
-          await downloadFile(rawUrl, filePath);
-        } else if (item.type === 'dir') {
-          await downloadDir(item.url, path.join(localDir, item.name));
-        }
-      }
-    }
-
-    try {
-      if (fs.existsSync(pluginPath)) {
-        fs.rmSync(pluginPath, { recursive: true, force: true });
-      }
-      await downloadDir(apiBase, pluginPath);
-      await pluginManager.loadPlugins();
-      // Notify main window about plugin changes
-      pluginManager.notifyPluginsChanged();
-      event.reply('download-plugin-result', { success: true, message: 'Plugin downloaded and installed successfully', folder: folder });
-      notification("success", `${folder} download success`)
-    } catch (e) {
-      event.reply('download-plugin-result', { success: false, message: e.message, folder: folder });
-    }
-  });
-}
-
-/**
- * Set up system feature IPC handling
- */
-function setupSystemIPC(appManager) {
-  if (global._systemIpcRegistered) return;
-  global._systemIpcRegistered = true;
-  const configManager = appManager.getComponent('configManager');
-  const keyboardManager = appManager.getComponent('keyboardManager')
-
-  // Get application status
-  ipcMain.handle('get-app-status', () => {
-    return appManager.getAppStatus();
-  });
-
-  // Get configuration information
-  ipcMain.handle('get-config', (event, configName) => {
-    return configManager.getConfig(configName);
-  });
-
-  // Get configuration names
-  ipcMain.handle('get-config-names', () => {
-    return configManager.getConfigNames();
-  });
-
-  // Refresh shortcuts
-  ipcMain.handle('refresh-shortcut', async () => {
-    try {
-      keyboardManager.unregisterAll();
-      keyboardManager.registerShortcutsFromConfig();
-      return { success: true, message: 'Shortcuts refreshed' };
-    } catch (error) {
-      return { success: false, message: error.message };
-    }
-  });
-
-  // Set configuration
-  ipcMain.handle('set-config', async (event, configName, config) => {
-    try {
-      configManager.setConfig(configName, config);
-      if (configName === 'main' && config.app && 
-        typeof config.app.autoStart !== 'undefined') {
-        setAutoStart(!!config.app.autoStart);
-      }
-      return { success: true, message: 'Configuration updated successfully' };
-    } catch (error) {
-      return { success: false, message: error.message };
-    }
-  });
-
-  // Screenshot capture
-  ipcMain.handle('capture-screen', async () => {
-    try {
-      const macTools = appManager.getComponent('macTools');
-      const imageBuffer = await macTools.captureScreenRegion();
-      return {
-        success: true,
-        imageData: imageBuffer.toString('base64'),
-        message: 'Screenshot captured successfully'
-      };
-    } catch (error) {
-      return { 
-        success: false, 
-        imageData: null, 
-        message: error.message 
-      };
-    }
-  });
-
-  // OCR text recognition
-  // only support base64 image fromat
-  ipcMain.handle('perform-ocr', async (event, imageData) => {
-    try {
-      const macTools = appManager.getComponent('macTools');    
-      if (!imageData) {
-        return { 
-          success: false, 
-          text: '', 
-          message: "No executable image" 
-        };
-      }
-      imageData = imageData.replace(/^data:image\/[a-z]+;base64,/, '');
-      const imageBuffer = Buffer.from(imageData, 'base64');
-      
-      const ocrResult = await macTools.performOCR(imageBuffer);      
-      return {
-        success: true,
-        text: ocrResult,
-        message: 'OCR performed successfully'
-      };
-    } catch (error) {
-      logger.error('OCR failed:', error);
-      return { 
-        success: false, 
-        text: '', 
-        message: `OCR failed: ${error.message}` 
-      };
-    }
-  });
-
-  // Combined screenshot + OCR (for backward compatibility)
-  ipcMain.handle('capture-and-ocr', async () => {
-    try {
-      const macTools = appManager.getComponent('macTools');
-      const imageBuffer = await macTools.captureScreenRegion();
-      const ocrResult = await macTools.performOCR(imageBuffer);
-      return {
-        success: true,
-        imageData: imageBuffer.toString('base64'),
-        text: ocrResult,
-        message: 'Screenshot and OCR completed successfully'
-      };
-    } catch (error) {
-      logger.error('Screenshot and OCR failed:', error);
-      return { 
-        success: false, 
-        imageData: null, 
-        text: '', 
-        message: `Screenshot and OCR failed: ${error.message}` 
-      };
-    }
-  });
-
-
-
-  // Show system notification
-  ipcMain.on('show-system-notification', (event, { title, body }) => {
-    notification(title, body);
-  });
-
-  // Quit application
-  ipcMain.on('quit-app', () => {
-    app.quit();
-  });
-
-  // File dialog operations
-  ipcMain.handle('show-open-dialog', async (event, options) => {
-    try {
-      const result = await dialog.showOpenDialog(options);
-      return {
-        success: true,
-        canceled: result.canceled,
-        filePaths: result.filePaths
-      };
-    } catch (error) {
-      return { success: false, message: error.message };
-    }
-  });
-
-  ipcMain.handle('show-save-dialog', async (event, options) => {
-    try {
-      const result = await dialog.showSaveDialog(options);
-      return {
-        success: true,
-        canceled: result.canceled,
-        filePath: result.filePath
-      };
-    } catch (error) {
-      return { success: false, message: error.message };
-    }
-  });
-
-  // File system operations
-  ipcMain.handle('read-file', async (event, filePath) => {
-    try {
-      const content = fs.readFileSync(filePath, 'utf8');
-      return { success: true, content };
-    } catch (error) {
-      return { success: false, message: error.message };
-    }
-  });
-
-  ipcMain.handle('write-file', async (event, filePath, content) => {
-    try {
-      fs.writeFileSync(filePath, content, 'utf8');
-      return { success: true, message: 'File written successfully' };
-    } catch (error) {
-      return { success: false, message: error.message };
-    }
-  });
-
-  ipcMain.handle('file-exists', (event, filePath) => {
-    try {
-      const exists = fs.existsSync(filePath);
-      return { success: true, exists };
-    } catch (error) {
-      return { success: false, message: error.message };
-    }
-  });
-
-  ipcMain.handle('create-directory', async (event, dirPath) => {
-    try {
-      fs.mkdirSync(dirPath, { recursive: true });
-      return { success: true, message: 'Directory created successfully' };
-    } catch (error) {
-      return { success: false, message: error.message };
-    }
-  });
-
-  // System operations
-  ipcMain.handle('open-external', async (event, url) => {
-    try {
-      await shell.openExternal(url);
-      return { success: true, message: 'Opened external link' };
-    } catch (error) {
-      return { success: false, message: error.message };
-    }
-  });
-
-  ipcMain.handle('show-item-in-folder', async (event, filePath) => {
-    try {
-      shell.showItemInFolder(filePath);
-      return { success: true, message: 'Showed item in folder' };
-    } catch (error) {
-      return { success: false, message: error.message };
-    }
-  });
-
-  ipcMain.handle('get-app-version', () => {
-    try {
-      return { success: true, version: app.getVersion() };
-    } catch (error) {
-      return { success: false, message: error.message };
-    }
-  });
-
-  // Window operations
-  ipcMain.handle('get-window-info', (event) => {
-    try {
-      const win = BrowserWindow.fromWebContents(event.sender);
-      if (win) {
-        return {
-          success: true,
-          isVisible: win.isVisible(),
-          isMinimized: win.isMinimized(),
-          isMaximized: win.isMaximized(),
-          bounds: win.getBounds()
-        };
-      }
-      return { success: false, message: 'Window not found' };
-    } catch (error) {
-      return { success: false, message: error.message };
-    }
-  });
-
-  ipcMain.handle('minimize-window', (event) => {
-    try {
-      const win = BrowserWindow.fromWebContents(event.sender);
-      if (win) {
-        win.minimize();
-        return { success: true, message: 'Window minimized' };
-      }
-      return { success: false, message: 'Window not found' };
-    } catch (error) {
-      return { success: false, message: error.message };
-    }
-  });
-
-  ipcMain.handle('maximize-window', (event) => {
-    try {
-      const win = BrowserWindow.fromWebContents(event.sender);
-      if (win) {
-        if (win.isMaximized()) {
-          win.unmaximize();
-          return { success: true, message: 'Window unmaximized' };
-        } else {
-          win.maximize();
-          return { success: true, message: 'Window maximized' };
-        }
-      }
-      return { success: false, message: 'Window not found' };
-    } catch (error) {
-      return { success: false, message: error.message };
-    }
-  });
-
-  ipcMain.handle('show-window', (event) => {
-    try {
-      const win = BrowserWindow.fromWebContents(event.sender);
-      if (win) {
-        win.show();
-        return { success: true, message: 'Window shown' };
-      }
-      return { success: false, message: 'Window not found' };
-    } catch (error) {
-      return { success: false, message: error.message };
-    }
-  });
-
-  ipcMain.handle('hide-window', (event) => {
-    try {
-      const win = BrowserWindow.fromWebContents(event.sender);
-      if (win) {
-        win.hide();
-        return { success: true, message: 'Window hidden' };
-      }
-      return { success: false, message: 'Window not found' };
-    } catch (error) {
-      return { success: false, message: error.message };
-    }
-  });
-
-  // System information
-  ipcMain.handle('get-system-info', () => {
-    try {
-      return {
-        success: true,
-        platform: os.platform(),
-        arch: os.arch(),
-        version: os.version(),
-        hostname: os.hostname(),
-        homedir: os.homedir(),
-        tmpdir: os.tmpdir(),
-        cpus: os.cpus().length,
-        totalmem: os.totalmem(),
-        freemem: os.freemem(),
-        uptime: os.uptime()
-      };
-    } catch (error) {
-      return { success: false, message: error.message };
-    }
-  });
-
-  // Process management
-  ipcMain.handle('get-process-info', () => {
-    try {
-      const process = require('process');
-      return {
-        success: true,
-        pid: process.pid,
-        version: process.version,
-        platform: process.platform,
-        arch: process.arch,
-        memoryUsage: process.memoryUsage(),
-        uptime: process.uptime()
-      };
-    } catch (error) {
-      return { success: false, message: error.message };
-    }
-  });
-
-  // File system extended operations
-  ipcMain.handle('list-directory', async (event, dirPath) => {
-    try {
-      const items = fs.readdirSync(dirPath, { withFileTypes: true });
-      const result = items.map(item => ({
-        name: item.name,
-        isDirectory: item.isDirectory(),
-        isFile: item.isFile(),
-        isSymbolicLink: item.isSymbolicLink()
-      }));
-      return { success: true, items: result };
-    } catch (error) {
-      return { success: false, message: error.message };
-    }
-  });
-
-  ipcMain.handle('get-file-info', (event, filePath) => {
-    try {
-      const stats = fs.statSync(filePath);
-      return {
-        success: true,
-        size: stats.size,
-        isDirectory: stats.isDirectory(),
-        isFile: stats.isFile(),
-        isSymbolicLink: stats.isSymbolicLink(),
-        created: stats.birthtime,
-        modified: stats.mtime,
-        accessed: stats.atime
-      };
-    } catch (error) {
-      return { success: false, message: error.message };
-    }
-  });
-
-  ipcMain.handle('delete-file', async (event, filePath) => {
-    try {
-      const stats = fs.statSync(filePath);
-      if (stats.isDirectory()) {
-        fs.rmSync(filePath, { recursive: true, force: true });
-      } else {
-        fs.unlinkSync(filePath);
-      }
-      return { success: true, message: 'File deleted successfully' };
-    } catch (error) {
-      return { success: false, message: error.message };
-    }
-  });
-
-  ipcMain.handle('copy-file', async (event, sourcePath, destPath) => {
-    try {
-      fs.copyFileSync(sourcePath, destPath);
-      return { success: true, message: 'File copied successfully' };
-    } catch (error) {
-      return { success: false, message: error.message };
-    }
-  });
-
-  ipcMain.handle('move-file', async (event, sourcePath, destPath) => {
-    try {
-      fs.renameSync(sourcePath, destPath);
-      return { success: true, message: 'File moved successfully' };
-    } catch (error) {
-      return { success: false, message: error.message };
-    }
-  });
-
-  // Database operations (simple key-value storage)
-  ipcMain.handle('set-db-value', async (event, dbName, key, value) => {
-    try {
-      const dbDir = GetDBDir()
-      if (!fs.existsSync(dbDir)) {
-        fs.mkdirSync(dbDir, { recursive: true });
-      }
-      const dbPath = path.join(dbDir, `${dbName}.json`);
-      let db = {};
-      if (fs.existsSync(dbPath)) {
-        db = JSON.parse(fs.readFileSync(dbPath, 'utf8'));
-      }
-      db[key] = value;
-      fs.writeFileSync(dbPath, JSON.stringify(db, null, 2));
-      return { success: true, message: 'Value stored successfully' };
-    } catch (error) {
-      return { success: false, message: error.message };
-    }
-  });
-
-  ipcMain.handle('get-db-value', async (event, dbName, key) => {
-    try {
-      const dbDir = GetDBDir()
-      if (!fs.existsSync(dbDir)) {
-        fs.mkdirSync(dbDir, { recursive: true });
-      }
-      const dbPath = path.join(dbDir, `${dbName}.json`);
-      if (!fs.existsSync(dbPath)) {
-        return { success: true, value: null };
-      }
-      const db = JSON.parse(fs.readFileSync(dbPath, 'utf8'));
-      return { success: true, value: db[key] || null };
-    } catch (error) {
-      return { success: false, message: error.message };
-    }
-  });
-
-  ipcMain.handle('delete-db-value', async (event, dbName, key) => {
-    try {
-      const dbDir = GetDBDir()
-      if (!fs.existsSync(dbDir)) {
-        fs.mkdirSync(dbDir, { recursive: true });
-      }
-      const dbPath = path.join(dbDir, `${dbName}.json`);
-      if (!fs.existsSync(dbPath)) {
-        return { success: true, message: 'Key not found' };
-      }
-      const db = JSON.parse(fs.readFileSync(dbPath, 'utf8'));
-      delete db[key];
-      fs.writeFileSync(dbPath, JSON.stringify(db, null, 2));
-      return { success: true, message: 'Value deleted successfully' };
-    } catch (error) {
-      return { success: false, message: error.message };
-    }
-  });
-
-  // Screen and display operations
-  ipcMain.handle('get-screen-info', () => {
-    try {
-      const displays = screen.getAllDisplays();
-      const primaryDisplay = screen.getPrimaryDisplay();
-      return {
-        success: true,
-        displays: displays.map(display => ({
-          id: display.id,
-          bounds: display.bounds,
-          workArea: display.workArea,
-          scaleFactor: display.scaleFactor,
-          rotation: display.rotation,
-          internal: display.internal,
-          size: display.size
-        })),
-        primaryDisplay: {
-          id: primaryDisplay.id,
-          bounds: primaryDisplay.bounds,
-          workArea: primaryDisplay.workArea,
-          scaleFactor: primaryDisplay.scaleFactor
-        }
-      };
-    } catch (error) {
-      return { success: false, message: error.message };
-    }
-  });
-
-  // Crypto operations
-  ipcMain.handle('hash-string', (event, algorithm, data) => {
-    try {
-      const hash = crypto.createHash(algorithm);
-      hash.update(data);
-      return { success: true, hash: hash.digest('hex') };
-    } catch (error) {
-      return { success: false, message: error.message };
-    }
-  });
-
-  ipcMain.handle('generate-uuid', () => {
-    try {
-      const uuid = crypto.randomUUID();
-      return { success: true, uuid };
-    } catch (error) {
-      return { success: false, message: error.message };
-    }
-  });
-
-  ipcMain.handle('encrypt-text', (event, text, password) => {
-    try {
-      const algorithm = 'aes-256-cbc';
-      const key = crypto.scryptSync(password, 'salt', 32);
-      const iv = crypto.randomBytes(16);
-      const cipher = crypto.createCipher(algorithm, key);
-      let encrypted = cipher.update(text, 'utf8', 'hex');
-      encrypted += cipher.final('hex');
-      return { success: true, encrypted, iv: iv.toString('hex') };
-    } catch (error) {
-      return { success: false, message: error.message };
-    }
-  });
-
-  ipcMain.handle('decrypt-text', (event, encrypted, password, iv) => {
-    try {
-      const algorithm = 'aes-256-cbc';
-      const key = crypto.scryptSync(password, 'salt', 32);
-      const decipher = crypto.createDecipher(algorithm, key);
-      let decrypted = decipher.update(encrypted, 'hex', 'utf8');
-      decrypted += decipher.final('utf8');
-      return { success: true, decrypted };
-    } catch (error) {
-      return { success: false, message: error.message };
-    }
-  });
-
-  // Time and date operations
-  ipcMain.handle('get-current-time', () => {
-    try {
-      const now = new Date();
-      return {
-        success: true,
-        timestamp: now.getTime(),
-        isoString: now.toISOString(),
-        localString: now.toString(),
-        year: now.getFullYear(),
-        month: now.getMonth() + 1,
-        day: now.getDate(),
-        hour: now.getHours(),
-        minute: now.getMinutes(),
-        second: now.getSeconds()
-      };
-    } catch (error) {
-      return { success: false, message: error.message };
-    }
-  });
-
-  ipcMain.handle('format-date', (event, timestamp, format) => {
-    try {
-      const date = new Date(timestamp);
-      let result = format;
-      
-      // Simple format replacement
-      result = result.replace('YYYY', date.getFullYear());
-      result = result.replace('MM', String(date.getMonth() + 1).padStart(2, '0'));
-      result = result.replace('DD', String(date.getDate()).padStart(2, '0'));
-      result = result.replace('HH', String(date.getHours()).padStart(2, '0'));
-      result = result.replace('mm', String(date.getMinutes()).padStart(2, '0'));
-      result = result.replace('ss', String(date.getSeconds()).padStart(2, '0'));
-      
-      return { success: true, formatted: result };
-    } catch (error) {
-      return { success: false, message: error.message };
-    }
-  });
-
-  // Text processing operations
-  ipcMain.handle('text-to-base64', (event, text) => {
-    try {
-      const base64 = Buffer.from(text, 'utf8').toString('base64');
-      return { success: true, base64 };
-    } catch (error) {
-      return { success: false, message: error.message };
-    }
-  });
-
-  ipcMain.handle('base64-to-text', (event, base64) => {
-    try {
-      const text = Buffer.from(base64, 'base64').toString('utf8');
-      return { success: true, text };
-    } catch (error) {
-      return { success: false, message: error.message };
-    }
-  });
-
-  ipcMain.handle('generate-random-string', (event, length = 16, charset = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789') => {
-    try {
-      let result = '';
-      for (let i = 0; i < length; i++) {
-        result += charset.charAt(Math.floor(Math.random() * charset.length));
-      }
-      return { success: true, randomString: result };
-    } catch (error) {
-      return { success: false, message: error.message };
-    }
-  });
-
-  // File compression utilities
-  ipcMain.handle('compress-file', async (event, sourcePath, destPath) => {
-    try {
-      const zlib = require('zlib');
-      const input = fs.createReadStream(sourcePath);
-      const output = fs.createWriteStream(destPath);
-      const gzip = zlib.createGzip();
-      
-      return new Promise((resolve) => {
-        input.pipe(gzip).pipe(output);
-        output.on('finish', () => {
-          resolve({ success: true, message: 'File compressed successfully' });
-        });
-        output.on('error', (error) => {
-          resolve({ success: false, message: error.message });
-        });
-      });
-    } catch (error) {
-      return { success: false, message: error.message };
-    }
-  });
-
-  ipcMain.handle('decompress-file', async (event, sourcePath, destPath) => {
-    try {
-      const zlib = require('zlib');
-      const input = fs.createReadStream(sourcePath);
-      const output = fs.createWriteStream(destPath);
-      const gunzip = zlib.createGunzip();
-      
-      return new Promise((resolve) => {
-        input.pipe(gunzip).pipe(output);
-        output.on('finish', () => {
-          resolve({ success: true, message: 'File decompressed successfully' });
-        });
-        output.on('error', (error) => {
-          resolve({ success: false, message: error.message });
-        });
-      });
-    } catch (error) {
-      return { success: false, message: error.message };
-    }
-  });
-
-  // Clipboard operations
-  ipcMain.handle('read-clipboard', () => {
-    try {
-      const text = clipboard.readText();
-      if (text == '') {
-        return { success: false, message: 'No text in clipboard' };
-      }
-      return { success: true, text };
-    } catch (error) {
-      return { success: false, message: error.message };
-    }
-  });
-
-  ipcMain.handle('write-clipboard', (event, text) => {
-    try {
-      clipboard.writeText(text);
-      return { success: true, message: 'Text copied to clipboard' };
-    } catch (error) {
-      return { success: false, message: error.message };
-    }
-  });
-
-  ipcMain.handle('read-clipboard-image', () => {
-    try {
-      const image = clipboard.readImage();
-      if (image.isEmpty()) {
-        return { success: false, message: 'No image in clipboard' };
-      }
-      return { success: true, imageData: image.toDataURL() };
-    } catch (error) {
-      return { success: false, message: error.message };
-    }
-  });
-
-  ipcMain.handle('write-clipboard-image', (event, imageData) => {
-    try {
-      const image = clipboard.readImage();
-      clipboard.writeImage(image);
-      return { success: true, message: 'Image copied to clipboard' };
-    } catch (error) {
-      return { success: false, message: error.message };
-    }
-  });
-
-  // Simulate mouse operations
-  ipcMain.handle('simulate-mouse', async (event, action, params) => {
-    try {
-      switch (action) {
-        case 'move': {
-          // params: { x, y }
-          robot.moveMouse(params.x, params.y);
-          break;
-        }
-        case 'click': {
-          // params: { button: 'left'|'right'|'middle', double: false }
-          robot.mouseClick(params.button || 'left', params.double || false);
-          break;
-        }
-        case 'doubleClick': {
-          // params: { button: 'left'|'right'|'middle' }
-          robot.mouseClick(params.button || 'left', true);
-          break;
-        }
-        case 'scroll': {
-          // params: { x, y }
-          robot.scrollMouse(params.x || 0, params.y || 0);
-          break;
-        }
-        case 'drag': {
-          // params: { x, y }
-          robot.dragMouse(params.x, params.y);
-          break;
-        }
-        default:
-          return { success: false, message: 'Unknown mouse action' };
-      }
-      return { success: true, message: 'Mouse action performed' };
-    } catch (error) {
-      return { success: false, message: error.message };
-    }
-  });
-
-  // Simulate keyboard operations
-  ipcMain.handle('simulate-keyboard', async (event, action, params) => {
-    try {
-      switch (action) {
-        case 'type': {
-          // params: { text }
-          robot.typeString(params.text);
-          break;
-        }
-        case 'keyTap': {
-          // params: { key, modifiers }
-          robot.keyTap(params.key, params.modifiers);
-          break;
-        }
-        case 'keyToggle': {
-          // params: { key, down: 'down'|'up', modifiers }
-          robot.keyToggle(params.key, params.down, params.modifiers);
-          break;
-        }
-        default:
-          return { success: false, message: 'Unknown keyboard action' };
-      }
-      return { success: true, message: 'Keyboard action performed' };
-    } catch (error) {
-      return { success: false, message: error.message };
-    }
-  });
-
-  // Get current mouse position
-  ipcMain.handle('get-mouse-position', async () => {
-    try {
-      const pos = robot.getMousePos();
-      return { success: true, x: pos.x, y: pos.y };
-    } catch (error) {
-      return { success: false, message: error.message };
-    }
-  });
-}
 
 function notification(title, body) {
   try {
@@ -1181,14 +30,6 @@ function notification(title, body) {
     }
 
     const notification = new Notification({ title, body });
-    
-    notification.on('show', () => {
-      logger.info('Notification shown successfully');
-    });
-    
-    notification.on('error', (error) => {
-      logger.error('Notification error:', error);
-    });
     
     notification.show();
   } catch (error) {
@@ -1201,13 +42,13 @@ function createFunctionMap(appManager) {
   const pluginManager = appManager.getComponent('pluginManager');
   const configManager = appManager.getComponent('configManager');
   const keyboardManager = appManager.getComponent('keyboardManager');
-  // 迁移所有 handler 逻辑
   return {
     // Plugin handlers
-    getPlugins: async () => {
+    getPlugins: async (event) => {
       return await pluginManager.getPluginsList();
     },
-    getPluginNames: async () => {
+
+    getPluginNames: async (event) => {
       const plugins = await pluginManager.getPluginsList();
       return plugins.map(plugin => ({
         name: plugin.name,
@@ -1215,7 +56,8 @@ function createFunctionMap(appManager) {
         description: plugin.description || ''
       }));
     },
-    executePlugin: async (pluginName, ...args) => {
+
+    executePlugin: async (event, pluginName, ...args) => {
       if (appManager.mainWindowIsDestroyed()) {
         appManager.mainWindowHide();
       }
@@ -1241,15 +83,8 @@ function createFunctionMap(appManager) {
         startupMode: pluginInfo.startupMode
       };
     },
-    startPlugin: async (pluginName) => {
-      await pluginManager.startPlugin(pluginName);
-      return { success: true, message: `Plugin ${pluginName} started successfully` };
-    },
-    stopPlugin: async (pluginName) => {
-      await pluginManager.stopPlugin(pluginName);
-      return { success: true, message: `Plugin ${pluginName} stopped successfully` };
-    },
-    showPluginWindowByName: async (pluginName) => {
+
+    showPluginWindowByName: async (event, pluginName) => {
       const pluginInfo = pluginManager.getPluginInfo(pluginName);
       if (!pluginInfo) {
         throw new Error(`Plugin ${pluginName} not found`);
@@ -1277,49 +112,23 @@ function createFunctionMap(appManager) {
         };
       }
     },
-    hidePluginWindowByName: async (pluginName) => {
+
+    hidePluginWindowByName: async (event, pluginName) => {
       const result = pluginManager.hidePluginWindow(pluginName);
       return { success: result, message: result ? `Plugin window hidden: ${pluginName}` : `Plugin window not found or already hidden: ${pluginName}` };
     },
-    togglePluginWindowByName: async (pluginName) => {
-      const pluginInfo = pluginManager.getPluginInfo(pluginName);
-      if (!pluginInfo) {
-        throw new Error(`Plugin ${pluginName} not found`);
-      }
-      const status = pluginManager.getPluginWindowStatus(pluginName);
-      if (!status.exists) {
-        try {
-          await pluginManager.getProcess(pluginName);
-        } catch (error) {
-          throw new Error(`Failed to create plugin process: ${error.message}`);
-        }
-      }
-      const isVisible = status.exists && status.visible;
-      if (isVisible) {
-        const result = pluginManager.hidePluginWindow(pluginName);
-        return {
-          success: result,
-          message: result ? `Plugin window hidden: ${pluginName}` : `Plugin window not found: ${pluginName}`,
-          action: 'hide'
-        };
-      } else {
-        const result = pluginManager.showPluginWindow(pluginName);
-        return {
-          success: result,
-          message: result ? `Plugin window shown: ${pluginName}` : `Failed to show plugin window: ${pluginName}`,
-          action: 'show'
-        };
-      }
-    },
-    getPluginWindowStatus: async (pluginName) => {
+
+    getPluginWindowStatus: async (event, pluginName) => {
       const status = pluginManager.getPluginWindowStatus(pluginName);
       return { success: true, status };
     },
-    uninstallPlugin: async (pluginName, removeFiles = true) => {
+
+    uninstallPlugin: async (event, pluginName, removeFiles = true) => {
       const result = await pluginManager.uninstallPlugin(pluginName, removeFiles);
       return result;
     },
-    setPluginConfig: async (pluginName, config) => {
+
+    setPluginConfig: async (event, pluginName, config) => {
       const pluginInfo = pluginManager.getPluginInfo(pluginName);
       if (!pluginInfo) {
         throw new Error(`Plugin ${pluginName} not found`);
@@ -1331,11 +140,110 @@ function createFunctionMap(appManager) {
       pluginManager.notifyPluginsChanged();
       return { success: true, message: `Plugin ${pluginName} configuration saved` };
     },
-    getCustomShortcuts: async () => {
+
+    downloadPlugin: async (event, { folder }) => {
+      const pluginsDir = GetPluginDir();
+      const pluginPath = path.join(pluginsDir, folder);
+      const repo = 'ilikebug/oTools-Plugins';
+      const apiBase = `https://api.github.com/repos/${repo}/contents/${folder}`;
+      const headers = { 'User-Agent': 'oTools' };
+      const mainConfig = configManager.getConfig('main')
+      if (mainConfig && mainConfig.githubToken) {
+        headers['Authorization'] = `token ${mainConfig.githubToken}`;
+      }
+      async function fetchJson(url) {
+        return new Promise((resolve, reject) => {
+          https.get(url, { headers }, (res) => {
+            let data = '';
+            res.on('data', chunk => data += chunk);
+            res.on('end', () => {
+              try {
+                resolve(JSON.parse(data));
+              } catch (e) {
+                reject(e);
+              }
+            });
+          }).on('error', reject);
+        });
+      }
+  
+      async function downloadFile(url, dest) {
+        return new Promise((resolve, reject) => {
+          https.get(url, { headers }, (res) => {
+            if (res.statusCode !== 200) return reject(new Error('Download failed: ' + url));
+            const fileStream = fs.createWriteStream(dest);
+            res.pipe(fileStream);
+            fileStream.on('finish', () => fileStream.close(resolve));
+            fileStream.on('error', reject);
+          }).on('error', reject);
+        });
+      }
+  
+      async function downloadDir(apiUrl, localDir) {
+        if (!fs.existsSync(localDir)) fs.mkdirSync(localDir, { recursive: true });
+        const list = await fetchJson(apiUrl);
+        for (const item of list) {
+          if (item.type === 'file') {
+            const rawUrl = item.download_url;
+            const filePath = path.join(localDir, item.name);
+            await downloadFile(rawUrl, filePath);
+          } else if (item.type === 'dir') {
+            await downloadDir(item.url, path.join(localDir, item.name));
+          }
+        }
+      }
+  
+      try {
+        if (fs.existsSync(pluginPath)) {
+          fs.rmSync(pluginPath, { recursive: true, force: true });
+        }
+        await downloadDir(apiBase, pluginPath);
+        await pluginManager.loadPlugins();
+        // Notify main window about plugin changes
+        pluginManager.notifyPluginsChanged();
+        event.sender.send('download-plugin-result', { 
+          success: true, 
+          message: 'Plugin downloaded and installed successfully', 
+          folder: folder,
+        });
+        notification("success", `${folder} download success`)
+      } catch (e) {
+        event.sender.send('download-plugin-result', {
+           success: false, 
+           message: e.message, 
+           folder: folder,
+        });
+      }
+    },
+
+    openPluginMarket: (event) => {
+      const win = new BrowserWindow({
+        width: 900,
+        height: 700,
+        resizable: true,
+        frame: true,
+        webPreferences: {
+          preload: path.join(__dirname, '../renderer/preload.js'),
+          nodeIntegration: false,
+          contextIsolation: true,
+          enableRemoteModule: false
+        }
+      });
+      win.setMenuBarVisibility(true);
+      win.loadFile(path.join(__dirname, '../renderer/plugin-market.html'));
+      const mainConfig = configManager.getConfig('main')
+      if (mainConfig && mainConfig.pluginMarket.debug) {
+        win.webContents.openDevTools();
+      }
+    },
+    
+    // custom shortcuts
+    getCustomShortcuts: async (event) => {
       const config = configManager.getConfig('main');
       return config.customShortcuts || [];
     },
-    setCustomShortcuts: async (shortcuts) => {
+
+    setCustomShortcuts: async (event, shortcuts) => {
       const config = configManager.getConfig('main');
       config.customShortcuts = shortcuts;
       configManager.setConfig('main', config);
@@ -1344,29 +252,56 @@ function createFunctionMap(appManager) {
       }
       return { success: true, message: 'Custom shortcuts saved' };
     },
+
     // System handlers
-    getAppStatus: () => {
+    getAppStatus: (event) => {
       return appManager.getAppStatus();
     },
-    getConfig: (configName) => {
-      return configManager.getConfig(configName);
+    
+    getSystemInfo: async (event) => {
+      return {
+        success: true,
+        platform: os.platform(),
+        arch: os.arch(),
+        version: os.version(),
+        hostname: os.hostname(),
+        homedir: os.homedir(),
+        tmpdir: os.tmpdir(),
+        cpus: os.cpus().length,
+        totalmem: os.totalmem(),
+        freemem: os.freemem(),
+        uptime: os.uptime()
+      };
     },
-    getConfigNames: () => {
-      return configManager.getConfigNames();
-    },
-    refreshShortcut: async () => {
+
+    refreshShortcut: async (event) => {
       keyboardManager.unregisterAll();
       keyboardManager.registerShortcutsFromConfig();
       return { success: true, message: 'Shortcuts refreshed' };
     },
-    setConfig: async (configName, config) => {
+    
+    openExternal: async (event, url) => {
+      await shell.openExternal(url);
+      return { success: true, message: 'Opened external link' };
+    },
+
+    getConfig: (event, configName) => {
+      return configManager.getConfig(configName);
+    },
+
+    getConfigNames: (event) => {
+      return configManager.getConfigNames();
+    },
+
+    setConfig: async (event, configName, config) => {
       configManager.setConfig(configName, config);
       if (configName === 'main' && config.app && typeof config.app.autoStart !== 'undefined') {
         setAutoStart(!!config.app.autoStart);
       }
       return { success: true, message: 'Configuration updated successfully' };
     },
-    captureScreen: async () => {
+
+    captureScreen: async (event) => {
       const macTools = appManager.getComponent('macTools');
       const imageBuffer = await macTools.captureScreenRegion();
       return {
@@ -1375,7 +310,8 @@ function createFunctionMap(appManager) {
         message: 'Screenshot captured successfully'
       };
     },
-    performOcr: async (imageData) => {
+
+    performOcr: async (event, imageData) => {
       const macTools = appManager.getComponent('macTools');
       if (!imageData) {
         return {
@@ -1393,7 +329,8 @@ function createFunctionMap(appManager) {
         message: 'OCR performed successfully'
       };
     },
-    captureAndOcr: async () => {
+
+    captureAndOcr: async (event) => {
       const macTools = appManager.getComponent('macTools');
       const imageBuffer = await macTools.captureScreenRegion();
       const ocrResult = await macTools.performOCR(imageBuffer);
@@ -1404,94 +341,41 @@ function createFunctionMap(appManager) {
         message: 'Screenshot and OCR completed successfully'
       };
     },
-    // Show open dialog
-    showOpenDialog: async (options) => {
+
+    // File system operations
+    showOpenDialog: async (event, options) => {
       return await dialog.showOpenDialog(options);
     },
-    // Show save dialog
-    showSaveDialog: async (options) => {
+
+    showSaveDialog: async (event, options) => {
       return await dialog.showSaveDialog(options);
     },
-    // File system operations
-    readFile: async (filePath) => {
+    
+    readFile: async (event, filePath) => {
       return fs.readFileSync(filePath, 'utf8');
     },
-    writeFile: async (filePath, content) => {
+
+    writeFile: async (event, filePath, content) => {
       fs.writeFileSync(filePath, content, 'utf8');
       return { success: true, message: 'File written successfully' };
     },
-    fileExists: async (filePath) => {
+
+    fileExists: async (event, filePath) => {
       const exists = fs.existsSync(filePath);
       return { success: true, exists };
     },
-    createDirectory: async (dirPath) => {
+
+    createDirectory: async (event, dirPath) => {
       fs.mkdirSync(dirPath, { recursive: true });
       return { success: true, message: 'Directory created successfully' };
     },
-    // System operations
-    openExternal: async (url) => {
-      await shell.openExternal(url);
-      return { success: true, message: 'Opened external link' };
-    },
-    showItemInFolder: async (filePath) => {
+
+    showItemInFolder: async (event, filePath) => {
       shell.showItemInFolder(filePath);
       return { success: true, message: 'Showed item in folder' };
     },
-    getAppVersion: async () => {
-      return { success: true, version: app.getVersion() };
-    },
-    // Window operations
-    getWindowInfo: async () => {
-      // Not available from plugin window, return null
-      return { success: false, message: 'Not available from plugin window' };
-    },
-    minimizeWindow: async () => {
-      // Not available from plugin window, return null
-      return { success: false, message: 'Not available from plugin window' };
-    },
-    maximizeWindow: async () => {
-      // Not available from plugin window, return null
-      return { success: false, message: 'Not available from plugin window' };
-    },
-    showWindow: async () => {
-      // Not available from plugin window, return null
-      return { success: false, message: 'Not available from plugin window' };
-    },
-    hideWindow: async () => {
-      // Not available from plugin window, return null
-      return { success: false, message: 'Not available from plugin window' };
-    },
-    // System information
-    getSystemInfo: async () => {
-      return {
-        success: true,
-        platform: os.platform(),
-        arch: os.arch(),
-        version: os.version(),
-        hostname: os.hostname(),
-        homedir: os.homedir(),
-        tmpdir: os.tmpdir(),
-        cpus: os.cpus().length,
-        totalmem: os.totalmem(),
-        freemem: os.freemem(),
-        uptime: os.uptime()
-      };
-    },
-    // Process management
-    getProcessInfo: async () => {
-      const process = require('process');
-      return {
-        success: true,
-        pid: process.pid,
-        version: process.version,
-        platform: process.platform,
-        arch: process.arch,
-        memoryUsage: process.memoryUsage(),
-        uptime: process.uptime()
-      };
-    },
-    // File system extended operations
-    listDirectory: async (dirPath) => {
+
+    listDirectory: async (event, dirPath) => {
       const items = fs.readdirSync(dirPath, { withFileTypes: true });
       const result = items.map(item => ({
         name: item.name,
@@ -1501,7 +385,8 @@ function createFunctionMap(appManager) {
       }));
       return { success: true, items: result };
     },
-    getFileInfo: async (filePath) => {
+
+    getFileInfo: async (event, filePath) => {
       const stats = fs.statSync(filePath);
       return {
         success: true,
@@ -1514,7 +399,8 @@ function createFunctionMap(appManager) {
         accessed: stats.atime
       };
     },
-    deleteFile: async (filePath) => {
+
+    deleteFile: async (event, filePath) => {
       const stats = fs.statSync(filePath);
       if (stats.isDirectory()) {
         fs.rmSync(filePath, { recursive: true, force: true });
@@ -1523,16 +409,46 @@ function createFunctionMap(appManager) {
       }
       return { success: true, message: 'File deleted successfully' };
     },
-    copyFile: async (sourcePath, destPath) => {
+
+    copyFile: async (event, sourcePath, destPath) => {
       fs.copyFileSync(sourcePath, destPath);
       return { success: true, message: 'File copied successfully' };
     },
-    moveFile: async (sourcePath, destPath) => {
+
+    moveFile: async (event, sourcePath, destPath) => {
       fs.renameSync(sourcePath, destPath);
       return { success: true, message: 'File moved successfully' };
     },
+
+
+    // Window operations
+    getWindowInfo: async (event) => {
+      // Not available from plugin window, return null
+      return { success: false, message: 'Not available from plugin window' };
+    },
+
+    minimizeWindow: async (event) => {
+      // Not available from plugin window, return null
+      return { success: false, message: 'Not available from plugin window' };
+    },
+    
+    maximizeWindow: async (event) => {
+      // Not available from plugin window, return null
+      return { success: false, message: 'Not available from plugin window' };
+    },
+
+    showWindow: async (event) => {
+      // Not available from plugin window, return null
+      return { success: false, message: 'Not available from plugin window' };
+    },
+
+    hideWindow: async (event) => {
+      // Not available from plugin window, return null
+      return { success: false, message: 'Not available from plugin window' };
+    },
+
     // Database operations
-    setDbValue: async (dbName, key, value) => {
+    setDbValue: async (event, dbName, key, value) => {
       const dbDir = GetDBDir();
       if (!fs.existsSync(dbDir)) {
         fs.mkdirSync(dbDir, { recursive: true });
@@ -1546,7 +462,8 @@ function createFunctionMap(appManager) {
       fs.writeFileSync(dbPath, JSON.stringify(db, null, 2));
       return { success: true, message: 'Value stored successfully' };
     },
-    getDbValue: async (dbName, key) => {
+
+    getDbValue: async (event, dbName, key) => {
       const dbDir = GetDBDir();
       if (!fs.existsSync(dbDir)) {
         fs.mkdirSync(dbDir, { recursive: true });
@@ -1558,7 +475,8 @@ function createFunctionMap(appManager) {
       const db = JSON.parse(fs.readFileSync(dbPath, 'utf8'));
       return { success: true, value: db[key] || null };
     },
-    deleteDbValue: async (dbName, key) => {
+    
+    deleteDbValue: async (event, dbName, key) => {
       const dbDir = GetDBDir();
       if (!fs.existsSync(dbDir)) {
         fs.mkdirSync(dbDir, { recursive: true });
@@ -1572,8 +490,9 @@ function createFunctionMap(appManager) {
       fs.writeFileSync(dbPath, JSON.stringify(db, null, 2));
       return { success: true, message: 'Value deleted successfully' };
     },
+
     // Screen and display operations
-    getScreenInfo: async () => {
+    getScreenInfo: async (event) => {
       const displays = screen.getAllDisplays();
       const primaryDisplay = screen.getPrimaryDisplay();
       return {
@@ -1595,133 +514,46 @@ function createFunctionMap(appManager) {
         }
       };
     },
-    // Crypto operations
-    hashString: async (algorithm, data) => {
-      const hash = crypto.createHash(algorithm);
-      hash.update(data);
-      return { success: true, hash: hash.digest('hex') };
-    },
-    generateUuid: async () => {
-      const uuid = crypto.randomUUID();
-      return { success: true, uuid };
-    },
-    encryptText: async (text, password) => {
-      const algorithm = 'aes-256-cbc';
-      const key = crypto.scryptSync(password, 'salt', 32);
-      const iv = crypto.randomBytes(16);
-      const cipher = crypto.createCipher(algorithm, key);
-      let encrypted = cipher.update(text, 'utf8', 'hex');
-      encrypted += cipher.final('hex');
-      return { success: true, encrypted, iv: iv.toString('hex') };
-    },
-    decryptText: async (encrypted, password, iv) => {
-      const algorithm = 'aes-256-cbc';
-      const key = crypto.scryptSync(password, 'salt', 32);
-      const decipher = crypto.createDecipher(algorithm, key);
-      let decrypted = decipher.update(encrypted, 'hex', 'utf8');
-      decrypted += decipher.final('utf8');
-      return { success: true, decrypted };
-    },
-    // Time and date operations
-    getCurrentTime: async () => {
-      const now = new Date();
-      return {
-        success: true,
-        timestamp: now.getTime(),
-        isoString: now.toISOString(),
-        localString: now.toString(),
-        year: now.getFullYear(),
-        month: now.getMonth() + 1,
-        day: now.getDate(),
-        hour: now.getHours(),
-        minute: now.getMinutes(),
-        second: now.getSeconds()
-      };
-    },
-    formatDate: async (timestamp, format) => {
-      const date = new Date(timestamp);
-      let result = format;
-      result = result.replace('YYYY', date.getFullYear());
-      result = result.replace('MM', String(date.getMonth() + 1).padStart(2, '0'));
-      result = result.replace('DD', String(date.getDate()).padStart(2, '0'));
-      result = result.replace('HH', String(date.getHours()).padStart(2, '0'));
-      result = result.replace('mm', String(date.getMinutes()).padStart(2, '0'));
-      result = result.replace('ss', String(date.getSeconds()).padStart(2, '0'));
-      return { success: true, formatted: result };
-    },
-    // Text processing operations
-    textToBase64: async (text) => {
-      const base64 = Buffer.from(text, 'utf8').toString('base64');
-      return { success: true, base64 };
-    },
-    base64ToText: async (base64) => {
-      const text = Buffer.from(base64, 'base64').toString('utf8');
-      return { success: true, text };
-    },
-    generateRandomString: async (length = 16, charset = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789') => {
+
+    // Generate randon string
+    generateRandomString: async (event, length = 16, charset = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789') => {
       let result = '';
       for (let i = 0; i < length; i++) {
         result += charset.charAt(Math.floor(Math.random() * charset.length));
       }
       return { success: true, randomString: result };
     },
-    // File compression utilities
-    compressFile: async (sourcePath, destPath) => {
-      const zlib = require('zlib');
-      const input = fs.createReadStream(sourcePath);
-      const output = fs.createWriteStream(destPath);
-      const gzip = zlib.createGzip();
-      return await new Promise((resolve) => {
-        input.pipe(gzip).pipe(output);
-        output.on('finish', () => {
-          resolve({ success: true, message: 'File compressed successfully' });
-        });
-        output.on('error', (error) => {
-          resolve({ success: false, message: error.message });
-        });
-      });
-    },
-    decompressFile: async (sourcePath, destPath) => {
-      const zlib = require('zlib');
-      const input = fs.createReadStream(sourcePath);
-      const output = fs.createWriteStream(destPath);
-      const gunzip = zlib.createGunzip();
-      return await new Promise((resolve) => {
-        input.pipe(gunzip).pipe(output);
-        output.on('finish', () => {
-          resolve({ success: true, message: 'File decompressed successfully' });
-        });
-        output.on('error', (error) => {
-          resolve({ success: false, message: error.message });
-        });
-      });
-    },
+
     // Clipboard operations
-    readClipboard: async () => {
+    readClipboard: async (event) => {
       const text = clipboard.readText();
       if (text == '') {
         return { success: false, message: 'No text in clipboard' };
       }
       return { success: true, text };
     },
-    writeClipboard: async (text) => {
+
+    writeClipboard: async (event, text) => {
       clipboard.writeText(text);
       return { success: true, message: 'Text copied to clipboard' };
     },
-    readClipboardImage: async () => {
+
+    readClipboardImage: async (event) => {
       const image = clipboard.readImage();
       if (image.isEmpty()) {
         return { success: false, message: 'No image in clipboard' };
       }
       return { success: true, imageData: image.toDataURL() };
     },
-    writeClipboardImage: async (imageData) => {
+
+    writeClipboardImage: async (event, imageData) => {
       const image = clipboard.readImage();
       clipboard.writeImage(image);
       return { success: true, message: 'Image copied to clipboard' };
     },
+
     // Simulate mouse operations
-    simulateMouse: async (action, params) => {
+    simulateMouse: async (event, action, params) => {
       switch (action) {
         case 'move': {
           robot.moveMouse(params.x, params.y);
@@ -1748,8 +580,14 @@ function createFunctionMap(appManager) {
       }
       return { success: true, message: 'Mouse action performed' };
     },
+
+    getMousePosition: async (event) => {
+      const pos = robot.getMousePos();
+      return { success: true, x: pos.x, y: pos.y };
+    },  
+
     // Simulate keyboard operations
-    simulateKeyboard: async (action, params) => {
+    simulateKeyboard: async (event, action, params) => {
       switch (action) {
         case 'type': {
           robot.typeString(params.text);
@@ -1768,19 +606,25 @@ function createFunctionMap(appManager) {
       }
       return { success: true, message: 'Keyboard action performed' };
     },
-    getMousePosition: async () => {
-      const pos = robot.getMousePos();
-      return { success: true, x: pos.x, y: pos.y };
+
+    // Quit application
+    quitApp: (event) => {
+      app.quit();
     },
+
+    // Show sysnte notification
+    showSystemNotification: (event, { title, body }) => {
+      notification(title, body);
+      return { success: true };
+    },
+
   };
 }
-
-let functionMap = null;
 
 ipcMain.handle('otools-function', async (event, funcName, ...args) => {
   if (functionMap && functionMap[funcName]) {
     try {
-      return await functionMap[funcName](...args);
+        return await functionMap[funcName](event, ...args);
     } catch (e) {
       logger.error(`otools-function call filed: ${funcName} - ${e.message}`, e);
       return { success: false, message: e.message };

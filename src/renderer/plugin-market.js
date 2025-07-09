@@ -4,8 +4,8 @@
   const listDiv = document.getElementById('pluginMarketList');
 
   async function fetchWithGithubToken(url, options = {}) {
-    if (window.mainWindow && window.mainWindow.getConfig) {
-      const config = await window.mainWindow.getConfig('main');
+    if (window.otools && window.otools.getConfig) {
+      const config = await window.otools.getConfig('main');
       const token = config && config.githubToken;
       options.headers = options.headers || {};
       if (token) {
@@ -94,11 +94,11 @@
       if (downloadBtn) {
         downloadBtn.addEventListener('click', (e) => {
           e.stopPropagation();
-          if (window.mainWindow && window.mainWindow.downloadPlugin) {
+          if (window.otools && window.otools.downloadPlugin) {
             downloadBtn.innerHTML = '<i class="fa fa-spinner fa-spin"></i>';
             downloadBtn.disabled = true;
             downloadBtn.title = 'Downloading...';
-            window.mainWindow.downloadPlugin({
+            window.otools.downloadPlugin({
               folder: plugin.folder,
               name: plugin.name
             });
@@ -109,8 +109,8 @@
     });
   }
 
-  if (window.mainWindow && window.mainWindow.onDownloadPluginResult) {
-    window.mainWindow.onDownloadPluginResult((result) => {
+  if (window.events && window.events.onDownloadPluginResult) {
+    window.events.onDownloadPluginResult((result) => {
     
       const downloadBtn = document.querySelector(`[data-folder="${result.folder}"]`);
       if (downloadBtn) {

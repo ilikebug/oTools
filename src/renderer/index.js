@@ -67,15 +67,15 @@ class oToolsApp {
           const shortcut = this._getShortcutString(pressedKeys);
           input.value = this._formatShortcutForDisplay(shortcut);
           // Save to config
-          this.callMainWindow('getConfig', 'main').then(config => {
+          window.otools.getConfig('main').then(config => {
             let obj = config;
             for (let i = 0; i < configPath.length - 1; i++) {
               if (!obj[configPath[i]]) obj[configPath[i]] = {};
               obj = obj[configPath[i]];
             }
             obj[configPath[configPath.length - 1]] = shortcut;
-            this.callMainWindow('setConfig', 'main', config).then(() => {
-              this.callMainWindow('refreshShortcut');
+            window.otools.setConfig('main', config).then(() => {
+              window.otools.refreshShortcut();
             }).catch(err => {
               console.error('Failed to save config:', err);
             });
@@ -221,7 +221,7 @@ class oToolsApp {
       const pluginsBtn = document.getElementById('pluginsBtn');
       if (pluginsBtn) {
         pluginsBtn.addEventListener('click', () => {
-          this.callMainWindow('openPluginMarket');
+          window.otools.openPluginMarket();
         });
       }
 
@@ -232,9 +232,9 @@ class oToolsApp {
           const input = document.getElementById('githubTokenInput');
           if (input) {
             const token = input.value.trim();
-            let config = await this.callMainWindow('getConfig', 'main') || {};
+            let config = await window.otools.getConfig('main') || {};
             config.githubToken = token;
-            await this.callMainWindow('setConfig', 'main', config);
+            await window.otools.setConfig('main', config);
             alert('GitHub Token saved!');
           }
         });
@@ -247,7 +247,7 @@ class oToolsApp {
       if (quitBtnTop) {
         quitBtnTop.addEventListener('click', () => {
           if (confirm('Are you sure you want to exit the application?')) {
-            this.callMainWindow('quitApp');
+            window.otools.quitApp();
           }
         });
       }
@@ -258,7 +258,7 @@ class oToolsApp {
 
   async loadAppStatus() {
     try {
-      this.appStatus = await this.callMainWindow('getAppStatus');
+      this.appStatus = await window.otools.getAppStatus();
     } catch (error) {
       console.error('Failed to load application status:', error);
     }
@@ -266,7 +266,7 @@ class oToolsApp {
 
   async loadPlugins() {
     try {
-      this.plugins = await this.callMainWindow('getPlugins');
+      this.plugins = await window.otools.getPlugins();
       this.renderPluginButtons();
     } catch (error) {
       console.error('Failed to load plugins:', error);
@@ -275,7 +275,7 @@ class oToolsApp {
 
   setAppCompleteWatcher() {
     try {
-      window.mainWindow.onAppInitCompleted(async () => {
+      window.events.onAppInitCompleted(async () => {
         await this.loadAppStatus();
         await this.loadPlugins();
         this.updateStatusDisplay();
@@ -287,7 +287,7 @@ class oToolsApp {
 
   setupPluginWatcher() {
     try {
-      window.mainWindow.onPluginsChanged((plugins) => {
+      window.events.onPluginsChanged((plugins) => {
         this.plugins = plugins;
         this.renderPluginButtons();
       });
@@ -385,7 +385,7 @@ class oToolsApp {
   // General plugin execution logic
   async executePlugin(pluginName) {
     try {
-      const result = await this.callMainWindow('executePlugin', pluginName);
+      const result = await window.otools.executePlugin(pluginName);
       if (!result && !result.success) {
         this.showNotification(`Plugin execution failed: ${result.message}`, 'error');
       }
@@ -401,14 +401,14 @@ class oToolsApp {
           this.showPluginConfigDialog(pluginName);
           break;
         case 'show':
-          const showResult = await this.callMainWindow('showPluginWindow', pluginName);
+          const showResult = await window.otools.showPluginWindow(pluginName);
           if (!showResult.success) {
             console.error(showResult.message)
             this.showNotification(showResult.message, 'warning')
           }
           break;
         case 'uninstall':
-          const uninstallResult = await this.callMainWindow('uninstallPlugin', pluginName, );
+          const uninstallResult = await window.otools.uninstallPlugin(pluginName);
           if (!uninstallResult.success) {
             console.error(uninstallResult.message)
             this.showNotification(uninstallResult.message, 'warning')
@@ -508,7 +508,7 @@ class oToolsApp {
         const oldUi = plugin.ui || {};
         const ui = { ...oldUi, hideOnBlur };
         
-        const result = await this.callMainWindow('setPluginConfig', pluginName, {
+        const result = await window.otools.setPluginConfig(pluginName, {
           startupMode,
           enabled,
           ui
@@ -523,7 +523,6 @@ class oToolsApp {
           this.showNotification(result.message, 'error');
         }
       } catch (error) {
-        console.error('setPluginConfig method not available:', error);
         this.showNotification('Plugin configuration method not available', 'error');
       }
       closeDialog();
@@ -667,7 +666,7 @@ class oToolsApp {
       if (type === 'success') title = 'Success';
       if (type === 'error') title = 'Error';
       if (type === 'warning') title = 'Warning';
-      this.callMainWindow('showSystemNotification', title, message);
+      window.otools.showSystemNotification(title, message);
     } catch (error) {
       console.error('Failed to show system notification:', error);
     }
@@ -685,7 +684,7 @@ class oToolsApp {
 
     async loadSettingsFromConfig() {
     try {
-      const config = await this.callMainWindow('getConfig', 'main');
+      const config = await window.otools.getConfig('main');
       if (!config) return;
       // Auto start
       const autoStart = document.getElementById('autoStart');
@@ -730,10 +729,10 @@ class oToolsApp {
     if (autoStart) {
       autoStart.addEventListener('change', async (e) => {
         try {
-          const config = await this.callMainWindow('getConfig', 'main');
+          const config = await window.otools.getConfig('main');
           config.app = config.app || {};
           config.app.autoStart = !!e.target.checked;
-          await this.callMainWindow('setConfig', 'main', config);
+          await window.otools.setConfig('main', config);
         } catch (error) {
           console.error('Failed to update auto start setting:', error);
         }
@@ -744,10 +743,10 @@ class oToolsApp {
     if (autoLoadPlugins) {
       autoLoadPlugins.addEventListener('change', async (e) => {
         try {
-          const config = await this.callMainWindow('getConfig', 'main');
+          const config = await window.otools.getConfig('main');
           config.plugins = config.plugins || {};
           config.plugins.autoLoad = !!e.target.checked;
-          await this.callMainWindow('setConfig', 'main', config);
+          await window.otools.setConfig('main', config);
         } catch (error) {
           console.error('Failed to update auto load plugins setting:', error);
         }
@@ -764,7 +763,7 @@ class oToolsApp {
   // Custom shortcuts methods
   async loadCustomShortcuts() {
     try {
-      const shortcuts = await this.callMainWindow('getCustomShortcuts');
+      const shortcuts = await window.otools.getCustomShortcuts();
       this.renderCustomShortcuts(shortcuts);
     } catch (error) {
       console.error('Failed to load custom shortcuts:', error);
@@ -820,7 +819,7 @@ class oToolsApp {
 
   async populatePluginOptions(selectElement, valueToSet) {
     try {
-      const plugins = await this.callMainWindow('getPluginNames');
+      const plugins = await window.otools.getPluginNames();
       plugins.forEach(plugin => {
         const option = document.createElement('option');
         option.value = plugin.name;
@@ -973,7 +972,7 @@ class oToolsApp {
         accelerator: this.getShortcutValue(item.querySelector('.shortcut-input'))
       })).filter(shortcut => shortcut.pluginName && shortcut.accelerator);
 
-      await this.callMainWindow('setCustomShortcuts', shortcuts);
+      await window.otools.setCustomShortcuts(shortcuts);
     } catch (error) {
       console.error('Failed to save custom shortcuts:', error);
       this.showNotification('Failed to save custom shortcuts', 'error');

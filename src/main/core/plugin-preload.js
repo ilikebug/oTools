@@ -1,11 +1,66 @@
 const { contextBridge, ipcRenderer } = require('electron');
 const fs = require('fs');
 
-
-console.log('plugin-preload.js loaded');
-
 const allowedMethods = [
+  'getPlugins',
+  'getPluginNames',
+  'executePlugin',
+  'showPluginWindowByName',
+  'hidePluginWindowByName',
+  'getPluginWindowStatus',
+  'uninstallPlugin',
+  'setPluginConfig',
+  'downlaodPlugnin',
+
+  'getCustomShortcuts',
+  'setCustomShortcuts',
+  
+  'getAppStatus',
+  'getSystemInfo',
+  'refreshShortcut',
+  'openExternal',
+  'getConfig',
+  'getConfigNames',
+  'setConfig',
+
   'captureScreen',
+  'performOcr',
+  'captureAndOcr',
+
+  'showOpenDialog',
+  'showSaveDialog',
+  'readFile',
+  'writeFile',
+  'fileExists',
+  'createDirectory',
+  'showItemInFolder',
+  'listDirectory',
+  'getFileInfo',
+  'deleteFile',
+  'copyFile',
+  'moveFile',
+
+  'getWindowInfo',
+  'minimizeWindow',
+  'maximizeWindow',
+  'showWindow',
+  'hideWindow',
+  'setDbValue',
+  'getDbValue',
+  'deleteDbValue',
+  'getScreenInfo',
+  'generateRandomString',
+
+  'readClipboard',
+  'writeClipboard',
+  'readClipboardImage',
+  'writeClipboardImage',
+
+  'simulateMouse',
+  'getMousePosition',
+  'simulateKeyboard',
+
+  'showSystemNotification',
 ];
 
 const otools = {};
