@@ -391,10 +391,8 @@ class PluginManager {
     if (!fs.existsSync(metaPath)) throw new Error(`Plugin configuration file does not exist: ${metaPath}`);
     const meta = JSON.parse(fs.readFileSync(metaPath, 'utf-8'));
     const htmlPath = path.join(pluginPath, meta.ui && meta.ui.html ? meta.ui.html : 'index.html');
-    const preloadPath = path.join(pluginPath, 'preload.js');
-    if (!fs.existsSync(htmlPath)) throw new Error(`Plugin main page does not exist: ${htmlPath}`);
-    if (!fs.existsSync(preloadPath)) throw new Error(`Plugin preload script does not exist: ${preloadPath}`);
-
+    const pluginPreloadPath = path.join(pluginPath, meta.preload ? meta.preload : 'preload.js');
+    
     const defaultWidth = 900;
     const defaultHeight = 600;
     const winWidth = meta.ui.width || defaultWidth;
@@ -415,9 +413,11 @@ class PluginManager {
       resizable: true,
       frame: winFrame,
       webPreferences: {
-        preload: preloadPath,
+        sandbox: false, 
+        preload: path.join(__dirname, 'plugin-preload.js'),
         nodeIntegration: false,
-        contextIsolation: true
+        contextIsolation: true,
+        additionalArguments: [`--plugin-preload-path=${pluginPreloadPath}`]
       }
     });
 

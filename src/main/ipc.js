@@ -6,11 +6,9 @@ const os = require('os');
 const crypto = require('crypto');
 const robot = require('robotjs'); // For simulating mouse and keyboard
 
-const MacTools = require('./utils/mac-tools');
 const logger = require('./utils/logger');
 const { setAutoStart } = require('./utils/auto-start');
 const { GetPluginDir, GetDBDir } = require('./comm');
-const { ConsoleLogLevel } = require('@nut-tree/nut-js');
 
 // 用 global 变量做全局保护
 if (!global._systemIpcRegistered) global._systemIpcRegistered = false;
@@ -37,6 +35,8 @@ function setupIPC(appManager) {
   
   // System feature IPC handling
   setupSystemIPC(appManager);
+
+  functionMap = createFunctionMap(appManager);
 }
 
 /**
@@ -1195,5 +1195,598 @@ function notification(title, body) {
     logger.error('Failed to show notification:', error);
   }
 }
+
+// Function map for exposing all main process APIs to plugin renderer processes
+function createFunctionMap(appManager) {
+  const pluginManager = appManager.getComponent('pluginManager');
+  const configManager = appManager.getComponent('configManager');
+  const keyboardManager = appManager.getComponent('keyboardManager');
+  // 迁移所有 handler 逻辑
+  return {
+    // Plugin handlers
+    getPlugins: async () => {
+      return await pluginManager.getPluginsList();
+    },
+    getPluginNames: async () => {
+      const plugins = await pluginManager.getPluginsList();
+      return plugins.map(plugin => ({
+        name: plugin.name,
+        shortName: plugin.shortName || plugin.name,
+        description: plugin.description || ''
+      }));
+    },
+    executePlugin: async (pluginName, ...args) => {
+      if (appManager.mainWindowIsDestroyed()) {
+        appManager.mainWindowHide();
+      }
+      const pluginInfo = pluginManager.getPluginInfo(pluginName);
+      if (!pluginInfo) {
+        throw new Error(`Plugin ${pluginName} not found`);
+      }
+      if (pluginInfo.startupMode === 'dependent') {
+        const status = pluginManager.getPluginWindowStatus(pluginName);
+        if (!status.exists) {
+          try {
+            await pluginManager.getProcess(pluginName);
+          } catch (error) {
+            throw new Error(`Failed to create plugin process: ${error.message}`);
+          }
+        }
+      }
+      const result = await pluginManager.executePlugin(pluginName, 'default', ...args);
+      return {
+        success: true,
+        result: result,
+        message: `Plugin ${pluginName} executed successfully`,
+        startupMode: pluginInfo.startupMode
+      };
+    },
+    startPlugin: async (pluginName) => {
+      await pluginManager.startPlugin(pluginName);
+      return { success: true, message: `Plugin ${pluginName} started successfully` };
+    },
+    stopPlugin: async (pluginName) => {
+      await pluginManager.stopPlugin(pluginName);
+      return { success: true, message: `Plugin ${pluginName} stopped successfully` };
+    },
+    showPluginWindowByName: async (pluginName) => {
+      const pluginInfo = pluginManager.getPluginInfo(pluginName);
+      if (!pluginInfo) {
+        throw new Error(`Plugin ${pluginName} not found`);
+      }
+      const status = pluginManager.getPluginWindowStatus(pluginName);
+      if (!status.exists) {
+        try {
+          await pluginManager.getProcess(pluginName);
+        } catch (error) {
+          throw new Error(`Failed to create plugin process: ${error.message}`);
+        }
+      }
+      const result = pluginManager.showPluginWindow(pluginName);
+      if (result) {
+        return {
+          success: true,
+          message: `Plugin window shown: ${pluginName}`,
+          startupMode: status.startupMode
+        };
+      } else {
+        return {
+          success: false,
+          message: `Failed to show plugin window: ${pluginName}`,
+          startupMode: status.startupMode
+        };
+      }
+    },
+    hidePluginWindowByName: async (pluginName) => {
+      const result = pluginManager.hidePluginWindow(pluginName);
+      return { success: result, message: result ? `Plugin window hidden: ${pluginName}` : `Plugin window not found or already hidden: ${pluginName}` };
+    },
+    togglePluginWindowByName: async (pluginName) => {
+      const pluginInfo = pluginManager.getPluginInfo(pluginName);
+      if (!pluginInfo) {
+        throw new Error(`Plugin ${pluginName} not found`);
+      }
+      const status = pluginManager.getPluginWindowStatus(pluginName);
+      if (!status.exists) {
+        try {
+          await pluginManager.getProcess(pluginName);
+        } catch (error) {
+          throw new Error(`Failed to create plugin process: ${error.message}`);
+        }
+      }
+      const isVisible = status.exists && status.visible;
+      if (isVisible) {
+        const result = pluginManager.hidePluginWindow(pluginName);
+        return {
+          success: result,
+          message: result ? `Plugin window hidden: ${pluginName}` : `Plugin window not found: ${pluginName}`,
+          action: 'hide'
+        };
+      } else {
+        const result = pluginManager.showPluginWindow(pluginName);
+        return {
+          success: result,
+          message: result ? `Plugin window shown: ${pluginName}` : `Failed to show plugin window: ${pluginName}`,
+          action: 'show'
+        };
+      }
+    },
+    getPluginWindowStatus: async (pluginName) => {
+      const status = pluginManager.getPluginWindowStatus(pluginName);
+      return { success: true, status };
+    },
+    uninstallPlugin: async (pluginName, removeFiles = true) => {
+      const result = await pluginManager.uninstallPlugin(pluginName, removeFiles);
+      return result;
+    },
+    setPluginConfig: async (pluginName, config) => {
+      const pluginInfo = pluginManager.getPluginInfo(pluginName);
+      if (!pluginInfo) {
+        throw new Error(`Plugin ${pluginName} not found`);
+      }
+      const updatedConfig = { ...pluginInfo, ...config };
+      pluginManager.plugins.set(pluginName, updatedConfig);
+      const pluginConfigPath = path.join(pluginInfo.dir, 'plugin.json');
+      fs.writeFileSync(pluginConfigPath, JSON.stringify(updatedConfig, null, 2));
+      pluginManager.notifyPluginsChanged();
+      return { success: true, message: `Plugin ${pluginName} configuration saved` };
+    },
+    getCustomShortcuts: async () => {
+      const config = configManager.getConfig('main');
+      return config.customShortcuts || [];
+    },
+    setCustomShortcuts: async (shortcuts) => {
+      const config = configManager.getConfig('main');
+      config.customShortcuts = shortcuts;
+      configManager.setConfig('main', config);
+      if (keyboardManager) {
+        keyboardManager.refreshShortcuts();
+      }
+      return { success: true, message: 'Custom shortcuts saved' };
+    },
+    // System handlers
+    getAppStatus: () => {
+      return appManager.getAppStatus();
+    },
+    getConfig: (configName) => {
+      return configManager.getConfig(configName);
+    },
+    getConfigNames: () => {
+      return configManager.getConfigNames();
+    },
+    refreshShortcut: async () => {
+      keyboardManager.unregisterAll();
+      keyboardManager.registerShortcutsFromConfig();
+      return { success: true, message: 'Shortcuts refreshed' };
+    },
+    setConfig: async (configName, config) => {
+      configManager.setConfig(configName, config);
+      if (configName === 'main' && config.app && typeof config.app.autoStart !== 'undefined') {
+        setAutoStart(!!config.app.autoStart);
+      }
+      return { success: true, message: 'Configuration updated successfully' };
+    },
+    captureScreen: async () => {
+      const macTools = appManager.getComponent('macTools');
+      const imageBuffer = await macTools.captureScreenRegion();
+      return {
+        success: true,
+        imageData: imageBuffer.toString('base64'),
+        message: 'Screenshot captured successfully'
+      };
+    },
+    performOcr: async (imageData) => {
+      const macTools = appManager.getComponent('macTools');
+      if (!imageData) {
+        return {
+          success: false,
+          text: '',
+          message: 'No executable image'
+        };
+      }
+      imageData = imageData.replace(/^data:image\/[a-z]+;base64,/, '');
+      const imageBuffer = Buffer.from(imageData, 'base64');
+      const ocrResult = await macTools.performOCR(imageBuffer);
+      return {
+        success: true,
+        text: ocrResult,
+        message: 'OCR performed successfully'
+      };
+    },
+    captureAndOcr: async () => {
+      const macTools = appManager.getComponent('macTools');
+      const imageBuffer = await macTools.captureScreenRegion();
+      const ocrResult = await macTools.performOCR(imageBuffer);
+      return {
+        success: true,
+        imageData: imageBuffer.toString('base64'),
+        text: ocrResult,
+        message: 'Screenshot and OCR completed successfully'
+      };
+    },
+    // Show open dialog
+    showOpenDialog: async (options) => {
+      return await dialog.showOpenDialog(options);
+    },
+    // Show save dialog
+    showSaveDialog: async (options) => {
+      return await dialog.showSaveDialog(options);
+    },
+    // File system operations
+    readFile: async (filePath) => {
+      return fs.readFileSync(filePath, 'utf8');
+    },
+    writeFile: async (filePath, content) => {
+      fs.writeFileSync(filePath, content, 'utf8');
+      return { success: true, message: 'File written successfully' };
+    },
+    fileExists: async (filePath) => {
+      const exists = fs.existsSync(filePath);
+      return { success: true, exists };
+    },
+    createDirectory: async (dirPath) => {
+      fs.mkdirSync(dirPath, { recursive: true });
+      return { success: true, message: 'Directory created successfully' };
+    },
+    // System operations
+    openExternal: async (url) => {
+      await shell.openExternal(url);
+      return { success: true, message: 'Opened external link' };
+    },
+    showItemInFolder: async (filePath) => {
+      shell.showItemInFolder(filePath);
+      return { success: true, message: 'Showed item in folder' };
+    },
+    getAppVersion: async () => {
+      return { success: true, version: app.getVersion() };
+    },
+    // Window operations
+    getWindowInfo: async () => {
+      // Not available from plugin window, return null
+      return { success: false, message: 'Not available from plugin window' };
+    },
+    minimizeWindow: async () => {
+      // Not available from plugin window, return null
+      return { success: false, message: 'Not available from plugin window' };
+    },
+    maximizeWindow: async () => {
+      // Not available from plugin window, return null
+      return { success: false, message: 'Not available from plugin window' };
+    },
+    showWindow: async () => {
+      // Not available from plugin window, return null
+      return { success: false, message: 'Not available from plugin window' };
+    },
+    hideWindow: async () => {
+      // Not available from plugin window, return null
+      return { success: false, message: 'Not available from plugin window' };
+    },
+    // System information
+    getSystemInfo: async () => {
+      return {
+        success: true,
+        platform: os.platform(),
+        arch: os.arch(),
+        version: os.version(),
+        hostname: os.hostname(),
+        homedir: os.homedir(),
+        tmpdir: os.tmpdir(),
+        cpus: os.cpus().length,
+        totalmem: os.totalmem(),
+        freemem: os.freemem(),
+        uptime: os.uptime()
+      };
+    },
+    // Process management
+    getProcessInfo: async () => {
+      const process = require('process');
+      return {
+        success: true,
+        pid: process.pid,
+        version: process.version,
+        platform: process.platform,
+        arch: process.arch,
+        memoryUsage: process.memoryUsage(),
+        uptime: process.uptime()
+      };
+    },
+    // File system extended operations
+    listDirectory: async (dirPath) => {
+      const items = fs.readdirSync(dirPath, { withFileTypes: true });
+      const result = items.map(item => ({
+        name: item.name,
+        isDirectory: item.isDirectory(),
+        isFile: item.isFile(),
+        isSymbolicLink: item.isSymbolicLink()
+      }));
+      return { success: true, items: result };
+    },
+    getFileInfo: async (filePath) => {
+      const stats = fs.statSync(filePath);
+      return {
+        success: true,
+        size: stats.size,
+        isDirectory: stats.isDirectory(),
+        isFile: stats.isFile(),
+        isSymbolicLink: stats.isSymbolicLink(),
+        created: stats.birthtime,
+        modified: stats.mtime,
+        accessed: stats.atime
+      };
+    },
+    deleteFile: async (filePath) => {
+      const stats = fs.statSync(filePath);
+      if (stats.isDirectory()) {
+        fs.rmSync(filePath, { recursive: true, force: true });
+      } else {
+        fs.unlinkSync(filePath);
+      }
+      return { success: true, message: 'File deleted successfully' };
+    },
+    copyFile: async (sourcePath, destPath) => {
+      fs.copyFileSync(sourcePath, destPath);
+      return { success: true, message: 'File copied successfully' };
+    },
+    moveFile: async (sourcePath, destPath) => {
+      fs.renameSync(sourcePath, destPath);
+      return { success: true, message: 'File moved successfully' };
+    },
+    // Database operations
+    setDbValue: async (dbName, key, value) => {
+      const dbDir = GetDBDir();
+      if (!fs.existsSync(dbDir)) {
+        fs.mkdirSync(dbDir, { recursive: true });
+      }
+      const dbPath = path.join(dbDir, `${dbName}.json`);
+      let db = {};
+      if (fs.existsSync(dbPath)) {
+        db = JSON.parse(fs.readFileSync(dbPath, 'utf8'));
+      }
+      db[key] = value;
+      fs.writeFileSync(dbPath, JSON.stringify(db, null, 2));
+      return { success: true, message: 'Value stored successfully' };
+    },
+    getDbValue: async (dbName, key) => {
+      const dbDir = GetDBDir();
+      if (!fs.existsSync(dbDir)) {
+        fs.mkdirSync(dbDir, { recursive: true });
+      }
+      const dbPath = path.join(dbDir, `${dbName}.json`);
+      if (!fs.existsSync(dbPath)) {
+        return { success: true, value: null };
+      }
+      const db = JSON.parse(fs.readFileSync(dbPath, 'utf8'));
+      return { success: true, value: db[key] || null };
+    },
+    deleteDbValue: async (dbName, key) => {
+      const dbDir = GetDBDir();
+      if (!fs.existsSync(dbDir)) {
+        fs.mkdirSync(dbDir, { recursive: true });
+      }
+      const dbPath = path.join(dbDir, `${dbName}.json`);
+      if (!fs.existsSync(dbPath)) {
+        return { success: true, message: 'Key not found' };
+      }
+      const db = JSON.parse(fs.readFileSync(dbPath, 'utf8'));
+      delete db[key];
+      fs.writeFileSync(dbPath, JSON.stringify(db, null, 2));
+      return { success: true, message: 'Value deleted successfully' };
+    },
+    // Screen and display operations
+    getScreenInfo: async () => {
+      const displays = screen.getAllDisplays();
+      const primaryDisplay = screen.getPrimaryDisplay();
+      return {
+        success: true,
+        displays: displays.map(display => ({
+          id: display.id,
+          bounds: display.bounds,
+          workArea: display.workArea,
+          scaleFactor: display.scaleFactor,
+          rotation: display.rotation,
+          internal: display.internal,
+          size: display.size
+        })),
+        primaryDisplay: {
+          id: primaryDisplay.id,
+          bounds: primaryDisplay.bounds,
+          workArea: primaryDisplay.workArea,
+          scaleFactor: primaryDisplay.scaleFactor
+        }
+      };
+    },
+    // Crypto operations
+    hashString: async (algorithm, data) => {
+      const hash = crypto.createHash(algorithm);
+      hash.update(data);
+      return { success: true, hash: hash.digest('hex') };
+    },
+    generateUuid: async () => {
+      const uuid = crypto.randomUUID();
+      return { success: true, uuid };
+    },
+    encryptText: async (text, password) => {
+      const algorithm = 'aes-256-cbc';
+      const key = crypto.scryptSync(password, 'salt', 32);
+      const iv = crypto.randomBytes(16);
+      const cipher = crypto.createCipher(algorithm, key);
+      let encrypted = cipher.update(text, 'utf8', 'hex');
+      encrypted += cipher.final('hex');
+      return { success: true, encrypted, iv: iv.toString('hex') };
+    },
+    decryptText: async (encrypted, password, iv) => {
+      const algorithm = 'aes-256-cbc';
+      const key = crypto.scryptSync(password, 'salt', 32);
+      const decipher = crypto.createDecipher(algorithm, key);
+      let decrypted = decipher.update(encrypted, 'hex', 'utf8');
+      decrypted += decipher.final('utf8');
+      return { success: true, decrypted };
+    },
+    // Time and date operations
+    getCurrentTime: async () => {
+      const now = new Date();
+      return {
+        success: true,
+        timestamp: now.getTime(),
+        isoString: now.toISOString(),
+        localString: now.toString(),
+        year: now.getFullYear(),
+        month: now.getMonth() + 1,
+        day: now.getDate(),
+        hour: now.getHours(),
+        minute: now.getMinutes(),
+        second: now.getSeconds()
+      };
+    },
+    formatDate: async (timestamp, format) => {
+      const date = new Date(timestamp);
+      let result = format;
+      result = result.replace('YYYY', date.getFullYear());
+      result = result.replace('MM', String(date.getMonth() + 1).padStart(2, '0'));
+      result = result.replace('DD', String(date.getDate()).padStart(2, '0'));
+      result = result.replace('HH', String(date.getHours()).padStart(2, '0'));
+      result = result.replace('mm', String(date.getMinutes()).padStart(2, '0'));
+      result = result.replace('ss', String(date.getSeconds()).padStart(2, '0'));
+      return { success: true, formatted: result };
+    },
+    // Text processing operations
+    textToBase64: async (text) => {
+      const base64 = Buffer.from(text, 'utf8').toString('base64');
+      return { success: true, base64 };
+    },
+    base64ToText: async (base64) => {
+      const text = Buffer.from(base64, 'base64').toString('utf8');
+      return { success: true, text };
+    },
+    generateRandomString: async (length = 16, charset = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789') => {
+      let result = '';
+      for (let i = 0; i < length; i++) {
+        result += charset.charAt(Math.floor(Math.random() * charset.length));
+      }
+      return { success: true, randomString: result };
+    },
+    // File compression utilities
+    compressFile: async (sourcePath, destPath) => {
+      const zlib = require('zlib');
+      const input = fs.createReadStream(sourcePath);
+      const output = fs.createWriteStream(destPath);
+      const gzip = zlib.createGzip();
+      return await new Promise((resolve) => {
+        input.pipe(gzip).pipe(output);
+        output.on('finish', () => {
+          resolve({ success: true, message: 'File compressed successfully' });
+        });
+        output.on('error', (error) => {
+          resolve({ success: false, message: error.message });
+        });
+      });
+    },
+    decompressFile: async (sourcePath, destPath) => {
+      const zlib = require('zlib');
+      const input = fs.createReadStream(sourcePath);
+      const output = fs.createWriteStream(destPath);
+      const gunzip = zlib.createGunzip();
+      return await new Promise((resolve) => {
+        input.pipe(gunzip).pipe(output);
+        output.on('finish', () => {
+          resolve({ success: true, message: 'File decompressed successfully' });
+        });
+        output.on('error', (error) => {
+          resolve({ success: false, message: error.message });
+        });
+      });
+    },
+    // Clipboard operations
+    readClipboard: async () => {
+      const text = clipboard.readText();
+      if (text == '') {
+        return { success: false, message: 'No text in clipboard' };
+      }
+      return { success: true, text };
+    },
+    writeClipboard: async (text) => {
+      clipboard.writeText(text);
+      return { success: true, message: 'Text copied to clipboard' };
+    },
+    readClipboardImage: async () => {
+      const image = clipboard.readImage();
+      if (image.isEmpty()) {
+        return { success: false, message: 'No image in clipboard' };
+      }
+      return { success: true, imageData: image.toDataURL() };
+    },
+    writeClipboardImage: async (imageData) => {
+      const image = clipboard.readImage();
+      clipboard.writeImage(image);
+      return { success: true, message: 'Image copied to clipboard' };
+    },
+    // Simulate mouse operations
+    simulateMouse: async (action, params) => {
+      switch (action) {
+        case 'move': {
+          robot.moveMouse(params.x, params.y);
+          break;
+        }
+        case 'click': {
+          robot.mouseClick(params.button || 'left', params.double || false);
+          break;
+        }
+        case 'doubleClick': {
+          robot.mouseClick(params.button || 'left', true);
+          break;
+        }
+        case 'scroll': {
+          robot.scrollMouse(params.x || 0, params.y || 0);
+          break;
+        }
+        case 'drag': {
+          robot.dragMouse(params.x, params.y);
+          break;
+        }
+        default:
+          return { success: false, message: 'Unknown mouse action' };
+      }
+      return { success: true, message: 'Mouse action performed' };
+    },
+    // Simulate keyboard operations
+    simulateKeyboard: async (action, params) => {
+      switch (action) {
+        case 'type': {
+          robot.typeString(params.text);
+          break;
+        }
+        case 'keyTap': {
+          robot.keyTap(params.key, params.modifiers);
+          break;
+        }
+        case 'keyToggle': {
+          robot.keyToggle(params.key, params.down, params.modifiers);
+          break;
+        }
+        default:
+          return { success: false, message: 'Unknown keyboard action' };
+      }
+      return { success: true, message: 'Keyboard action performed' };
+    },
+    getMousePosition: async () => {
+      const pos = robot.getMousePos();
+      return { success: true, x: pos.x, y: pos.y };
+    },
+  };
+}
+
+let functionMap = null;
+
+ipcMain.handle('otools-function', async (event, funcName, ...args) => {
+  if (functionMap && functionMap[funcName]) {
+    try {
+      return await functionMap[funcName](...args);
+    } catch (e) {
+      logger.error(`otools-function call filed: ${funcName} - ${e.message}`, e);
+      return { success: false, message: e.message };
+    }
+  }
+  return { success: false, message: 'Function not found: ' + funcName };
+});
 
 module.exports = { setupIPC }; 
