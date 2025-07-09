@@ -84,7 +84,7 @@ function createFunctionMap(appManager) {
       };
     },
 
-    showPluginWindowByName: async (event, pluginName) => {
+    showPluginWindow: async (event, pluginName) => {
       const pluginInfo = pluginManager.getPluginInfo(pluginName);
       if (!pluginInfo) {
         throw new Error(`Plugin ${pluginName} not found`);
@@ -113,7 +113,7 @@ function createFunctionMap(appManager) {
       }
     },
 
-    hidePluginWindowByName: async (event, pluginName) => {
+    hidePluginWindow: async (event, pluginName) => {
       const result = pluginManager.hidePluginWindow(pluginName);
       return { success: result, message: result ? `Plugin window hidden: ${pluginName}` : `Plugin window not found or already hidden: ${pluginName}` };
     },
