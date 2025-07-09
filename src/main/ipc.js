@@ -423,28 +423,54 @@ function createFunctionMap(appManager) {
 
     // Window operations
     getWindowInfo: async (event) => {
-      // Not available from plugin window, return null
-      return { success: false, message: 'Not available from plugin window' };
+      const win = BrowserWindow.fromWebContents(event.sender);
+      if (win) {
+        return {
+          success: true,
+          isVisible: win.isVisible(),
+          isMinimized: win.isMinimized(),
+          isMaximized: win.isMaximized(),
+          bounds: win.getBounds()
+        };
+      }
+      return { success: false, message: 'Window not found' };
     },
 
     minimizeWindow: async (event) => {
-      // Not available from plugin window, return null
-      return { success: false, message: 'Not available from plugin window' };
+      const win = BrowserWindow.fromWebContents(event.sender);
+      if (win) {
+        win.minimize();
+        return { success: true, message: 'Window minimized' };
+      }
+      return { success: false, message: 'Window not found' };
     },
     
     maximizeWindow: async (event) => {
-      // Not available from plugin window, return null
-      return { success: false, message: 'Not available from plugin window' };
+      if (win.isMaximized()) {
+        win.unmaximize();
+        return { success: true, message: 'Window unmaximized' };
+      } else {
+        win.maximize();
+        return { success: true, message: 'Window maximized' };
+      }
     },
 
     showWindow: async (event) => {
-      // Not available from plugin window, return null
-      return { success: false, message: 'Not available from plugin window' };
+      const win = BrowserWindow.fromWebContents(event.sender);
+      if (win) {
+        win.show();
+        return { success: true, message: 'Window shown' };
+      }
+      return { success: false, message: 'Window not found' };
     },
 
     hideWindow: async (event) => {
-      // Not available from plugin window, return null
-      return { success: false, message: 'Not available from plugin window' };
+      const win = BrowserWindow.fromWebContents(event.sender);
+      if (win) {
+        win.hide();
+        return { success: true, message: 'Window hidden' };
+      }
+      return { success: false, message: 'Window not found' };
     },
 
     // Database operations
