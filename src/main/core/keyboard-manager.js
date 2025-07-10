@@ -179,12 +179,11 @@ class KeyboardManager {
       
       if (isVisible) {
         // Hide window
-        const result = pluginManager.hidePluginWindow(pluginName);
+        pluginManager.hidePluginWindow(pluginName);
         logger.info(`Custom shortcut: Plugin window hidden: ${pluginName}`);
       } else {
         // Show window
-        const result = pluginManager.showPluginWindow(pluginName);
-        logger.info(`Custom shortcut: Plugin window shown: ${pluginName}`);
+        pluginManager.showPluginWindow(pluginName);
       }
     } catch (error) {
       logger.error(`Error executing custom shortcut for ${pluginName}: ${error.message}`);
