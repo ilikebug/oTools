@@ -134,8 +134,7 @@ oTools/
   "plugins": {
     "autoLoad": true,                 // 启动时自动加载插件 / Auto load plugins on startup
     "maxProcesses": 10,               // 最大插件进程数 / Max plugin processes
-    "timeout": 30000,                 // 插件超时时间（毫秒）/ Plugin timeout (ms)
-    "debug": false                    // 插件调试模式 / Plugin debug mode
+    "timeout": 30000                  // 插件超时时间（毫秒）/ Plugin timeout (ms)
   },
   "logger": {
     "level": "info",                  // 日志级别 / Log level (e.g. info, debug, error)

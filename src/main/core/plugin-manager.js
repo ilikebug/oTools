@@ -17,7 +17,6 @@ class PluginManager {
 
     this.watcher = null;
     this.mainWindow = null;
-    this.debug = null
     this.store = null
   }
 
@@ -27,7 +26,6 @@ class PluginManager {
   async initialize(options = {}) {
     try {
       this.maxProcesses = options.maxProcesses;
-      this.debug = options.debug
       this.store = options.store
       
       logger.info(`Initializing plugin manager`);
@@ -421,7 +419,7 @@ class PluginManager {
       }
     });
 
-    if (this.debug) {
+    if (meta.debug) {
       win.webContents.openDevTools();
     }
     
