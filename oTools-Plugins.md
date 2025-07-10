@@ -1,5 +1,7 @@
 # oTools 插件开发详细指南 / oTools Plugin Development Detailed Guide
 
+> 适用版本 / Applicable Version: oTools v1.0.0 及以上 / v1.0.0+
+
 ---
 
 ## 目录 / Table of Contents
@@ -30,7 +32,7 @@ my-plugin/
   ├── plugin.json         # 插件元信息配置 / Plugin metadata
   ├── index.html          # 主页面 / Main page
   ├── preload.js          # 预加载脚本 / Preload script
-  ├── main.js             # 插件主逻辑 / Optional, plugin main logic
+  ├── main.js             # 插件主逻辑（可选）/ Optional, plugin main logic
   ├── icon.png            # 插件图标 / Icon
   └── index.css           # 样式文件 / CSS
 ```
@@ -45,24 +47,24 @@ my-plugin/
 
 ```json
 {
-  "name": "screenshot-ocr",
-  "shortName": "截图识别",
-  "description": "截图并进行 OCR 文字识别",
-  "version": "1.0.0",
-  "author": "Your Name",
-  "icon": "icon.png",
-  "type": "custom",
-  "enabled": true,
-  "startupMode": "independent",
+  "name": "screenshot-ocr",           // 插件英文唯一名 / Unique English name
+  "shortName": "截图识别",             // 插件中文名 / Chinese name
+  "description": "截图并进行 OCR 文字识别", // 插件功能描述 / Description
+  "version": "1.0.0",                 // 版本号 / Version
+  "author": "Your Name",              // 作者 / Author
+  "icon": "icon.png",                 // 图标文件名 / Icon filename
+  "type": "custom",                   // 插件类型 / Plugin type
+  "enabled": true,                     // 是否启用 / Enabled
+  "startupMode": "independent",        // 启动模式 / Startup mode
   "ui": {
-    "html": "index.html",
-    "preload": "preload.js",
-    "width": 900,
-    "height": 600,
-    "title": "截图识别",
-    "resizable": true,
-    "alwaysOnTop": true
+    "html": "index.html",              // 主页面文件 / Main page file
+    "width": 900,                       // 窗口宽度 / Window width
+    "height": 600,                      // 窗口高度 / Window height
+    "title": "截图识别",                // 窗口标题 / Window title
   }
+  "preload": "preload.js",           // 预加载脚本 / Preload script
+  "frame": true,                     // 边框设置 / frame setting
+  "debug": false,                    // 开启 DevTools / open DevTools
 }
 ```
 
@@ -218,258 +220,235 @@ window.otools.invoke('your-custom-channel', { foo: 'bar' }).then(result => { ...
 
 ---
 
-## 7. IPC 接口与调用示例 / IPC APIs & Usage Examples
+## IPC 接口与调用示例（IPC API & Usage）
 
-以下为 oTools 框架暴露的主要 IPC 接口及其在 preload.js/渲染进程中的常见调用写法：
-/ Below are the main IPC APIs exposed by oTools and typical usage in preload.js/renderer:
+### 1. 基本说明（Basic Description）
 
-### 1. 插件相关接口 / Plugin-related APIs
+所有在 `allowedMethods` 列表中的方法，都会通过 `contextBridge` 暴露到渲染进程的 `window.otools` 对象下。  
+All methods in the `allowedMethods` list are exposed to the renderer process via `window.otools` by `contextBridge`.
 
-- 获取插件列表 / Get plugin list  
-  `getPlugins: () => ipcRenderer.invoke('get-plugins')`
-- 获取插件名称（用于快捷键配置）/ Get plugin names (for shortcut config)  
-  `getPluginNames: () => ipcRenderer.invoke('get-plugin-names')`
-- 执行插件 / Execute plugin  
-  `executePlugin: (pluginName, ...args) => ipcRenderer.invoke('execute-plugin', pluginName, ...args)`
-- 启动插件进程 / Start plugin process  
-  `startPlugin: (pluginName) => ipcRenderer.invoke('start-plugin', pluginName)`
-- 停止插件进程 / Stop plugin process  
-  `stopPlugin: (pluginName) => ipcRenderer.invoke('stop-plugin', pluginName)`
-- 显示插件窗口（通过 sender）/ Show plugin window (by sender)  
-  `showPluginWindow: () => ipcRenderer.invoke('show-plugin-window')`
-- 按名称显示插件窗口 / Show plugin window by name  
-  `showPluginWindowByName: (pluginName) => ipcRenderer.invoke('show-plugin-window-by-name', pluginName)`
-- 按名称隐藏插件窗口 / Hide plugin window by name  
-  `hidePluginWindowByName: (pluginName) => ipcRenderer.invoke('hide-plugin-window-by-name', pluginName)`
-- 切换插件窗口显示/隐藏 / Toggle plugin window show/hide  
-  `togglePluginWindowByName: (pluginName) => ipcRenderer.invoke('toggle-plugin-window-by-name', pluginName)`
-- 获取插件窗口状态 / Get plugin window status  
-  `getPluginWindowStatus: (pluginName) => ipcRenderer.invoke('get-plugin-window-status', pluginName)`
-- 卸载插件 / Uninstall plugin  
-  `uninstallPlugin: (pluginName, removeFiles = true) => ipcRenderer.invoke('uninstall-plugin', pluginName, removeFiles)`
-- 设置插件配置 / Set plugin config  
-  `setPluginConfig: (pluginName, config) => ipcRenderer.invoke('set-plugin-config', pluginName, config)`
+调用方式统一为 / Usage:
 
-### 2. 插件市场与快捷键 / Plugin Market & Shortcuts
+```js
+window.otools.方法名(...参数) // window.otools.methodName(...args)
+```
 
-- 获取自定义快捷键 / Get custom shortcuts  
-  `getCustomShortcuts: () => ipcRenderer.invoke('get-custom-shortcuts')`
-- 设置自定义快捷键 / Set custom shortcuts  
-  `setCustomShortcuts: (shortcuts) => ipcRenderer.invoke('set-custom-shortcuts', shortcuts)`
-- 打开插件市场窗口 / Open plugin market window  
-  `ipcRenderer.send('open-plugin-market')`
-- 下载并安装插件 / Download and install plugin  
-  `ipcRenderer.send('download-plugin', { folder: 'plugin-folder-name' })`
-
-### 3. 系统与配置相关接口 / System & Config APIs
-
-- 获取应用状态 / Get app status  
-  `getAppStatus: () => ipcRenderer.invoke('get-app-status')`
-- 获取配置 / Get config  
-  `getConfig: (configName) => ipcRenderer.invoke('get-config', configName)`
-- 获取所有配置名 / Get all config names  
-  `getConfigNames: () => ipcRenderer.invoke('get-config-names')`
-- 刷新快捷键 / Refresh shortcuts  
-  `refreshShortcut: () => ipcRenderer.invoke('refresh-shortcut')`
-- 设置配置 / Set config  
-  `setConfig: (configName, config) => ipcRenderer.invoke('set-config', configName, config)`
-
-### 4. 截图与 OCR / Screenshot & OCR
-
-- 截图 / Capture screen  
-  `captureScreen: () => ipcRenderer.invoke('capture-screen')`
-- OCR 识别（base64图片）/ OCR recognition (base64 image)  
-  `performOCR: (imageData) => ipcRenderer.invoke('perform-ocr', imageData)`
-- 截图并识别 / Capture and OCR  
-  `captureAndOCR: () => ipcRenderer.invoke('capture-and-ocr')`
-
-### 5. 通知与应用控制 / Notification & App Control
-
-- 系统通知 / System notification  
-  `ipcRenderer.send('show-system-notification', { title: '标题', body: '内容' })`
-- 退出应用 / Quit app  
-  `ipcRenderer.send('quit-app')`
-
-### 6. 文件与对话框操作 / File & Dialog Operations
-
-- 打开文件对话框 / Show open dialog  
-  `showOpenDialog: (options) => ipcRenderer.invoke('show-open-dialog', options)`
-- 保存文件对话框 / Show save dialog  
-  `showSaveDialog: (options) => ipcRenderer.invoke('show-save-dialog', options)`
-- 读取文件内容 / Read file content  
-  `readFile: (filePath) => ipcRenderer.invoke('read-file', filePath)`
-- 写入文件内容 / Write file content  
-  `writeFile: (filePath, content) => ipcRenderer.invoke('write-file', filePath, content)`
-- 判断文件是否存在 / Check if file exists  
-  `fileExists: (filePath) => ipcRenderer.invoke('file-exists', filePath)`
-- 创建目录 / Create directory  
-  `createDirectory: (dirPath) => ipcRenderer.invoke('create-directory', dirPath)`
-- 删除文件或目录 / Delete file or directory  
-  `deleteFile: (filePath) => ipcRenderer.invoke('delete-file', filePath)`
-- 复制文件 / Copy file  
-  `copyFile: (sourcePath, destPath) => ipcRenderer.invoke('copy-file', sourcePath, destPath)`
-- 移动文件 / Move file  
-  `moveFile: (sourcePath, destPath) => ipcRenderer.invoke('move-file', sourcePath, destPath)`
-- 列出目录内容 / List directory contents  
-  `listDirectory: (dirPath) => ipcRenderer.invoke('list-directory', dirPath)`
-- 获取文件信息 / Get file info  
-  `getFileInfo: (filePath) => ipcRenderer.invoke('get-file-info', filePath)`
-
-### 7. 剪贴板操作 / Clipboard Operations
-
-- 读取剪贴板文本 / Read clipboard text  
-  `readClipboard: () => ipcRenderer.invoke('read-clipboard')`
-- 写入剪贴板文本 / Write clipboard text  
-  `writeClipboard: (text) => ipcRenderer.invoke('write-clipboard', text)`
-- 读取剪贴板图片 / Read clipboard image  
-  `readClipboardImage: () => ipcRenderer.invoke('read-clipboard-image')`
-- 写入剪贴板图片 / Write clipboard image  
-  `writeClipboardImage: (imageData) => ipcRenderer.invoke('write-clipboard-image', imageData)`
-
-### 8. 窗口操作 / Window Operations
-
-- 获取窗口信息 / Get window info  
-  `getWindowInfo: () => ipcRenderer.invoke('get-window-info')`
-- 最小化窗口 / Minimize window  
-  `minimizeWindow: () => ipcRenderer.invoke('minimize-window')`
-- 最大化/还原窗口 / Maximize/unmaximize window  
-  `maximizeWindow: () => ipcRenderer.invoke('maximize-window')`
-- 显示窗口 / Show window  
-  `showWindow: () => ipcRenderer.invoke('show-window')`
-- 隐藏窗口 / Hide window  
-  `hideWindow: () => ipcRenderer.invoke('hide-window')`
-
-### 9. 系统信息与进程 / System Info & Process
-
-- 获取系统信息 / Get system info  
-  `getSystemInfo: () => ipcRenderer.invoke('get-system-info')`
-- 获取进程信息 / Get process info  
-  `getProcessInfo: () => ipcRenderer.invoke('get-process-info')`
-
-### 10. 数据库（简单键值存储）/ Simple Key-Value Storage
-
-- 设置键值 / Set key-value  
-  `setDbValue: (key, value) => ipcRenderer.invoke('set-db-value', dbName, key, value)`
-- 获取键值 / Get key-value  
-  `getDbValue: (key) => ipcRenderer.invoke('get-db-value', dbName, key)`
-- 删除键值 / Delete key-value  
-  `deleteDbValue: (key) => ipcRenderer.invoke('delete-db-value', dbName, key)`
-
-### 11. 屏幕与显示器 / Screen & Display
-
-- 获取所有显示器信息 / Get all display info  
-  `getScreenInfo: () => ipcRenderer.invoke('get-screen-info')`
-
-### 12. 加密与哈希 / Crypto & Hash
-
-- 哈希字符串 / Hash string  
-  `hashString: (algorithm, data) => ipcRenderer.invoke('hash-string', algorithm, data)`
-- 生成 UUID / Generate UUID  
-  `generateUUID: () => ipcRenderer.invoke('generate-uuid')`
-- 加密文本 / Encrypt text  
-  `encryptText: (text, password) => ipcRenderer.invoke('encrypt-text', text, password)`
-- 解密文本 / Decrypt text  
-  `decryptText: (encrypted, password, iv) => ipcRenderer.invoke('decrypt-text', encrypted, password, iv)`
-
-### 13. 时间与日期 / Time & Date
-
-- 获取当前时间 / Get current time  
-  `getCurrentTime: () => ipcRenderer.invoke('get-current-time')`
-- 格式化时间戳 / Format timestamp  
-  `formatDate: (timestamp, format) => ipcRenderer.invoke('format-date', timestamp, format)`
-
-### 14. 文本与编码 / Text & Encoding
-
-- 文本转 base64 / Text to base64  
-  `textToBase64: (text) => ipcRenderer.invoke('text-to-base64', text)`
-- base64 转文本 / Base64 to text  
-  `base64ToText: (base64) => ipcRenderer.invoke('base64-to-text', base64)`
-- 生成随机字符串 / Generate random string  
-  `generateRandomString: (length, charset) => ipcRenderer.invoke('generate-random-string', length, charset)`
-
-### 15. 文件压缩与解压 / File Compression
-
-- 压缩文件 / Compress file  
-  `compressFile: (sourcePath, destPath) => ipcRenderer.invoke('compress-file', sourcePath, destPath)`
-- 解压文件 / Decompress file  
-  `decompressFile: (sourcePath, destPath) => ipcRenderer.invoke('decompress-file', sourcePath, destPath)`
-
-### 16. 其他 / Others
-
-- 打开外部链接 / Open external link  
-  `openExternal: (url) => ipcRenderer.invoke('open-external', url)`
-- 在文件夹中显示项目 / Show item in folder  
-  `showItemInFolder: (filePath) => ipcRenderer.invoke('show-item-in-folder', filePath)`
-- 获取应用版本 / Get app version  
-  `getAppVersion: () => ipcRenderer.invoke('get-app-version')`
-
-### 17. 鼠标与键盘模拟 / Mouse & Keyboard Simulation
-
-- 模拟鼠标操作 / Simulate mouse actions  
-  `simulateMouse: (action, params) => ipcRenderer.invoke('simulate-mouse', action, params)`
-
-  **参数说明 / Parameters:**
-  - action: 'move' | 'click' | 'doubleClick' | 'scroll' | 'drag'
-  - params: 
-    - move: { x, y }
-    - click/doubleClick: { button: 'left'|'right'|'middle', double?: boolean }
-    - scroll: { x, y }
-    - drag: { x, y }
-
-  **示例 / Example:**
-  ```js
-  // 鼠标移动到 (100, 200)
-  window.otools.invoke('simulate-mouse', 'move', { x: 100, y: 200 });
-  // 鼠标左键单击
-  window.otools.invoke('simulate-mouse', 'click', { button: 'left' });
-  // 鼠标左键双击
-  window.otools.invoke('simulate-mouse', 'doubleClick', { button: 'left' });
-  ```
-
-- 模拟键盘操作 / Simulate keyboard actions  
-  `simulateKeyboard: (action, params) => ipcRenderer.invoke('simulate-keyboard', action, params)`
-
-  **参数说明 / Parameters:**
-  - action: 'type' | 'keyTap' | 'keyToggle'
-  - params:
-    - type: { text }
-    - keyTap: { key, modifiers }
-    - keyToggle: { key, down: 'down'|'up', modifiers }
-
-  **示例 / Example:**
-  ```js
-  // 输入字符串
-  window.otools.invoke('simulate-keyboard', 'type', { text: 'Hello oTools' });
-  // 模拟 Command+V 粘贴（Mac 下）
-  window.otools.invoke('simulate-keyboard', 'keyTap', { key: 'v', modifiers: ['command'] });
-  // 按下并松开 Shift+A
-  window.otools.invoke('simulate-keyboard', 'keyTap', { key: 'a', modifiers: ['shift'] });
-  ```
+所有方法均为**异步**，返回 Promise。All methods are **asynchronous** and return a Promise.
 
 ---
 
-如需在 preload.js 中暴露这些方法，可参考如下写法：  
-/ To expose these methods in preload.js, you can use:
+### 2. 方法列表与调用示例 / Method List & Usage Example
+
+| 方法名 (Method)         | 参数说明 (Params)       | 返回值/说明 (Return/Description) | 示例 (Example)                    |
+|-------------------------|------------------------|----------------------------------|-----------------------------------|
+| getPlugins              | 无 / none              | Promise<插件列表 / plugin list>  | `await window.otools.getPlugins()` |
+| getPluginNames          | 无 / none              | Promise<插件名数组 / names[]>    | `await window.otools.getPluginNames()` |
+| executePlugin           | (pluginName, ...args)  | Promise<执行结果 / result>       | `await window.otools.executePlugin('myPlugin', arg1, arg2)` |
+| showPluginWindow        | (pluginName)           | Promise<void>                    | `await window.otools.showPluginWindow('myPlugin')` |
+| hidePluginWindow        | (pluginName)           | Promise<void>                    | `await window.otools.hidePluginWindow('myPlugin')` |
+| getPluginWindowStatus   | (pluginName)           | Promise<boolean>                 | `await window.otools.getPluginWindowStatus('myPlugin')` |
+| uninstallPlugin         | (pluginName)           | Promise<void>                    | `await window.otools.uninstallPlugin('myPlugin')` |
+| setPluginConfig         | (pluginName, config)   | Promise<void>                    | `await window.otools.setPluginConfig('myPlugin', {key: 'value'})` |
+| downloadPlugin          | (options)              | Promise<结果 / result>           | `await window.otools.downloadPlugin({folder: 'plugin-folder'})` |
+| getCustomShortcuts      | 无 / none              | Promise<快捷键配置 / shortcuts>  | `await window.otools.getCustomShortcuts()` |
+| setCustomShortcuts      | (config)               | Promise<void>                    | `await window.otools.setCustomShortcuts({...})` |
+| getAppStatus            | 无 / none              | Promise<状态对象 / status>       | `await window.otools.getAppStatus()` |
+| getSystemInfo           | 无 / none              | Promise<系统信息 / info>         | `await window.otools.getSystemInfo()` |
+| refreshShortcut         | 无 / none              | Promise<void>                    | `await window.otools.refreshShortcut()` |
+| openExternal            | (url)                  | Promise<void>                    | `await window.otools.openExternal('https://...')` |
+| getConfig               | (key)                  | Promise<值 / value>              | `await window.otools.getConfig('theme')` |
+| getConfigNames          | 无 / none              | Promise<key数组 / keys[]>        | `await window.otools.getConfigNames()` |
+| setConfig               | (key, value)           | Promise<void>                    | `await window.otools.setConfig('theme', 'dark')` |
+| captureScreen           | 无 / none              | Promise<图片数据 / image>        | `await window.otools.captureScreen()` |
+| performOcr              | (imageData)            | Promise<识别结果 / text>         | `await window.otools.performOcr(img)` |
+| captureAndOcr           | 无 / none              | Promise<识别结果 / text>         | `await window.otools.captureAndOcr()` |
+| showOpenDialog          | (options)              | Promise<文件路径 / path>         | `await window.otools.showOpenDialog({})` |
+| showSaveDialog          | (options)              | Promise<文件路径 / path>         | `await window.otools.showSaveDialog({})` |
+| readFile                | (filePath)             | Promise<内容 / content>          | `await window.otools.readFile('/path')` |
+| writeFile               | (filePath, content)    | Promise<void>                    | `await window.otools.writeFile('/path', 'data')` |
+| fileExists              | (filePath)             | Promise<boolean>                 | `await window.otools.fileExists('/path')` |
+| createDirectory         | (dirPath)              | Promise<void>                    | `await window.otools.createDirectory('/dir')` |
+| showItemInFolder        | (filePath)             | Promise<void>                    | `await window.otools.showItemInFolder('/path')` |
+| listDirectory           | (dirPath)              | Promise<文件列表 / files[]>      | `await window.otools.listDirectory('/dir')` |
+| getFileInfo             | (filePath)             | Promise<信息对象 / info>         | `await window.otools.getFileInfo('/path')` |
+| deleteFile              | (filePath)             | Promise<void>                    | `await window.otools.deleteFile('/path')` |
+| copyFile                | (src, dest)            | Promise<void>                    | `await window.otools.copyFile('/src', '/dest')` |
+| moveFile                | (src, dest)            | Promise<void>                    | `await window.otools.moveFile('/src', '/dest')` |
+| getWindowInfo           | 无 / none              | Promise<窗口信息 / info>         | `await window.otools.getWindowInfo()` |
+| minimizeWindow          | 无 / none              | Promise<void>                    | `await window.otools.minimizeWindow()` |
+| maximizeWindow          | 无 / none              | Promise<void>                    | `await window.otools.maximizeWindow()` |
+| showWindow              | 无 / none              | Promise<void>                    | `await window.otools.showWindow()` |
+| hideWindow              | 无 / none              | Promise<void>                    | `await window.otools.hideWindow()` |
+| setDbValue              | (key, value)           | Promise<void>                    | `await window.otools.setDbValue('key', 'value')` |
+| getDbValue              | (key)                  | Promise<值 / value>              | `await window.otools.getDbValue('key')` |
+| deleteDbValue           | (key)                  | Promise<void>                    | `await window.otools.deleteDbValue('key')` |
+| getScreenInfo           | 无 / none              | Promise<屏幕信息 / info>         | `await window.otools.getScreenInfo()` |
+| generateRandomString    | (length)               | Promise<string>                  | `await window.otools.generateRandomString(16)` |
+| readClipboard           | 无 / none              | Promise<string>                  | `await window.otools.readClipboard()` |
+| writeClipboard          | (text)                 | Promise<void>                    | `await window.otools.writeClipboard('内容')` |
+| readClipboardImage      | 无 / none              | Promise<图片数据 / image>        | `await window.otools.readClipboardImage()` |
+| writeClipboardImage     | (imageData)            | Promise<void>                    | `await window.otools.writeClipboardImage(img)` |
+| simulateMouse           | (options)              | Promise<void>                    | `await window.otools.simulateMouse({...})` |
+| getMousePosition        | 无 / none              | Promise<{x, y}>                  | `await window.otools.getMousePosition()` |
+| simulateKeyboard        | (options)              | Promise<void>                    | `await window.otools.simulateKeyboard({...})` |
+| showSystemNotification  | (options)              | Promise<void>                    | `await window.otools.showSystemNotification({...})` |
+
+---
+
+### 3. 统一调用机制（Unified Call Mechanism）
+
+所有方法最终通过 IPC 调用主进程的 `'otools-function'` 事件，参数依次为：  
+All methods are finally called via IPC event `'otools-function'` in the main process, with parameters:
+
+- 第一个参数：方法名（字符串）/ First param: method name (string)
+- 后续参数：方法实际参数 / Following params: actual method arguments
+
+**所有方法均为异步，返回 Promise。All methods are asynchronous and return Promise.**
+
+---
+
+### 4. 示例（Examples）
 
 ```js
-const { contextBridge, ipcRenderer } = require('electron');
-
-contextBridge.exposeInMainWorld('otools', {
-  getAppStatus: () => ipcRenderer.invoke('get-app-status'),
-  // ... 其他方法同上
+// 获取插件列表 / Get plugin list
+window.otools.getPlugins().then(plugins => {
+  console.log(plugins);
 });
+
+// 写入文件（推荐 async/await）/ Write file (recommended async/await)
+async function saveFile() {
+  await window.otools.writeFile('/tmp/test.txt', 'hello world');
+  alert('保存成功 / Saved!');
+}
 ```
 
-如需更多接口参数说明或用法示例，请随时提问！/ For more details or usage examples, feel free to ask!
+---
+
+如需了解每个方法的具体参数和返回值，请参考主进程 ipc 相关实现（通常在 `ipc.js` 或相关文件中）。  
+For detailed params and return values, please refer to the main process IPC implementation (usually in `ipc.js` or related files).
+
+---
+
+如需进一步补充详细参数类型和返回结构，请提供主进程对应方法的实现代码。  
+If you need more detailed param types and return structures, please provide the main process implementation code.
+
+---
+
+### 5. 自定义 IPC 通道注册 / Registering Custom IPC Channels
+
+主进程可通过 ipcMain.handle('your-channel', handler) 注册自定义通道，插件通过 window.otools.invoke('your-channel', ...) 调用。
+
+The main process can register custom channels via ipcMain.handle('your-channel', handler), and plugins can call them via window.otools.invoke('your-channel', ...).
+
+---
+
+### 6. API 参数与返回结构 / API Params & Return Structure
+
+详细参数和返回结构请参考主进程 ipc.js 文件的实现，或联系开发者获取接口文档。
+
+For detailed params and return structures, refer to the main process ipc.js implementation or contact the developer for API docs.
 
 ---
 
 ## 8. 插件开发与调试建议 / Development & Debugging Tips
 
-开发模式下，插件窗口会自动打开 DevTools，便于调试。/ In development mode, plugin windows will automatically open DevTools for debugging.
-推荐使用 VSCode 等编辑器，配合 Electron/前端调试工具。/ It is recommended to use editors like VSCode with Electron/frontend debugging tools.
-充分利用热重载，快速迭代开发。/ Make full use of hot reload for rapid development.
-预加载脚本中只暴露必要 API，避免安全隐患。/ Only expose necessary APIs in the preload script to avoid security risks.
+- 开发模式下插件窗口会自动打开 DevTools（如未自动打开可手动调用 win.webContents.openDevTools()）。/ In development mode, plugin windows will automatically open DevTools (if not, call win.webContents.openDevTools() manually).
+- 推荐使用 VSCode、Chrome DevTools 进行断点调试。/ Recommend using VSCode, Chrome DevTools for debugging.
+- 充分利用热重载，快速迭代开发。/ Make full use of hot reload for rapid development.
+- 预加载脚本中只暴露必要 API，避免安全隐患。/ Only expose necessary APIs in the preload script to avoid security risks.
+- 插件开发遇到问题可查阅主程序日志（oTools/logs/otools.log）。/ Check main app log (oTools/logs/otools.log) if you encounter plugin development issues.
+
+---
+
+## 8. 插件中使用第三方 Node 模块（Using Third-party Node Modules in Plugins）
+
+### 1. 安装依赖（Install Dependencies）
+
+每个插件可以有自己的 `node_modules` 目录和 `package.json` 文件。
+Each plugin can have its own `node_modules` and `package.json`.
+
+**步骤 / Steps:**
+
+1. 进入你的插件目录（如 `plugins/your-plugin/`）。  
+   Go to your plugin directory (e.g. `plugins/your-plugin/`).
+2. 使用 npm 或 yarn 安装所需模块。  
+   Use npm or yarn to install the required module.
+
+   ```bash
+   npm install axios
+   # 或 / or
+   yarn add axios
+   ```
+
+3. 安装后，`node_modules` 和 `package.json` 会出现在插件目录下。  
+   After installation, `node_modules` and `package.json` will appear in your plugin folder.
+
+---
+
+### 2. 插件中引用第三方模块（Require Third-party Modules in Plugin）
+
+在插件的主入口文件或其他 JS 文件中，直接使用 `require` 或 `import` 引入第三方模块。
+In your plugin's main entry file or any JS file, use `require` or `import` to include third-party modules.
+
+**示例 / Example:**
+
+```js
+// CommonJS
+const axios = require('axios');
+
+// ES Module (如果你的插件支持)
+import axios from 'axios';
+
+// 使用 axios 发起请求 / Use axios to make a request
+axios.get('https://api.example.com/data')
+  .then(res => {
+    console.log(res.data);
+  });
+```
+
+---
+
+### 3. 运行时依赖加载机制（Runtime Dependency Resolution）
+
+oTools 框架的插件加载机制会自动为插件设置好 `module.paths`，
+使得 `require` 优先从插件自身的 `node_modules` 查找依赖。
+The oTools plugin loader automatically sets up `module.paths` so that `require` will first look for dependencies in the plugin's own `node_modules`.
+
+**注意 / Note:**  
+- 如果插件没有自己的 `node_modules`，会回退到主程序的依赖目录。  
+  If the plugin does not have its own `node_modules`, it will fallback to the main app's dependencies.
+- 推荐每个插件独立管理依赖，避免版本冲突。  
+  It is recommended that each plugin manages its own dependencies to avoid version conflicts.
+
+---
+
+### 4. 在插件 preload.js 中使用（Use in Plugin Preload.js）
+
+如果你的插件有自定义的 `preload.js`，同样可以直接 `require` 第三方模块。
+If your plugin has a custom `preload.js`, you can also `require` third-party modules directly.
+
+**示例 / Example:**
+
+```js
+// plugins/your-plugin/preload.js
+const dayjs = require('dayjs');
+console.log(dayjs().format());
+```
+
+---
+
+### 5. 常见问题（FAQ）
+
+- **Q: 为什么 require 找不到模块？**  
+  A: 请确认已在插件目录下正确安装依赖，并且插件目录结构正确。
+
+- **Q: 可以使用原生 Node.js 模块吗？**  
+  A: 可以，Node.js 内置模块（如 `fs`, `path` 等）可直接使用，无需安装。
+
+---
+
+如需更详细的插件开发说明，请参考 oTools 插件开发文档或联系开发者支持。  
+For more details, please refer to the oTools plugin development documentation or contact developer support.
 
 ---
 
@@ -484,13 +463,16 @@ contextBridge.exposeInMainWorld('otools', {
 ## 10. 常见问题与最佳实践 / FAQ & Best Practices
 
 Q: 插件窗口无法打开？ / Q: Plugin window cannot open?  
-A: 检查 plugin.json 的 ui.html、ui.preload 路径是否正确，确保文件存在。/ Check if the ui.html and ui.preload paths in plugin.json are correct and files exist.
+A: 检查 plugin.json 的 ui.html、ui.preload 路径是否正确，确保文件存在，并查看主程序日志。/ Check if the ui.html and ui.preload paths in plugin.json are correct, files exist, and check the main app log.
 
 Q: 如何与主程序深度集成？ / Q: How to deeply integrate with the main app?  
 A: 通过自定义 IPC 通道与主程序通信，或请求主程序暴露更多 API。/ Communicate with the main app via custom IPC channels, or request the main app to expose more APIs.
 
-Q: 插件如何存储数据？ / Q: How does a plugin store data?  
-A: 推荐使用主程序暴露的存储 API，或自行在插件目录下管理数据文件。/ It is recommended to use the storage API exposed by the main app, or manage data files in the plugin directory.
+Q: 插件依赖冲突如何解决？ / Q: How to resolve plugin dependency conflicts?  
+A: 推荐每个插件独立管理依赖，避免版本冲突。/ It is recommended that each plugin manages its own dependencies independently to avoid version conflicts.
+
+Q: 如何调试 preload.js？ / Q: How to debug preload.js?  
+A: 可在 preload.js 中使用 console.log，或在插件窗口 DevTools 的 Console 面板查看输出。/ Use console.log in preload.js and check output in the plugin window DevTools Console panel.
 
 **最佳实践 / Best Practices:**
 - 保持插件目录结构清晰，资源独立。/ Keep plugin directory structure clear and resources independent.

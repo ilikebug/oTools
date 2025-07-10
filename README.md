@@ -1,4 +1,4 @@
-# oTools - 桌面工具管理中心
+# oTools - 桌面工具管理中心 / oTools - Desktop Tool Management Center
 # oTools - Desktop Tool Management Center
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -16,38 +16,41 @@ oTools is an Electron-based desktop tool management center with a plugin archite
 ## ✨ 主要功能 / Key Features
 
 ### 🔧 插件管理 / Plugin Management
-- **插件安装与卸载** / Plugin Installation & Uninstallation
-- **插件启用/禁用** / Plugin Enable/Disable
-- **插件配置管理** / Plugin Configuration Management
-- **插件市场集成** / Plugin Market Integration
-- **插件窗口管理** / Plugin Window Management
+- **插件安装与卸载 / Plugin Installation & Uninstallation**
+- **插件启用/禁用 / Plugin Enable/Disable**
+- **插件配置管理 / Plugin Configuration Management**
+- **插件市场集成 / Plugin Market Integration**
+- **插件窗口管理 / Plugin Window Management**
 
 ### ⌨️ 快捷键系统 / Shortcut System
-- **全局快捷键** / Global Shortcuts
-- **自定义快捷键** / Custom Shortcuts
-- **快捷键冲突检测** / Shortcut Conflict Detection
-- **快捷键热重载** / Hot Reload Shortcuts
+- **全局快捷键 / Global Shortcuts**
+- **自定义快捷键 / Custom Shortcuts**
+- **快捷键热重载 / Hot Reload Shortcuts**
 
 ### 📊 状态监控 / Status Monitoring
-- **应用运行状态** / Application Running Status
-- **插件运行统计** / Plugin Running Statistics
-- **系统资源监控** / System Resource Monitoring
-- **实时状态更新** / Real-time Status Updates
+- **应用运行状态 / Application Running Status**
+- **插件运行统计 / Plugin Running Statistics**
+- **实时状态更新 / Real-time Status Updates**
 
 ### 🔐 配置管理 / Configuration Management
-- **GitHub Token 管理** / GitHub Token Management
-- **应用设置** / Application Settings
-- **插件配置** / Plugin Configuration
-- **自动启动设置** / Auto-start Settings
+- **GitHub Token 管理 / GitHub Token Management**
+- **应用设置 / Application Settings**
+- **插件配置 / Plugin Configuration**
+- **自动启动设置 / Auto-start Settings**
 
 ### 🛠️ 系统工具 / System Tools
-- **截图功能** / Screenshot Functionality
-- **OCR 文字识别** / OCR Text Recognition
-- **剪贴板管理** / Clipboard Management
-- **文件操作** / File Operations
-- **系统通知** / System Notifications
+- **截图功能 / Screenshot Functionality**
+- **OCR 文字识别 / OCR Text Recognition**
+- **剪贴板管理 / Clipboard Management**
+- **文件操作 / File Operations**
+- **系统通知 / System Notifications**
 
 ## 🚀 快速开始 / Quick Start
+
+### 环境要求 / Requirements
+- Node.js >= 18.x（推荐 / Recommended）
+- Electron >= 25.x（推荐 37.x / Recommended 37.x）
+- macOS 12+（仅支持 / Only supports macOS）
 
 ### 安装 / Installation
 
@@ -75,7 +78,12 @@ npm run make
 
 ## 📦 插件开发 / Plugin Development
 
-[ oTools 插件开发详细指南 ](./oTools-Plugins.md)
+- 支持热重载 / Supports hot reload
+- 插件独立依赖 / Independent plugin dependencies
+- 主进程与渲染进程安全通信 / Secure main/renderer communication
+- 插件市场一键集成 / One-click plugin market integration
+
+[ oTools 插件开发详细指南 / oTools Plugin Development Detailed Guide ](./oTools-Plugins.md)
 
 [ oTools Plugin Development Detailed Guide](./oTools-Plugins.md)
 
@@ -114,35 +122,35 @@ oTools/
   "app": {
     "name": "oTools",                // 应用名称 / Application name
     "version": "1.0.0",              // 版本号 / Version
-    "debug": false,                  // 调试模式 / Debug mode
-    "autoStart": true                // 是否开机自启 / Auto start on system boot
+    "debug": false,                   // 调试模式 / Debug mode
+    "autoStart": true                 // 是否开机自启 / Auto start on system boot
   },
   "window": {
-    "width": 400,                    // 主窗口宽度 / Main window width
-    "height": 360,                   // 主窗口高度 / Main window height
-    "alwaysOnTop": true,             // 窗口是否置顶 / Always on top
-    "skipTaskbar": true              // 是否在任务栏隐藏 / Skip taskbar
+    "width": 400,                     // 主窗口宽度 / Main window width
+    "height": 360,                    // 主窗口高度 / Main window height
+    "alwaysOnTop": true,              // 窗口是否置顶 / Always on top
+    "skipTaskbar": true               // 是否在任务栏隐藏 / Skip taskbar
   },
   "plugins": {
-    "autoLoad": true,                // 启动时自动加载插件 / Auto load plugins on startup
-    "maxProcesses": 10,              // 最大插件进程数 / Max plugin processes
-    "timeout": 30000,                // 插件超时时间（毫秒）/ Plugin timeout (ms)
-    "debug": false                   // 插件调试模式 / Plugin debug mode
+    "autoLoad": true,                 // 启动时自动加载插件 / Auto load plugins on startup
+    "maxProcesses": 10,               // 最大插件进程数 / Max plugin processes
+    "timeout": 30000,                 // 插件超时时间（毫秒）/ Plugin timeout (ms)
+    "debug": false                    // 插件调试模式 / Plugin debug mode
   },
   "logger": {
-    "level": "info",                 // 日志级别 / Log level (e.g. info, debug, error)
-    "enableFile": true,              // 是否写入日志文件 / Enable file logging
-    "logFile": "otools.log",         // 日志文件名 / Log file name
-    "enableConsole": false           // 是否控制台输出日志 / Enable console logging
+    "level": "info",                  // 日志级别 / Log level (e.g. info, debug, error)
+    "enableFile": true,               // 是否写入日志文件 / Enable file logging
+    "logFile": "otools.log",          // 日志文件名 / Log file name
+    "enableConsole": false            // 是否控制台输出日志 / Enable console logging
   },
   "shortcuts": {
-    "toggle": "ALT+SPACE"            // 主界面显示/隐藏快捷键 / Main window toggle shortcut
+    "toggle": "ALT+SPACE"             // 主界面显示/隐藏快捷键 / Main window toggle shortcut
   },
   "pluginMarket": {
-    "debug": false                   // 插件市场调试模式 / Plugin market debug mode
+    "debug": false                    // 插件市场调试模式 / Plugin market debug mode
   },
-  "githubToken": "",                 // GitHub Token（用于插件访问 GitHub API）/ GitHub Token (for plugin GitHub API access)
-  "customShortcuts": []              // 自定义插件快捷键列表 / Custom plugin shortcuts list
+  "githubToken": "",                  // GitHub Token（用于插件访问 GitHub API）/ GitHub Token (for plugin GitHub API access)
+  "customShortcuts": []               // 自定义插件快捷键列表 / Custom plugin shortcuts list
 }
 ```
 
@@ -198,10 +206,12 @@ GitHub Token is used for plugins to access GitHub API, especially when downloadi
 ### 自定义快捷键结构 / Custom Shortcut Structure
 
 ```json
-{
-  "pluginName": "YourPluginName",    // 插件名称 / Plugin name
-  "accelerator": "Ctrl+Alt+P"        // 快捷键组合 / Shortcut key combination
-}
+[
+  {
+    "pluginName": "your-plugin-name", // 插件名 / Plugin name
+    "accelerator": "Alt+Shift+S"     // 快捷键组合 / Shortcut key combination
+  }
+]
 ```
 
 ## 📋 开发计划 / Development Roadmap
@@ -269,3 +279,14 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 **⭐ 如果这个项目对你有帮助，请给我们一个星标！**
 
 **⭐ If this project helps you, please give us a star!** 
+
+## ❓ 常见问题 / FAQ
+
+### Q: 插件无法加载怎么办？ / What if a plugin fails to load?
+A: 检查 plugin.json 配置、主程序日志、插件目录结构是否正确。/ Check plugin.json config, main app log, and plugin directory structure.
+
+### Q: 如何查看主程序日志？ / How to view main app logs?
+A: 日志文件位于用户目录下 oTools/logs/otools.log。/ Log file is located at oTools/logs/otools.log in your user directory.
+
+### Q: 插件市场无法访问？ / Plugin market not accessible?
+A: 检查网络连接，或配置 GitHub Token 以提升访问速率。/ Check your network connection, or configure a GitHub Token to improve access speed. 

@@ -12,7 +12,7 @@ const allowedMethods = [
   'getPluginWindowStatus',
   'uninstallPlugin',
   'setPluginConfig',
-  'downlaodPlugnin',
+  'downloadPlugin',
 
   'getCustomShortcuts',
   'setCustomShortcuts',
