@@ -1,5 +1,7 @@
 const { contextBridge, ipcRenderer } = require('electron');
 const fs = require('fs');
+const path = require('path');
+
 
 const allowedMethods = [
   'getPlugins',
@@ -77,6 +79,11 @@ try {
   if (preloadArg) {
     const pluginPreloadPath = preloadArg.replace('--plugin-preload-path=', '');
     if (fs.existsSync(pluginPreloadPath)) {
+      const pluginDir = path.dirname(pluginPreloadPath);
+      const nodeModulesPath = path.join(pluginDir, 'node_modules');
+      if (fs.existsSync(nodeModulesPath)) {
+        module.paths.unshift(nodeModulesPath);
+      }
       require(pluginPreloadPath);
     }
   }
