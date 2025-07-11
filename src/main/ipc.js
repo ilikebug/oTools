@@ -8,7 +8,8 @@ const robot = require('robotjs'); // For simulating mouse and keyboard
 
 const logger = require('./utils/logger');
 const { setAutoStart } = require('./utils/auto-start');
-const { GetPluginDir, GetDBDir } = require('./comm');
+const { GetPluginPath } = require('./comm');
+const { getPluginKV } = require('./utils/kv-manager');
 
 let functionMap = null;
 
@@ -142,7 +143,7 @@ function createFunctionMap(appManager) {
     },
 
     downloadPlugin: async (event, { folder }) => {
-      const pluginsDir = GetPluginDir();
+      const pluginsDir = GetPluginPath();
       const pluginPath = path.join(pluginsDir, folder);
       const repo = 'ilikebug/oTools-Plugins';
       const apiBase = `https://api.github.com/repos/${repo}/contents/${folder}`;
@@ -475,45 +476,25 @@ function createFunctionMap(appManager) {
 
     // Database operations
     setDbValue: async (event, dbName, key, value) => {
-      const dbDir = GetDBDir();
-      if (!fs.existsSync(dbDir)) {
-        fs.mkdirSync(dbDir, { recursive: true });
-      }
-      const dbPath = path.join(dbDir, `${dbName}.json`);
-      let db = {};
-      if (fs.existsSync(dbPath)) {
-        db = JSON.parse(fs.readFileSync(dbPath, 'utf8'));
-      }
-      db[key] = value;
-      fs.writeFileSync(dbPath, JSON.stringify(db, null, 2));
+      const db = getPluginKV(dbName);
+      await db.put(key, value);
       return { success: true, message: 'Value stored successfully' };
     },
 
     getDbValue: async (event, dbName, key) => {
-      const dbDir = GetDBDir();
-      if (!fs.existsSync(dbDir)) {
-        fs.mkdirSync(dbDir, { recursive: true });
+      const db = getPluginKV(dbName);
+      try {
+        const value = await db.get(key);
+        return { success: true, value };
+      } catch (e) {
+        if (e.notFound) return { success: true, value: null };
+        throw e;
       }
-      const dbPath = path.join(dbDir, `${dbName}.json`);
-      if (!fs.existsSync(dbPath)) {
-        return { success: true, value: null };
-      }
-      const db = JSON.parse(fs.readFileSync(dbPath, 'utf8'));
-      return { success: true, value: db[key] || null };
     },
     
     deleteDbValue: async (event, dbName, key) => {
-      const dbDir = GetDBDir();
-      if (!fs.existsSync(dbDir)) {
-        fs.mkdirSync(dbDir, { recursive: true });
-      }
-      const dbPath = path.join(dbDir, `${dbName}.json`);
-      if (!fs.existsSync(dbPath)) {
-        return { success: true, message: 'Key not found' };
-      }
-      const db = JSON.parse(fs.readFileSync(dbPath, 'utf8'));
-      delete db[key];
-      fs.writeFileSync(dbPath, JSON.stringify(db, null, 2));
+      const db = getPluginKV(dbName);
+      await db.del(key);
       return { success: true, message: 'Value deleted successfully' };
     },
 

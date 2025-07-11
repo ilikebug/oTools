@@ -3,14 +3,14 @@ const path = require('node:path');
 const fs = require('fs');
 const chokidar = require('chokidar');
 const logger = require('../utils/logger');
-const { GetPluginDir, forceMoveWindowToCurrentDisplay, moveWindowToCursor } = require('../comm');
+const { GetPluginPath, forceMoveWindowToCurrentDisplay, moveWindowToCursor } = require('../comm');
 const { BrowserWindow } = require('electron');
 
 
 class PluginManager {
   constructor() {
     this.plugins = new Map();
-    this.pluginsDir = GetPluginDir();
+    this.pluginsDir = GetPluginPath();
     
     this.maxProcesses = null;
     this.processes = new Map(); 
@@ -388,7 +388,9 @@ class PluginManager {
     const metaPath = path.join(pluginPath, 'plugin.json');
     if (!fs.existsSync(metaPath)) throw new Error(`Plugin configuration file does not exist: ${metaPath}`);
     const meta = JSON.parse(fs.readFileSync(metaPath, 'utf-8'));
-    const htmlPath = path.join(pluginPath, meta.ui && meta.ui.html ? meta.ui.html : 'index.html');
+    const htmlEntry = meta.ui && meta.ui.html ? meta.ui.html : 'index.html';
+    const isUrl = /^https?:\/\//.test(htmlEntry);
+    const htmlPath = isUrl ? htmlEntry : path.join(pluginPath, htmlEntry);
     const pluginPreloadPath = path.join(pluginPath, meta.preload ? meta.preload : 'preload.js');
     
     const defaultWidth = 900;
@@ -428,7 +430,11 @@ class PluginManager {
     win.setAlwaysOnTop(true, 'floating');
     win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
     
-    await win.loadFile(htmlPath);
+    if (isUrl) {
+      await win.loadURL(htmlPath);
+    } else {
+      await win.loadFile(htmlPath);
+    }
     const info = { window: win, status: 'idle', meta };
     this.processes.set(pluginName, info);
 

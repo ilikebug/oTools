@@ -8,22 +8,21 @@ const APP_STATUS = {
   ERROR: 'error'
 };
 
-const GetPluginDir = () =>  {
+const GetPluginPath = () =>  {
   return path.join(app.getPath('userData'), 'plugins');
 }
 
-const GetLoggerDir = () => {
+const GetLoggerPath = () => {
   return path.join(app.getPath('userData'), 'logs');
 }
 
-const GetConfigDir = () => {
+const GetConfigPath = () => {
   return path.join(app.getPath('userData'), 'configs');
 }
 
-const GetDBDir = () => {
-  return path.join(app.getPath('userData'), 'fileDB');
+const GetKVStorePath = () => {
+  return path.join(app.getPath('userData'), 'KvStore');
 }
-
 
 /**
  * Force move window to center of current mouse screen (multi-display compatible, macOS optimized)
@@ -152,10 +151,10 @@ function saveWindowPosition(store, x, y) {
 module.exports = {
   APP_STATUS,
 
-  GetPluginDir,
-  GetLoggerDir,
-  GetConfigDir,
-  GetDBDir,
+  GetPluginPath,
+  GetLoggerPath,
+  GetConfigPath,
+  GetKVStorePath,
 
   getSavedWindowPosition, 
   saveWindowPosition,

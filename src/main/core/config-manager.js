@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const chokidar = require('chokidar');
-const {GetConfigDir} = require('../comm')
+const {GetConfigPath} = require('../comm')
 
 /**
  * Configuration Manager
@@ -13,7 +13,7 @@ class ConfigManager {
     this.watchers = new Map();
     this.validators = new Map();
 
-    this.configDir = GetConfigDir();  
+    this.configDir = GetConfigPath();  
   }
 
   /**

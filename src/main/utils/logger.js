@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const { app } = require('electron');
-const {GetLoggerDir} =  require('../comm')
+const {GetLoggerPath} =  require('../comm')
 
 /**
  * Log level enumeration
@@ -27,7 +27,7 @@ class Logger {
     this.enableFile = true;
     this.enableRemote = false;
     
-    this.logDir = GetLoggerDir();
+    this.logDir = GetLoggerPath();
     this.currentLogFile = null;
     this.fileStream = null;
   }
