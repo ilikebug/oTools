@@ -180,7 +180,6 @@ class KeyboardManager {
       if (isVisible) {
         // Hide window
         pluginManager.hidePluginWindow(pluginName);
-        logger.info(`Custom shortcut: Plugin window hidden: ${pluginName}`);
       } else {
         // Show window
         pluginManager.showPluginWindow(pluginName);

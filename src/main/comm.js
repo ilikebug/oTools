@@ -63,13 +63,8 @@ const forceMoveWindowToCurrentDisplay = (window) => {
   
   // If window is already on target display, just focus without moving
   if (windowCurrentDisplay && windowCurrentDisplay.id === targetDisplay.id) {
-    window.setAlwaysOnTop(true, 'screen-saver');
-    window.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
-    if (window.isVisible()) {
-      window.focus();
-    } else {
+    if (!window.isVisible()) {
       window.show();
-      window.focus();
     }
     return;
   }

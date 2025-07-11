@@ -406,6 +406,7 @@ class PluginManager {
       height: winHeight,
       title: winTitle,
       show: false,
+      transparent: true,
       alwaysOnTop: true,
       skipTaskbar: true,
       resizable: true,
@@ -424,7 +425,7 @@ class PluginManager {
     }
     
     // Set window level to ensure it appears above other applications
-    win.setAlwaysOnTop(true, 'screen-saver');
+    win.setAlwaysOnTop(true, 'floating');
     win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
     
     await win.loadFile(htmlPath);
@@ -492,11 +493,13 @@ class PluginManager {
    */
   _setWindowToTopTemporarily(window) {
     if (!window || window.isDestroyed()) return;
-    
-    window.setAlwaysOnTop(true, 'screen-saver');
+
+    window.setAlwaysOnTop(true, 'floating');
+    window.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
     setTimeout(() => {
       if (window && !window.isDestroyed()) {
-        window.setAlwaysOnTop(true, 'normal');
+        window.setAlwaysOnTop(true, 'floating');
+        window.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
       }
     }, 100);
   }
