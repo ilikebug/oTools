@@ -1,7 +1,7 @@
 {
   "name": "otools",
   "productName": "oTools",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "A powerful tool management center",
   "main": "src/main/main.js",
   "scripts": {

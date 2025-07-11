@@ -88,7 +88,7 @@ class ConfigManager {
     return {
       app: {
         name: 'oTools',
-        version: '1.0.0',
+        version: '1.10',
         debug: false,
         autoStart: true
       },
