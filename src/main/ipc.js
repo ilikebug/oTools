@@ -625,6 +625,23 @@ function createFunctionMap(appManager) {
       return { success: true };
     },
 
+    // Add a custom plugin directory and reload plugins
+    addCustomPluginDir: async (event, dir) => {
+      const pluginManager = appManager.getComponent('pluginManager');
+      if (pluginManager.addCustomPluginDir(dir)) {
+        const configManager = appManager.getComponent('configManager');
+        const mainConfig = configManager.getConfig('main');
+        mainConfig.plugins = mainConfig.plugins || {};
+        if (!mainConfig.plugins.pluginDirs) mainConfig.plugins.pluginDirs = [];
+        if (!mainConfig.plugins.pluginDirs.includes(dir)) {
+          mainConfig.plugins.pluginDirs.push(dir);
+        }
+        configManager.setConfig('main', mainConfig);
+        return { success: true };
+      }
+      return { success: false, message: 'Directory already exists or is default.' };
+    },
+
   };
 }
 

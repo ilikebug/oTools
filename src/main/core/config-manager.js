@@ -102,7 +102,7 @@ class ConfigManager {
         autoLoad: true,
         maxProcesses: 10,
         timeout: 30000,
-        debug: false
+        pluginDirs: []
       },
       logger: {
         level: 'info',

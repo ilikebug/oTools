@@ -758,6 +758,27 @@ class oToolsApp {
 
     // Custom shortcuts
     this.bindCustomShortcutsEvents();
+
+    // Load Plugin Directory button
+    const loadPluginDirBtn = document.getElementById('loadPluginDirBtn');
+    if (loadPluginDirBtn) {
+      loadPluginDirBtn.addEventListener('click', async () => {
+        const result = await window.otools.showOpenDialog({
+          properties: ['openDirectory']
+        });
+        if (result && result.filePaths && result.filePaths[0]) {
+          const dir = result.filePaths[0];
+          const res = await window.otools.addCustomPluginDir(dir);
+          if (res && res.success) {
+            this.showNotification('Plugin directory loaded successfully', 'success');
+            await this.loadPlugins();
+            this.renderPluginButtons();
+          } else {
+            this.showNotification(res && res.message ? res.message : 'Failed to load plugin directory', 'error');
+          }
+        }
+      });
+    }
   }
 
   // Custom shortcuts methods

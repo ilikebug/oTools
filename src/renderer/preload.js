@@ -18,6 +18,7 @@ const allowedMethods = [
   'showPluginWindow',
   'setPluginConfig',
   'uninstallPlugin',
+  'addCustomPluginDir',
   
   // Custom shortcuts
   'getCustomShortcuts',
@@ -39,6 +40,9 @@ const allowedMethods = [
   
   // Quit application
   'quitApp',
+
+  // file operation
+  'showOpenDialog',
 ];
 
 const otools = {};

@@ -956,6 +956,24 @@ body {
   transform: translateY(-2px) scale(1.04);
 }
 
+#loadPluginDirBtn {
+  padding: 6px 18px;
+  border: none;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  margin-left: 12px;
+  transition: background 0.2s, transform 0.2s;
+  box-shadow: 0 1px 4px rgba(102,126,234,0.08);
+}
+#loadPluginDirBtn:hover {
+  background: linear-gradient(135deg, #4b5ae2, #667eea);
+  transform: translateY(-2px) scale(1.04);
+}
+
 /* Plugin config dropdown styles */
 .action-btn {
   position: relative;

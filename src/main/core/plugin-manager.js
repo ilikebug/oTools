@@ -8,16 +8,20 @@ const { BrowserWindow } = require('electron');
 
 
 class PluginManager {
-  constructor() {
-    this.plugins = new Map();
-    this.pluginsDir = GetPluginPath();
+  constructor(options = {}) {
+    // Always include the default plugin directory for scanning
+    this.defaultDir = GetPluginPath();
+    // Custom plugin directories (excluding the default directory)
+    this.customDirs = [];
     
-    this.maxProcesses = null;
-    this.processes = new Map(); 
+    this.plugins = new Map();
+    this.processes = new Map();
 
     this.watcher = null;
     this.mainWindow = null;
-    this.store = null
+    this.maxProcesses = null;
+
+    this.configManager = null
   }
 
   /**
@@ -25,8 +29,10 @@ class PluginManager {
    */
   async initialize(options = {}) {
     try {
-      this.maxProcesses = options.maxProcesses;
-      this.store = options.store
+      this.configManager = options.configManager;
+      const mainConfig = this.configManager.getConfig('main')
+      this.maxProcesses = mainConfig.plugins.maxProcesses;
+      this.customDirs = mainConfig.plugins.pluginDirs;
       
       logger.info(`Initializing plugin manager`);
       
@@ -101,52 +107,59 @@ class PluginManager {
    */
   async uninstallPlugin(pluginName, removeFiles = true) {
     try {
-      // Check if plugin exists
       if (!this.hasPlugin(pluginName)) {
         return {
           success: false,
           error: `Plugin '${pluginName}' does not exist`
         };
       }
-
-      logger.info(`Starting uninstall process for plugin: ${pluginName}`);
-
+    
       // Stop plugin process if running
       await this.stopPluginProcess(pluginName);
-
+  
       // Get plugin info before removal
       const pluginInfo = this.getPluginInfo(pluginName);
       const pluginDir = pluginInfo.dir;
-
+  
       // Remove from plugins map
       this.plugins.delete(pluginName);
-
-      // Remove plugin files from disk if requested
-      if (removeFiles && pluginDir && fs.existsSync(pluginDir)) {
-        try {
-          // Use fs.rmSync for recursive directory removal (Node.js 14.14.0+)
-          fs.rmSync(pluginDir, { recursive: true, force: true });
-          logger.info(`Plugin files removed from disk: ${pluginDir}`);
-        } catch (error) {
-          logger.error(`Failed to remove plugin files from disk: ${error.message}`);
-          return {
-            success: false,
-            error: `Failed to remove plugin files: ${error.message}`
-          };
+  
+      const isCustomDir = this.customDirs.some(dir => {
+        return path.resolve(dir) === path.resolve(pluginDir);
+      });
+  
+      if (isCustomDir) {
+        if (this.configManager) {
+          const config = this.configManager.getConfig('main');
+          if (config && config.plugins && Array.isArray(config.plugins.pluginDirs)) {
+            config.plugins.pluginDirs = config.plugins.pluginDirs.filter(
+              d => path.resolve(d) !== path.resolve(pluginDir)
+            );
+            this.configManager.setConfig('main', config);
+          }
+        }
+      } else {
+        // default plugin dir so delete it
+        if (removeFiles && pluginDir && fs.existsSync(pluginDir)) {
+          try {
+            fs.rmSync(pluginDir, { recursive: true, force: true });
+            logger.info(`Plugin files removed from disk: ${pluginDir}`);
+          } catch (error) {
+            logger.error(`Failed to remove plugin files from disk: ${error.message}`);
+            return {
+              success: false,
+              error: `Failed to remove plugin files: ${error.message}`
+            };
+          }
         }
       }
-
-      // Notify main window about plugin changes
       this.notifyPluginsChanged();
-
-      logger.info(`Plugin '${pluginName}' uninstalled successfully`);
-      
-      return {
-        success: true,
-        message: `Plugin '${pluginName}' uninstalled successfully`,
-        removedFiles: removeFiles
-      };
-
+        logger.info(`Plugin '${pluginName}' uninstalled successfully`);
+        return {
+          success: true,
+          message: `Plugin '${pluginName}' uninstalled successfully`,
+          removedFiles: removeFiles
+        };
     } catch (error) {
       logger.error(`Error uninstalling plugin ${pluginName}: ${error.message}`);
       return {
@@ -168,51 +181,56 @@ class PluginManager {
 
       this.plugins.clear();
 
-      if (!fs.existsSync(this.pluginsDir)) {
-        fs.mkdirSync(this.pluginsDir, { recursive: true });
-        return;
-      }
-      
-      const files = fs.readdirSync(this.pluginsDir);
-      const loadedPlugins = [];
-      
-      for (const file of files) {
-        const fullPath = path.join(this.pluginsDir, file);
-        if (fs.statSync(fullPath).isDirectory()) {
-          const metaPath = path.join(fullPath, 'plugin.json');
-          if (fs.existsSync(metaPath)) {
-            try {
-              const fileContent = fs.readFileSync(metaPath, 'utf-8');
-              if (!fileContent.trim()) {
-                logger.warn(`Empty plugin.json file in ${fullPath}`);
-                continue;
-              }
-              
-              const meta = JSON.parse(fileContent);
-              if (!meta.name) {
-                logger.warn(`Plugin missing name in ${fullPath}`);
-                continue;
-              }
-              
-              const pluginInfo = {
-                ...meta,
-                dir: fullPath,
-                loadedAt: new Date().toISOString()
-              };
-              
-              this.plugins.set(meta.name, pluginInfo);
-              loadedPlugins.push(meta.name);
-          
-            } catch (e) {
-              logger.error(`Failed to load plugin from ${fullPath}: ${e.message}`);
-              // Continue loading other plugins instead of throwing
-              continue;
-            }
+      // Helper: check if a directory contains plugin.json
+      const isPluginDir = (dir) => {
+        return fs.existsSync(path.join(dir, 'plugin.json'));
+      };
+
+      // Helper: try to load a single plugin directory
+      const tryLoadPlugin = (pluginDir) => {
+        const metaPath = path.join(pluginDir, 'plugin.json');
+        try {
+          const fileContent = fs.readFileSync(metaPath, 'utf-8');
+          if (!fileContent.trim()) {
+            logger.warn(`Empty plugin.json file in ${pluginDir}`);
+            return;
+          }
+          const meta = JSON.parse(fileContent);
+          if (!meta.name) {
+            logger.warn(`Plugin missing name in ${pluginDir}`);
+            return;
+          }
+          const pluginInfo = {
+            ...meta,
+            dir: pluginDir,
+            loadedAt: new Date().toISOString()
+          };
+          this.plugins.set(meta.name, pluginInfo);
+        } catch (e) {
+          logger.error(`Failed to load plugin from ${pluginDir}: ${e.message}`);
+        }
+      };
+
+      for (const dir of this.getAllPluginDirs()) {
+        if (!fs.existsSync(dir)) continue;
+
+        // 1. If the directory itself is a plugin directory, load it directly
+        if (isPluginDir(dir)) {
+          tryLoadPlugin(dir);
+          continue;
+        }
+
+        // 2. Otherwise, scan all its subdirectories
+        const files = fs.readdirSync(dir);
+        for (const file of files) {
+          const fullPath = path.join(dir, file);
+          if (fs.statSync(fullPath).isDirectory() && isPluginDir(fullPath)) {
+            tryLoadPlugin(fullPath);
           }
         }
       }
       
-      logger.info(`Plugin loading completed, ${loadedPlugins.length} plugins loaded: ${loadedPlugins.join(', ')}`);
+      logger.info(`Plugin loading completed, ${this.plugins.size} plugins loaded.`);
       
       // Restart specific dependent plugin if restart is requested
       if (restartPluginName) {
@@ -247,11 +265,16 @@ class PluginManager {
       }
       
       // Ensure plugins directory exists
-      if (!fs.existsSync(this.pluginsDir)) {
-        fs.mkdirSync(this.pluginsDir, { recursive: true });
+      if (!fs.existsSync(this.defaultDir)) {
+        fs.mkdirSync(this.defaultDir, { recursive: true });
+      }
+      for (const dir of this.customDirs) {
+        if (!fs.existsSync(dir)) {
+          fs.mkdirSync(dir, { recursive: true });
+        }
       }
       
-      this.watcher = chokidar.watch(this.pluginsDir, {
+      this.watcher = chokidar.watch(this.defaultDir, {
         ignored: /(^|[\/\\])\../,
         persistent: true,
         ignoreInitial: true, // Ignore initial scan to avoid duplicate loading
@@ -384,7 +407,10 @@ class PluginManager {
   }
 
   async createProcess(pluginName) {
-    const pluginPath = path.join(this.pluginsDir, pluginName);
+    // Use the plugin's actual directory from the loaded plugin info
+    const pluginInfo = this.plugins.get(pluginName);
+    if (!pluginInfo) throw new Error(`Plugin info not found for: ${pluginName}`);
+    const pluginPath = pluginInfo.dir;
     const metaPath = path.join(pluginPath, 'plugin.json');
     if (!fs.existsSync(metaPath)) throw new Error(`Plugin configuration file does not exist: ${metaPath}`);
     const meta = JSON.parse(fs.readFileSync(metaPath, 'utf-8'));
@@ -400,7 +426,7 @@ class PluginManager {
     const winTitle = meta.ui.title || meta.shortName || meta.name || 'Plugin';
     let winFrame = true
     if (meta.ui.frame != undefined) {
-      winFrame = meta.ui.frame 
+      winFrame = meta.ui.frame;
     }
 
     const win = new BrowserWindow({
@@ -408,7 +434,6 @@ class PluginManager {
       height: winHeight,
       title: winTitle,
       show: false,
-      transparent: true,
       alwaysOnTop: true,
       skipTaskbar: true,
       resizable: true,
@@ -604,7 +629,7 @@ class PluginManager {
   testWatcher() {
     logger.info('Testing watcher functionality...');
     logger.info(`Watcher active: ${!!this.watcher}`);
-    logger.info(`Watching directory: ${this.pluginsDir}`);
+    logger.info(`Watching directory: ${this.defaultDir}`);
     logger.info(`Current plugins: ${Array.from(this.plugins.keys()).join(', ')}`);
     
     // Manually trigger a reload to test
@@ -614,6 +639,34 @@ class PluginManager {
     }).catch(error => {
       logger.error(`Manual plugin reload failed: ${error.message}`);
     });
+  }
+
+  getAllPluginDirs() {
+    // Return all valid plugin directories, default directory first
+    return [this.defaultDir, ...this.customDirs];
+  }
+
+  // Add a custom plugin directory (case-insensitive, ignore trailing slash)
+  addCustomPluginDir(dir) {
+    const norm = (d) => d.replace(/[\\/]+$/, '').toLowerCase();
+    if (
+      !this.customDirs.map(norm).includes(norm(dir)) &&
+      norm(dir) !== norm(this.defaultDir)
+    ) {
+      this.customDirs.push(dir);
+      return true;
+    }
+    return false;
+  }
+
+  // Get all custom plugin directories
+  getCustomPluginDirs() {
+    return this.customDirs.slice();
+  }
+
+  // Validate custom plugin directories (call on startup)
+  refreshCustomPluginDirs() {
+    this.customDirs = this.customDirs.filter(dir => fs.existsSync(dir));
   }
 }
 

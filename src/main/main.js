@@ -100,7 +100,7 @@ async function initializeApp() {
     // init plugin manager
     const pluginManager = new PluginManager();
     await pluginManager.initialize({
-      ...mainConfig.plugins,
+      configManager: configManager,
       store: store
     });
     console.log('Plugin manager initialized');
