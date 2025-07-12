@@ -472,7 +472,16 @@ class PluginManager {
     
     if (meta.ui && meta.ui.hideOnBlur) {
       win.on('blur', () => {
-        win.hide();
+        const pluginInfo = this.plugins.get(pluginName);
+        const startupMode = pluginInfo?.startupMode || 'independent';
+        
+        if (startupMode === 'dependent') {
+          // For dependent plugins, just hide the window
+          win.hide();
+        } else {
+          // For independent plugins, close the window
+          win.close();
+        }
       });
     }
     
@@ -484,10 +493,12 @@ class PluginManager {
       const pluginInfo = this.plugins.get(pluginName);
       const startupMode = pluginInfo?.startupMode || 'independent';
       
-      if (startupMode === 'dependent') {
-        event.preventDefault();
-        win.hide();
+      if (startupMode === 'independent') {
+        return
       }
+      
+      event.preventDefault();
+      win.hide();
     });
 
     return info;
