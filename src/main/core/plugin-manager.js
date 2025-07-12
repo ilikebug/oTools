@@ -280,7 +280,9 @@ class PluginManager {
         }
       }
       
-      this.watcher = chokidar.watch(this.defaultDir, {
+      // Watch both default directory and all custom directories
+      const allWatchDirs = [this.defaultDir, ...this.customDirs];
+      this.watcher = chokidar.watch(allWatchDirs, {
         ignored: /(^|[\/\\])\../,
         persistent: true,
         ignoreInitial: true, // Ignore initial scan to avoid duplicate loading
@@ -650,6 +652,12 @@ class PluginManager {
       // Reload plugins to include new directory
       await this.loadPlugins();
       this.notifyPluginsChanged();
+      
+      // Re-setup watcher to include the new directory
+      if (this.watcher) {
+        this.watcher.close();
+        this.watchPlugins();
+      }
       
       return true;
     }
