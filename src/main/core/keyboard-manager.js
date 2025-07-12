@@ -178,8 +178,19 @@ class KeyboardManager {
       const isVisible = status.exists && status.visible;
       
       if (isVisible) {
-        // Hide window
-        pluginManager.hidePluginWindow(pluginName);
+        // Handle hiding based on startup mode
+        const startupMode = pluginInfo.startupMode || 'independent';
+        
+        if (startupMode === 'dependent') {
+          // For dependent plugins, just hide the window
+          pluginManager.hidePluginWindow(pluginName);
+        } else {
+          // For independent plugins, close the window (which will kill the process)
+          const processInfo = pluginManager.processes.get(pluginName);
+          if (processInfo && processInfo.window && !processInfo.window.isDestroyed()) {
+            processInfo.window.close();
+          }
+        }
       } else {
         // Show window
         pluginManager.showPluginWindow(pluginName);

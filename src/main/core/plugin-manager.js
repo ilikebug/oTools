@@ -439,7 +439,7 @@ class PluginManager {
       show: false,
       alwaysOnTop: true,
       skipTaskbar: true,
-      resizable: true,
+      resizable: false,
       frame: winFrame,
       webPreferences: {
         sandbox: false, 
@@ -496,7 +496,7 @@ class PluginManager {
       if (startupMode === 'independent') {
         return
       }
-      
+
       event.preventDefault();
       win.hide();
     });
