@@ -85,17 +85,13 @@ const createWindow = (conf) => {
  */
 async function initializeApp() {
   try {
-    console.log('Starting application initialization...');
-    
     // Initialize basic components
     store = new Store();
-    console.log('Store initialized');
     
     // init config manager
     const configManager = new ConfigManager();
     await configManager.initialize();
     const mainConfig  = configManager.getConfig('main')
-    console.log('Config manager initialized');
     
     // init plugin manager
     const pluginManager = new PluginManager();
@@ -103,26 +99,21 @@ async function initializeApp() {
       configManager: configManager,
       store: store
     });
-    console.log('Plugin manager initialized');
     
     // Create main window
     createWindow(mainConfig);
-    console.log('Main window created');
     
     // Set mainWindow reference in plugin manager after window creation
     pluginManager.setMainWindow(mainWindow);
-    console.log('Main window reference set');
     
     // set auto start
     if (mainConfig && mainConfig.app && 
       typeof mainConfig.app.autoStart !== 'undefined') {
       setAutoStart(!!mainConfig.app.autoStart);
     }
-    console.log('Auto start configured');
     
     // Create app manager
     appManager = new AppManager();
-    console.log('App manager created, initializing...');
     
     await appManager.initialize(
       {
@@ -132,7 +123,6 @@ async function initializeApp() {
         store: store
       }
     );
-    console.log('App manager initialized');
 
     logger.info('Application started');
     

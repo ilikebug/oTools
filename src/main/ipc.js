@@ -628,7 +628,8 @@ function createFunctionMap(appManager) {
     // Add a custom plugin directory and reload plugins
     addCustomPluginDir: async (event, dir) => {
       const pluginManager = appManager.getComponent('pluginManager');
-      if (pluginManager.addCustomPluginDir(dir)) {
+      const result = await pluginManager.addCustomPluginDir(dir);
+      if (result) {
         const configManager = appManager.getComponent('configManager');
         const mainConfig = configManager.getConfig('main');
         mainConfig.plugins = mainConfig.plugins || {};

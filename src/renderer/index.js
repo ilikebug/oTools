@@ -324,62 +324,184 @@ class oToolsApp {
       actionGrid.appendChild(emptyDiv);
       return;
     }
+    
+    // Optimize display for large plugin sets
+    const pluginCount = this.plugins.length;
+    const isLargePluginSet = pluginCount > 20;
+    
+    if (isLargePluginSet) {
+      this.renderLargePluginSet(actionGrid);
+    } else {
+      this.renderSmallPluginSet(actionGrid);
+    }
+  }
+
+  renderSmallPluginSet(actionGrid) {
+    // Original rendering logic for small plugin sets
+    const pluginCount = this.plugins.length;
+    if (pluginCount <= 2) {
+      actionGrid.style.gridTemplateColumns = 'repeat(2, 1fr)';
+    } else if (pluginCount <= 4) {
+      actionGrid.style.gridTemplateColumns = 'repeat(2, 1fr)';
+    } else if (pluginCount <= 6) {
+      actionGrid.style.gridTemplateColumns = 'repeat(3, 1fr)';
+    } else {
+      actionGrid.style.gridTemplateColumns = 'repeat(4, 1fr)';
+    }
+    
     this.plugins.forEach((plugin, index) => {
-      const actionBtn = document.createElement('button');
-      actionBtn.className = 'action-btn';
-      actionBtn.id = `${plugin.name.replace(/\s+/g, '')}Btn`;
-      actionBtn.title = plugin.description;
-      const isEnabled = plugin.enabled !== false;
-      if (!isEnabled) {
-        actionBtn.classList.add('disabled');
+      this.createPluginButton(plugin, actionGrid);
+    });
+  }
+
+  renderLargePluginSet(actionGrid) {
+    // Optimized rendering for large plugin sets
+    actionGrid.classList.add('large-set');
+    
+    // Add pagination container
+    const paginationContainer = document.createElement('div');
+    paginationContainer.className = 'pagination-container';
+    actionGrid.parentNode.appendChild(paginationContainer);
+    
+    // Pagination configuration
+    const itemsPerPage = 24; // 6 columns x 4 rows
+    const totalPages = Math.ceil(this.plugins.length / itemsPerPage);
+    
+    // Create pagination controls
+    this.createPaginationControls(paginationContainer, totalPages, itemsPerPage);
+    
+    // Show first page initially
+    this.showPluginPage(0, itemsPerPage, actionGrid);
+  }
+
+  createPaginationControls(container, totalPages, itemsPerPage) {
+    container.innerHTML = `
+      <div class="pagination-info">
+        <span id="pageInfo">Page 1 of ${totalPages}</span>
+        <span id="pluginCount">(${this.plugins.length} plugins)</span>
+      </div>
+      <div class="pagination-controls">
+        <button id="prevPage" class="pagination-btn" disabled>
+          <i class="fas fa-chevron-left"></i>
+        </button>
+        <div class="page-numbers" id="pageNumbers"></div>
+        <button id="nextPage" class="pagination-btn">
+          <i class="fas fa-chevron-right"></i>
+        </button>
+      </div>
+    `;
+    
+    // Bind pagination events
+    this.bindPaginationEvents(totalPages, itemsPerPage);
+  }
+
+  bindPaginationEvents(totalPages, itemsPerPage) {
+    let currentPage = 0;
+    const actionGrid = document.querySelector('.action-grid');
+    
+    const updatePage = (page) => {
+      currentPage = page;
+      this.showPluginPage(page, itemsPerPage, actionGrid);
+      this.updatePaginationUI(page, totalPages);
+    };
+    
+    document.getElementById('prevPage').addEventListener('click', () => {
+      if (currentPage > 0) {
+        updatePage(currentPage - 1);
       }
-      let iconHtml = '';
-      if (plugin.icon && (plugin.icon.endsWith('.png') || plugin.icon.endsWith('.jpg') || plugin.icon.endsWith('.jpeg') || plugin.icon.endsWith('.svg'))) {
-        iconHtml = `<img class="plugin-icon" src="${plugin.icon}" onerror="this.style.display='none';this.parentNode.innerHTML='<i class='fas fa-puzzle-piece'></i>';" />`;
+    });
+    
+    document.getElementById('nextPage').addEventListener('click', () => {
+      if (currentPage < totalPages - 1) {
+        updatePage(currentPage + 1);
       }
-      actionBtn.innerHTML = `
-        <div class="plugin-icon-wrap">${iconHtml}</div>
-        <span>${plugin.shortName || plugin.name}</span>
-        <div class="plugin-config-dropdown">
-          <i class="fas fa-ellipsis-v"></i>
-          <div class="dropdown-content">
-            <div class="dropdown-item" data-action="configure" data-plugin="${plugin.name}">
-              <i class="fas fa-cog"></i> Configure
-            </div>
-            <div class="dropdown-item" data-action="show" data-plugin="${plugin.name}">
-              <i class="fas fa-eye"></i> Show Window
-            </div>
-            <div class="dropdown-item" data-action="uninstall" data-plugin="${plugin.name}">
-              <i class="fas fa-trash"></i> Uninstall
-            </div>
+    });
+    
+    // 初始更新UI
+    this.updatePaginationUI(0, totalPages);
+  }
+
+  updatePaginationUI(currentPage, totalPages) {
+    const pageInfo = document.getElementById('pageInfo');
+    const prevBtn = document.getElementById('prevPage');
+    const nextBtn = document.getElementById('nextPage');
+    
+    pageInfo.textContent = `Page ${currentPage + 1} of ${totalPages}`;
+    prevBtn.disabled = currentPage === 0;
+    nextBtn.disabled = currentPage === totalPages - 1;
+  }
+
+  showPluginPage(page, itemsPerPage, actionGrid) {
+    actionGrid.innerHTML = '';
+    
+    const startIndex = page * itemsPerPage;
+    const endIndex = Math.min(startIndex + itemsPerPage, this.plugins.length);
+    const pagePlugins = this.plugins.slice(startIndex, endIndex);
+    
+    pagePlugins.forEach((plugin) => {
+      this.createPluginButton(plugin, actionGrid);
+    });
+  }
+
+  createPluginButton(plugin, container) {
+    const actionBtn = document.createElement('button');
+    actionBtn.className = 'action-btn';
+    actionBtn.id = `${plugin.name.replace(/\s+/g, '')}Btn`;
+    actionBtn.title = plugin.description;
+    
+    const isEnabled = plugin.enabled !== false;
+    if (!isEnabled) {
+      actionBtn.classList.add('disabled');
+    }
+    
+    let iconHtml = '';
+    if (plugin.icon && (plugin.icon.endsWith('.png') || plugin.icon.endsWith('.jpg') || plugin.icon.endsWith('.jpeg') || plugin.icon.endsWith('.svg'))) {
+      iconHtml = `<img class="plugin-icon" src="${plugin.icon}" onerror="this.style.display='none';this.parentNode.innerHTML='<i class='fas fa-puzzle-piece'></i>';" />`;
+    }
+    
+    actionBtn.innerHTML = `
+      <div class="plugin-icon-wrap">${iconHtml}</div>
+      <span>${plugin.shortName || plugin.name}</span>
+      <div class="plugin-config-dropdown">
+        <i class="fas fa-ellipsis-v"></i>
+        <div class="dropdown-content">
+          <div class="dropdown-item" data-action="configure" data-plugin="${plugin.name}">
+            <i class="fas fa-cog"></i> Configure
+          </div>
+          <div class="dropdown-item" data-action="show" data-plugin="${plugin.name}">
+            <i class="fas fa-eye"></i> Show Window
+          </div>
+          <div class="dropdown-item" data-action="uninstall" data-plugin="${plugin.name}">
+            <i class="fas fa-trash"></i> Uninstall
           </div>
         </div>
-      `;
- 
-      actionBtn.addEventListener('click', () => {
-        if (isEnabled) {
-          this.executePlugin(plugin.name);
-        }
+      </div>
+    `;
+
+    actionBtn.addEventListener('click', () => {
+      if (isEnabled) {
+        this.executePlugin(plugin.name);
+      }
+    });
+
+    const dropdown = actionBtn.querySelector('.plugin-config-dropdown');
+    if (dropdown) {
+      dropdown.addEventListener('click', (e) => {
+        e.stopPropagation(); 
       });
 
-      const dropdown = actionBtn.querySelector('.plugin-config-dropdown');
-      if (dropdown) {
-        dropdown.addEventListener('click', (e) => {
-          e.stopPropagation(); 
+      const dropdownItems = dropdown.querySelectorAll('.dropdown-item');
+      dropdownItems.forEach(item => {
+        item.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const action = item.dataset.action;
+          const pluginName = item.dataset.plugin;
+          this.handlePluginAction(action, pluginName);
         });
-
-        const dropdownItems = dropdown.querySelectorAll('.dropdown-item');
-        dropdownItems.forEach(item => {
-          item.addEventListener('click', (e) => {
-            e.stopPropagation();
-            const action = item.dataset.action;
-            const pluginName = item.dataset.plugin;
-            this.handlePluginAction(action, pluginName);
-          });
-        });
-      }
-      actionGrid.appendChild(actionBtn);
-    });
+      });
+    }
+    
+    container.appendChild(actionBtn);
   }
 
   // General plugin execution logic
@@ -605,17 +727,136 @@ class oToolsApp {
   }
 
   handleSearch() {
-    const query = document.getElementById('searchInput').value.trim();
-    if (!query) return;
-    const matchedPlugins = this.plugins.filter(plugin => 
-      plugin.name.toLowerCase().includes(query.toLowerCase()) ||
-      plugin.description.toLowerCase().includes(query.toLowerCase())
-    );
-    if (matchedPlugins.length > 0) {
-      this.highlightPlugins(matchedPlugins);
-    } else {
-      this.showNotification('No related plugins found', 'warning');
+    const searchInput = document.getElementById('searchInput');
+    const searchTerm = searchInput.value.toLowerCase().trim();
+    
+    if (!searchTerm) {
+      this.renderPluginButtons();
+      return;
     }
+    
+    const matchedPlugins = this.plugins.filter(plugin => 
+      plugin.name.toLowerCase().includes(searchTerm) ||
+      (plugin.description && plugin.description.toLowerCase().includes(searchTerm)) ||
+      (plugin.shortName && plugin.shortName.toLowerCase().includes(searchTerm))
+    );
+    
+    if (matchedPlugins.length === 0) {
+      this.showNotification('No related plugins found', 'warning');
+      return;
+    }
+    
+    // 如果搜索结果很多，使用分页显示
+    if (matchedPlugins.length > 20) {
+      this.renderSearchResults(matchedPlugins);
+    } else {
+      this.highlightPlugins(matchedPlugins);
+    }
+  }
+
+  renderSearchResults(matchedPlugins) {
+    const actionGrid = document.querySelector('.action-grid');
+    if (!actionGrid) return;
+    
+    actionGrid.innerHTML = '';
+    actionGrid.classList.add('large-set');
+    
+    // 移除之前的分页容器
+    const existingPagination = document.querySelector('.pagination-container');
+    if (existingPagination) {
+      existingPagination.remove();
+    }
+    
+    // 移除之前的搜索结果信息
+    const existingSearchInfo = document.querySelector('.search-results-info');
+    if (existingSearchInfo) {
+      existingSearchInfo.remove();
+    }
+    
+    // 添加搜索结果信息
+    const searchInfo = document.createElement('div');
+    searchInfo.className = 'search-results-info';
+    searchInfo.innerHTML = `
+      <div style="padding: 12px 16px; background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 8px; margin-bottom: 16px; color: #0369a1;">
+        <i class="fas fa-search" style="margin-right: 8px;"></i>
+        Found ${matchedPlugins.length} plugins matching "${document.getElementById('searchInput').value}"
+      </div>
+    `;
+    actionGrid.parentNode.insertBefore(searchInfo, actionGrid);
+    
+    // 添加分页容器
+    const paginationContainer = document.createElement('div');
+    paginationContainer.className = 'pagination-container';
+    actionGrid.parentNode.appendChild(paginationContainer);
+    
+    // 分页配置
+    const itemsPerPage = 24;
+    const totalPages = Math.ceil(matchedPlugins.length / itemsPerPage);
+    
+    // 创建分页控件
+    this.createSearchPaginationControls(paginationContainer, totalPages, itemsPerPage, matchedPlugins);
+    
+    // 初始显示第一页
+    this.showSearchPage(0, itemsPerPage, actionGrid, matchedPlugins);
+  }
+
+  createSearchPaginationControls(container, totalPages, itemsPerPage, matchedPlugins) {
+    container.innerHTML = `
+      <div class="pagination-info">
+        <span id="pageInfo">Page 1 of ${totalPages}</span>
+        <span id="pluginCount">(${matchedPlugins.length} results)</span>
+      </div>
+      <div class="pagination-controls">
+        <button id="prevPage" class="pagination-btn" disabled>
+          <i class="fas fa-chevron-left"></i>
+        </button>
+        <div class="page-numbers" id="pageNumbers"></div>
+        <button id="nextPage" class="pagination-btn">
+          <i class="fas fa-chevron-right"></i>
+        </button>
+      </div>
+    `;
+    
+    // 绑定分页事件
+    this.bindSearchPaginationEvents(totalPages, itemsPerPage, matchedPlugins);
+  }
+
+  bindSearchPaginationEvents(totalPages, itemsPerPage, matchedPlugins) {
+    let currentPage = 0;
+    const actionGrid = document.querySelector('.action-grid');
+    
+    const updatePage = (page) => {
+      currentPage = page;
+      this.showSearchPage(page, itemsPerPage, actionGrid, matchedPlugins);
+      this.updatePaginationUI(page, totalPages);
+    };
+    
+    document.getElementById('prevPage').addEventListener('click', () => {
+      if (currentPage > 0) {
+        updatePage(currentPage - 1);
+      }
+    });
+    
+    document.getElementById('nextPage').addEventListener('click', () => {
+      if (currentPage < totalPages - 1) {
+        updatePage(currentPage + 1);
+      }
+    });
+    
+    // 初始更新UI
+    this.updatePaginationUI(0, totalPages);
+  }
+
+  showSearchPage(page, itemsPerPage, actionGrid, matchedPlugins) {
+    actionGrid.innerHTML = '';
+    
+    const startIndex = page * itemsPerPage;
+    const endIndex = Math.min(startIndex + itemsPerPage, matchedPlugins.length);
+    const pagePlugins = matchedPlugins.slice(startIndex, endIndex);
+    
+    pagePlugins.forEach((plugin) => {
+      this.createPluginButton(plugin, actionGrid);
+    });
   }
 
   highlightPlugins(matchedPlugins) {
@@ -770,9 +1011,8 @@ class oToolsApp {
           const dir = result.filePaths[0];
           const res = await window.otools.addCustomPluginDir(dir);
           if (res && res.success) {
-            this.showNotification('Plugin directory loaded successfully', 'success');
             await this.loadPlugins();
-            this.renderPluginButtons();
+            this.showNotification('Plugin directory loaded successfully', 'success');
           } else {
             this.showNotification(res && res.message ? res.message : 'Failed to load plugin directory', 'error');
           }

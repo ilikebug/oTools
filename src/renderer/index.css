@@ -246,9 +246,10 @@ body {
   box-sizing: border-box !important;
   overflow-y: auto !important;
   overflow-x: hidden !important;
-  max-height: 320px !important;
+  max-height: 500px !important;
   min-height: 220px !important;
   position: relative !important;
+  padding: 8px !important;
 }
 
 .action-btn {
@@ -1386,4 +1387,114 @@ body {
   box-shadow: 0 0 0 2px #ff4757;
   border-radius: 8px;
   background: #fff6f6;
+}
+
+/* Pagination styles for large plugin sets */
+.pagination-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 24px;
+  background: #f9fafb;
+  border-top: 1px solid #e5e7eb;
+  margin-top: 8px;
+}
+
+.pagination-info {
+  display: flex;
+  gap: 8px;
+  font-size: 14px;
+  color: #6b7280;
+}
+
+.pagination-info #pluginCount {
+  color: #9ca3af;
+}
+
+.pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.pagination-btn {
+  width: 32px;
+  height: 32px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  background: #fff;
+  color: #374151;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+}
+
+.pagination-btn:hover:not(:disabled) {
+  background: #f3f4f6;
+  border-color: #9ca3af;
+}
+
+.pagination-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: #f9fafb;
+}
+
+
+
+/* Optimize action grid for large plugin sets */
+.action-grid.large-set {
+  grid-template-columns: repeat(6, 1fr) !important;
+  gap: 12px !important;
+  max-height: 600px !important;
+}
+
+.action-grid.large-set .action-btn {
+  padding: 16px 6px !important;
+  min-height: 50px !important;
+  height: 70px !important;
+  font-size: 13px !important;
+}
+
+.action-grid.large-set .action-btn span {
+  font-size: 13px !important;
+  line-height: 1.2 !important;
+}
+
+.action-grid.large-set .action-btn i {
+  font-size: 18px !important;
+}
+
+/* Responsive design for large plugin sets */
+@media (max-width: 768px) {
+  .action-grid.large-set {
+    grid-template-columns: repeat(4, 1fr) !important;
+  }
+  
+  .pagination-container {
+    flex-direction: column;
+    gap: 12px;
+    padding: 12px 16px;
+  }
+  
+  .pagination-controls {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .action-grid.large-set {
+    grid-template-columns: repeat(3, 1fr) !important;
+  }
+  
+  .action-grid.large-set .action-btn {
+    padding: 12px 4px !important;
+    min-height: 45px !important;
+    height: 60px !important;
+    font-size: 12px !important;
+  }
 }

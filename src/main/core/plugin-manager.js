@@ -82,7 +82,6 @@ class PluginManager {
       try {
         processInfo.window.close();
         this.processes.delete(pluginName);
-        logger.info(`Plugin process stopped: ${pluginName}`);
       } catch (error) {
         logger.error(`Error stopping plugin process ${pluginName}: ${error.message}`);
       }
@@ -129,6 +128,11 @@ class PluginManager {
       });
   
       if (isCustomDir) {
+        // Remove from current memory array
+        this.customDirs = this.customDirs.filter(
+          d => path.resolve(d) !== path.resolve(pluginDir)
+        );
+        // Update configuration file
         if (this.configManager) {
           const config = this.configManager.getConfig('main');
           if (config && config.plugins && Array.isArray(config.plugins.pluginDirs)) {
@@ -143,7 +147,6 @@ class PluginManager {
         if (removeFiles && pluginDir && fs.existsSync(pluginDir)) {
           try {
             fs.rmSync(pluginDir, { recursive: true, force: true });
-            logger.info(`Plugin files removed from disk: ${pluginDir}`);
           } catch (error) {
             logger.error(`Failed to remove plugin files from disk: ${error.message}`);
             return {
@@ -154,7 +157,7 @@ class PluginManager {
         }
       }
       this.notifyPluginsChanged();
-        logger.info(`Plugin '${pluginName}' uninstalled successfully`);
+
         return {
           success: true,
           message: `Plugin '${pluginName}' uninstalled successfully`,
@@ -180,7 +183,6 @@ class PluginManager {
       }
 
       this.plugins.clear();
-
       // Helper: check if a directory contains plugin.json
       const isPluginDir = (dir) => {
         return fs.existsSync(path.join(dir, 'plugin.json'));
@@ -206,13 +208,17 @@ class PluginManager {
             loadedAt: new Date().toISOString()
           };
           this.plugins.set(meta.name, pluginInfo);
+          logger.info(`Plugin loaded: ${meta.name}`);
         } catch (e) {
           logger.error(`Failed to load plugin from ${pluginDir}: ${e.message}`);
         }
       };
 
       for (const dir of this.getAllPluginDirs()) {
-        if (!fs.existsSync(dir)) continue;
+        if (!fs.existsSync(dir)) {
+          logger.warn(`Plugin directory does not exist: ${dir}`);
+          continue;
+        }
 
         // 1. If the directory itself is a plugin directory, load it directly
         if (isPluginDir(dir)) {
@@ -289,17 +295,14 @@ class PluginManager {
       
       this.watcher
         .on('addDir', async (dirPath) => {
-          logger.info(`Plugin directory added: ${dirPath}`);
           await this.loadPlugins(); // Reload all plugins
           this.notifyPluginsChanged();
         })
         .on('unlinkDir', async (dirPath) => {
-          logger.info(`Plugin directory removed: ${dirPath}`);
           await this.loadPlugins(); // Reload all plugins
           this.notifyPluginsChanged();
         })
         .on('change', async (filePath) => {
-          logger.info(`File changed: ${filePath}`);
           // Extract plugin name from file path
           const pluginName = path.basename(path.dirname(filePath));
           // Add a small delay to ensure file is fully written
@@ -309,14 +312,12 @@ class PluginManager {
           }, 100);
         })
         .on('add', async (filePath) => {
-          logger.info(`File added: ${filePath}`);
           // Extract plugin name from file path
           const pluginName = path.basename(path.dirname(filePath));
           await this.loadPlugins(pluginName); // Restart specific plugin
           this.notifyPluginsChanged();
         })
         .on('unlink', async (filePath) => {
-          logger.info(`File removed: ${filePath}`);
           // Extract plugin name from file path
           const pluginName = path.basename(path.dirname(filePath));
           await this.loadPlugins(pluginName); // Restart specific plugin
@@ -326,9 +327,6 @@ class PluginManager {
           logger.error(`Plugin watcher error: ${error.message}`);
           // Don't throw error, just log it to prevent watcher from stopping
         })
-        .on('ready', () => {
-          logger.info('Plugin watcher ready');
-        });
       
     } catch (error) {
       logger.error(`Error setting up plugin watcher: ${error.message}`);
@@ -627,14 +625,8 @@ class PluginManager {
    * Test watcher functionality
    */
   testWatcher() {
-    logger.info('Testing watcher functionality...');
-    logger.info(`Watcher active: ${!!this.watcher}`);
-    logger.info(`Watching directory: ${this.defaultDir}`);
-    logger.info(`Current plugins: ${Array.from(this.plugins.keys()).join(', ')}`);
-    
     // Manually trigger a reload to test
     this.loadPlugins().then(() => {
-      logger.info('Manual plugin reload completed');
       this.notifyPluginsChanged();
     }).catch(error => {
       logger.error(`Manual plugin reload failed: ${error.message}`);
@@ -647,13 +639,18 @@ class PluginManager {
   }
 
   // Add a custom plugin directory (case-insensitive, ignore trailing slash)
-  addCustomPluginDir(dir) {
+  async addCustomPluginDir(dir) {
     const norm = (d) => d.replace(/[\\/]+$/, '').toLowerCase();
     if (
       !this.customDirs.map(norm).includes(norm(dir)) &&
       norm(dir) !== norm(this.defaultDir)
     ) {
       this.customDirs.push(dir);
+      
+      // Reload plugins to include new directory
+      await this.loadPlugins();
+      this.notifyPluginsChanged();
+      
       return true;
     }
     return false;
