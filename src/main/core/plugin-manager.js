@@ -123,19 +123,22 @@ class PluginManager {
       // Remove from plugins map
       this.plugins.delete(pluginName);
   
+      // Check if this plugin is in a custom directory
       const isCustomDir = this.customDirs.some(dir => {
         return path.resolve(dir) === path.resolve(pluginDir);
       });
   
       if (isCustomDir) {
-        // Remove from current memory array
+        // Remove the specific plugin directory from custom dirs
         this.customDirs = this.customDirs.filter(
           d => path.resolve(d) !== path.resolve(pluginDir)
         );
-        // Update configuration file
+        
+        // Update configuration file to remove this specific plugin directory
         if (this.configManager) {
           const config = this.configManager.getConfig('main');
           if (config && config.plugins && Array.isArray(config.plugins.pluginDirs)) {
+            // Remove the specific plugin directory from config
             config.plugins.pluginDirs = config.plugins.pluginDirs.filter(
               d => path.resolve(d) !== path.resolve(pluginDir)
             );
@@ -143,7 +146,7 @@ class PluginManager {
           }
         }
       } else {
-        // default plugin dir so delete it
+        // Default plugin dir so delete it
         if (removeFiles && pluginDir && fs.existsSync(pluginDir)) {
           try {
             fs.rmSync(pluginDir, { recursive: true, force: true });
@@ -156,13 +159,14 @@ class PluginManager {
           }
         }
       }
+      
       this.notifyPluginsChanged();
 
-        return {
-          success: true,
-          message: `Plugin '${pluginName}' uninstalled successfully`,
-          removedFiles: removeFiles
-        };
+      return {
+        success: true,
+        message: `Plugin '${pluginName}' uninstalled successfully`,
+        removedFiles: removeFiles
+      };
     } catch (error) {
       logger.error(`Error uninstalling plugin ${pluginName}: ${error.message}`);
       return {
@@ -213,7 +217,6 @@ class PluginManager {
           logger.error(`Failed to load plugin from ${pluginDir}: ${e.message}`);
         }
       };
-
       for (const dir of this.getAllPluginDirs()) {
         if (!fs.existsSync(dir)) {
           logger.warn(`Plugin directory does not exist: ${dir}`);
@@ -643,25 +646,74 @@ class PluginManager {
   // Add a custom plugin directory (case-insensitive, ignore trailing slash)
   async addCustomPluginDir(dir) {
     const norm = (d) => d.replace(/[\\/]+$/, '').toLowerCase();
-    if (
-      !this.customDirs.map(norm).includes(norm(dir)) &&
-      norm(dir) !== norm(this.defaultDir)
-    ) {
-      this.customDirs.push(dir);
-      
-      // Reload plugins to include new directory
-      await this.loadPlugins();
-      this.notifyPluginsChanged();
-      
-      // Re-setup watcher to include the new directory
-      if (this.watcher) {
-        this.watcher.close();
-        this.watchPlugins();
-      }
-      
-      return true;
+    
+    // Check if this directory is already in custom dirs
+    if (norm(dir) === norm(this.defaultDir)) {
+      return false;
     }
-    return false;
+    
+    // Check if this exact directory is already added
+    if (this.customDirs.some(d => norm(d) === norm(dir))) {
+      return false;
+    }
+    
+    // Scan the directory for plugin subdirectories
+    const pluginSubdirs = this.scanDirectoryForPlugins(dir);
+    
+    if (pluginSubdirs.length === 0) {
+      return false; // No plugins found in this directory
+    }
+    
+    // Add each plugin subdirectory to custom dirs
+    for (const pluginDir of pluginSubdirs) {
+      if (!this.customDirs.some(d => norm(d) === norm(pluginDir))) {
+        this.customDirs.push(pluginDir);
+      }
+    }
+    
+    await this.loadPlugins()
+  
+    // Re-setup watcher to include the new directories
+    if (this.watcher) {
+      this.watcher.close();
+      this.watchPlugins();
+    }
+    
+    return true;
+  }
+
+  /**
+   * Scan a directory for plugin subdirectories
+   * @param {string} dir Directory to scan
+   * @returns {string[]} Array of plugin directory paths
+   */
+  scanDirectoryForPlugins(dir) {
+    const pluginDirs = [];
+    
+    if (!fs.existsSync(dir)) {
+      return pluginDirs;
+    }
+    
+    try {
+      const items = fs.readdirSync(dir);
+      
+      for (const item of items) {
+        const fullPath = path.join(dir, item);
+        const stat = fs.statSync(fullPath);
+        
+        if (stat.isDirectory()) {
+          // Check if this directory contains a plugin.json file
+          const pluginJsonPath = path.join(fullPath, 'plugin.json');
+          if (fs.existsSync(pluginJsonPath)) {
+            pluginDirs.push(fullPath);
+          }
+        }
+      }
+    } catch (error) {
+      logger.error(`Error scanning directory ${dir} for plugins: ${error.message}`);
+    }
+    
+    return pluginDirs;
   }
 
   // Get all custom plugin directories

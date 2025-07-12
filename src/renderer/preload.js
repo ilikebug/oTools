@@ -18,7 +18,7 @@ const allowedMethods = [
   'showPluginWindow',
   'setPluginConfig',
   'uninstallPlugin',
-  'addCustomPluginDir',
+  'addCustomPlugin',
   
   // Custom shortcuts
   'getCustomShortcuts',

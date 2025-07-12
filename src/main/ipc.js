@@ -620,13 +620,26 @@ function createFunctionMap(appManager) {
     },
 
     // Show sysnte notification
-    showSystemNotification: (event, { title, body }) => {
-      notification(title, body);
+    showSystemNotification: (event, title, body) => {
+      // Handle both object format { title, body } and separate parameters
+      let notificationTitle, notificationBody;
+      
+      if (typeof title === 'object' && title !== null) {
+        // Object format: { title, body }
+        notificationTitle = title.title || 'Notification';
+        notificationBody = title.body || '';
+      } else {
+        // Separate parameters: title, body
+        notificationTitle = title || 'Notification';
+        notificationBody = body || '';
+      }
+      
+      notification(notificationTitle, notificationBody);
       return { success: true };
     },
 
     // Add a custom plugin directory and reload plugins
-    addCustomPluginDir: async (event, dir) => {
+    addCustomPlugin: async (event, dir) => {
       const pluginManager = appManager.getComponent('pluginManager');
       const result = await pluginManager.addCustomPluginDir(dir);
       if (result) {
@@ -634,13 +647,17 @@ function createFunctionMap(appManager) {
         const mainConfig = configManager.getConfig('main');
         mainConfig.plugins = mainConfig.plugins || {};
         if (!mainConfig.plugins.pluginDirs) mainConfig.plugins.pluginDirs = [];
-        if (!mainConfig.plugins.pluginDirs.includes(dir)) {
-          mainConfig.plugins.pluginDirs.push(dir);
-        }
+        
+        // Get the actual plugin directories that were added
+        const customDirs = pluginManager.getCustomPluginDirs();
+        
+        // Update config with all custom plugin directories
+        mainConfig.plugins.pluginDirs = customDirs;
         configManager.setConfig('main', mainConfig);
+        
         return { success: true };
       }
-      return { success: false, message: 'Directory already exists or is default.' };
+      return { success: false, message: 'Directory already exists, is default, or contains no plugins.' };
     },
 
   };

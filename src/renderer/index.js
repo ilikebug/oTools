@@ -907,7 +907,7 @@ class oToolsApp {
       if (type === 'success') title = 'Success';
       if (type === 'error') title = 'Error';
       if (type === 'warning') title = 'Warning';
-      window.otools.showSystemNotification(title, message);
+      window.otools.showSystemNotification({ title, body: message });
     } catch (error) {
       console.error('Failed to show system notification:', error);
     }
@@ -1009,7 +1009,7 @@ class oToolsApp {
         });
         if (result && result.filePaths && result.filePaths[0]) {
           const dir = result.filePaths[0];
-          const res = await window.otools.addCustomPluginDir(dir);
+          const res = await window.otools.addCustomPlugin(dir);
           if (res && res.success) {
             await this.loadPlugins();
             this.showNotification('Plugin directory loaded successfully', 'success');
