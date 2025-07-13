@@ -3,7 +3,7 @@ const path = require('node:path');
 const Store = require('electron-store');
 const logger = require('./utils/logger');
 const { AppManager } = require('./core');
-const { getSavedWindowPosition, saveWindowPosition} = require('./comm');
+const { forceMoveWindowToCurrentDisplay } = require('./comm');
 const ConfigManager = require('./core/config-manager');
 const { setAutoStart } = require('./utils/auto-start');
 const PluginManager = require('./core/plugin-manager')
@@ -22,14 +22,10 @@ let store;
  * Create main window
  */
 const createWindow = (conf) => {
-  const savedPos = getSavedWindowPosition(store);
-  
   mainWindow = new BrowserWindow({
     width: conf ? conf.window.width: 420,
     height: conf ? conf.window.height: 380,
-    x: savedPos ? savedPos.x : undefined,
-    y: savedPos ? savedPos.y : undefined,
-    center: !savedPos,
+    center: true,
     resizable: false,
     frame: false,
     transparent: true,
@@ -57,20 +53,14 @@ const createWindow = (conf) => {
   // Window event handling
   mainWindow.once('ready-to-show', () => {
     if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.show();
+      // Move window to current display center before showing
+      forceMoveWindowToCurrentDisplay(mainWindow);
     }
   });
 
   mainWindow.on('blur', () => {
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.hide();
-    }
-  });
-
-  mainWindow.on('move', () => {
-    if (mainWindow && !mainWindow.isDestroyed()) {
-      const [x, y] = mainWindow.getPosition();
-      saveWindowPosition(store, x, y);
     }
   });
 

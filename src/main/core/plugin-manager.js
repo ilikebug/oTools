@@ -534,22 +534,6 @@ class PluginManager {
   }
 
   /**
-   * Set window to top level temporarily
-   */
-  _setWindowToTopTemporarily(window) {
-    if (!window || window.isDestroyed()) return;
-
-    window.setAlwaysOnTop(true, 'floating');
-    window.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
-    setTimeout(() => {
-      if (window && !window.isDestroyed()) {
-        window.setAlwaysOnTop(true, 'floating');
-        window.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
-      }
-    }, 100);
-  }
-
-  /**
    * Show plugin window if it exists and is hidden
    */
   showPluginWindow(pluginName) {
@@ -561,7 +545,6 @@ class PluginManager {
       } else {
         forceMoveWindowToCurrentDisplay(processInfo.window);
       }
-      this._setWindowToTopTemporarily(processInfo.window);
       return true;
     } else {
       // If process doesn't exist, try to create it (for dependent plugins)
@@ -622,7 +605,6 @@ class PluginManager {
       if (info.window && !info.window.isVisible()) {
         // Move to current display before showing
         forceMoveWindowToCurrentDisplay(info.window);
-        this._setWindowToTopTemporarily(info.window);
       }
       
       info.status = 'idle';

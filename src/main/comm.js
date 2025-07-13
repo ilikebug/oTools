@@ -30,29 +30,27 @@ const GetKVStorePath = () => {
 const forceMoveWindowToCurrentDisplay = (window) => {
   if (!window || window.isDestroyed()) return;
   
+  // Set window properties for fullscreen compatibility
+  window.setAlwaysOnTop(true, 'floating');
+  window.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+  
   const displays = screen.getAllDisplays();
   const mousePosition = screen.getCursorScreenPoint();
+  const currentPos = window.getPosition();
   
-  // Find the display where the mouse cursor is located
-  let targetDisplay = displays.find(display => {
+  // Find target display (where mouse is located)
+  const targetDisplay = displays.find(display => {
     const b = display.bounds;
     return mousePosition.x >= b.x && mousePosition.x < b.x + b.width &&
            mousePosition.y >= b.y && mousePosition.y < b.y + b.height;
   }) || screen.getPrimaryDisplay();
   
-  // Get current window position
-  const currentPos = window.getPosition();
-  
-  // Check if window is already on the target display
-  let windowCurrentDisplay = null;
-  for (const display of displays) {
+  // Find current display (where window is located)
+  const currentDisplay = displays.find(display => {
     const b = display.bounds;
-    if (currentPos[0] >= b.x && currentPos[0] < b.x + b.width &&
-        currentPos[1] >= b.y && currentPos[1] < b.y + b.height) {
-      windowCurrentDisplay = display;
-      break;
-    }
-  }
+    return currentPos[0] >= b.x && currentPos[0] < b.x + b.width &&
+           currentPos[1] >= b.y && currentPos[1] < b.y + b.height;
+  });
   
   // Calculate target position
   const workArea = targetDisplay.workArea;
@@ -60,36 +58,20 @@ const forceMoveWindowToCurrentDisplay = (window) => {
   const windowX = Math.round(workArea.x + (workArea.width - windowSize[0]) / 2);
   const windowY = Math.round(workArea.y + (workArea.height - windowSize[1]) / 2);
   
-  // If window is already on target display, just focus without moving
-  if (windowCurrentDisplay && windowCurrentDisplay.id === targetDisplay.id) {
-    if (!window.isVisible()) {
-      window.show();
-    }
+  // If window is already on target display and visible, just focus
+  if (currentDisplay && currentDisplay.id === targetDisplay.id && window.isVisible()) {
+    window.focus();
     return;
   }
   
-  // If window is visible, check if movement is needed
-  if (window.isVisible()) {
-    // Calculate distance between current and target position
-    const distance = Math.sqrt(
-      Math.pow(currentPos[0] - windowX, 2) + 
-      Math.pow(currentPos[1] - windowY, 2)
-    );
-    
-    // If distance is less than 50 pixels, don't move window (avoid micro jitter)
-    if (distance < 50) {
-      window.focus();
-      return;
-    }
-    
-    window.setPosition(windowX, windowY);
-    window.focus();
-  } else {
-    // If window is hidden, set position first then show
-    window.setPosition(windowX, windowY);
+  // Move window to target position
+  window.setPosition(windowX, windowY);
+  
+  // Show window if hidden, then focus
+  if (!window.isVisible()) {
     window.show();
-    window.focus();
   }
+  window.focus();
 };
 
 /**
@@ -111,43 +93,6 @@ function moveWindowToCursor(window, align = 'center') {
   window.focus();
 }
 
-function getSavedWindowPosition(store) {
-  const pos = store.get('windowPosition');
-  if (pos && typeof pos.x === 'number' && typeof pos.y === 'number') {
-    // Check if saved position is still valid (within any display bounds)
-    const displays = screen.getAllDisplays();
-    for (const display of displays) {
-      const bounds = display.bounds;
-      if (pos.x >= bounds.x && 
-          pos.x < bounds.x + bounds.width &&
-          pos.y >= bounds.y && 
-          pos.y < bounds.y + bounds.height) {
-        return pos;
-      }
-    }
-    // If saved position is not valid, return null to trigger centering on current display
-    return null;
-  }
-  return null;
-}
-
-function saveWindowPosition(store, x, y) {
-  // Only save position if it's within a valid display
-  const displays = screen.getAllDisplays();
-  for (const display of displays) {
-    const bounds = display.bounds;
-    if (x >= bounds.x && 
-        x < bounds.x + bounds.width &&
-        y >= bounds.y && 
-        y < bounds.y + bounds.height) {
-      store.set('windowPosition', { x, y });
-      return;
-    }
-  }
-  // If position is not within any display, don't save it
-  store.delete('windowPosition');
-}
-
 module.exports = {
   APP_STATUS,
 
@@ -156,8 +101,6 @@ module.exports = {
   GetConfigPath,
   GetKVStorePath,
 
-  getSavedWindowPosition, 
-  saveWindowPosition,
   forceMoveWindowToCurrentDisplay,
   moveWindowToCursor
 };
