@@ -676,7 +676,7 @@ class PluginManager {
   }
 
   /**
-   * Scan a directory for plugin subdirectories
+   * Scan a directory for plugin subdirectories and check if the directory itself is a plugin
    * @param {string} dir Directory to scan
    * @returns {string[]} Array of plugin directory paths
    */
@@ -688,6 +688,13 @@ class PluginManager {
     }
     
     try {
+      // First check if the directory itself is a plugin
+      const dirPluginJsonPath = path.join(dir, 'plugin.json');
+      if (fs.existsSync(dirPluginJsonPath)) {
+        pluginDirs.push(dir);
+      }
+      
+      // Then check subdirectories
       const items = fs.readdirSync(dir);
       
       for (const item of items) {
