@@ -353,7 +353,8 @@ function createFunctionMap(appManager) {
     },
     
     readFile: async (event, filePath) => {
-      return fs.readFileSync(filePath, 'utf8');
+      const fileData = fs.readFileSync(filePath, 'utf8');
+      return { success: true, content: fileData }
     },
 
     writeFile: async (event, filePath, content) => {
