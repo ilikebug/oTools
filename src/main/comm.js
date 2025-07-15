@@ -31,7 +31,7 @@ const forceMoveWindowToCurrentDisplay = (window) => {
   if (!window || window.isDestroyed()) return;
   
   // Set window properties for fullscreen compatibility
-  window.setAlwaysOnTop(true, 'floating');
+  window.setAlwaysOnTop(true, 'screen-saver');
   window.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
   
   const displays = screen.getAllDisplays();

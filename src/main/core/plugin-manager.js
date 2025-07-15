@@ -489,7 +489,7 @@ class PluginManager {
     }
     
     // Set window level to ensure it appears above other applications
-    win.setAlwaysOnTop(true, 'floating');
+    win.setAlwaysOnTop(true, 'screen-saver');
     win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
     
     if (isUrl) {

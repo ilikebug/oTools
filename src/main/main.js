@@ -42,9 +42,8 @@ const createWindow = (conf) => {
 
   if (mainWindow && !mainWindow.isDestroyed()) {
     // Set window level to ensure it appears above other applications
-    mainWindow.setAlwaysOnTop(true, 'floating');
+    mainWindow.setAlwaysOnTop(true, 'screen-saver');
     mainWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
-    mainWindow.setFullScreenable(false);
   }
 
   // Load main interface
