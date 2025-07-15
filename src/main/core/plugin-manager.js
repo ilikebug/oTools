@@ -22,6 +22,28 @@ class PluginManager {
     this.maxProcesses = null;
 
     this.configManager = null
+    this.cleanupTimer = null; // Timer for periodic cleanup
+  }
+
+  /**
+   * Start a timer to periodically clean up unused references
+   */
+  startCleanupTimer() {
+    if (this.cleanupTimer) return;
+    this.cleanupTimer = setInterval(() => {
+      // Clean up destroyed window references
+      for (const [name, info] of this.processes) {
+        if (!info.window || info.window.isDestroyed()) {
+          this.processes.delete(name);
+        }
+      }
+      // Clean up plugin references whose directory no longer exists
+      for (const [name, plugin] of this.plugins) {
+        if (!plugin.dir || !fs.existsSync(plugin.dir)) {
+          this.plugins.delete(name);
+        }
+      }
+    }, 60000); // Clean up every minute
   }
 
   /**
@@ -43,6 +65,8 @@ class PluginManager {
       if (options.autoLoad !== false) {
         this.watchPlugins();
       }
+
+      this.startCleanupTimer(); // Start periodic cleanup
     } catch (error) {
       logger.error(`Error initializing plugin manager: ${error.message}`);
       throw error;
@@ -67,6 +91,10 @@ class PluginManager {
       }
       
       this.plugins.clear();
+      if (this.cleanupTimer) {
+        clearInterval(this.cleanupTimer);
+        this.cleanupTimer = null;
+      }
       
     } catch (error) {
       throw error;
