@@ -12,6 +12,7 @@ const { GetPluginPath } = require('./comm');
 const { getPluginKV } = require('./utils/kv-manager');
 
 let functionMap = null;
+let marketWindow = null; 
 
 /**
  * Set up IPC communication
@@ -218,7 +219,11 @@ function createFunctionMap(appManager) {
     },
 
     openPluginMarket: (event) => {
-      const win = new BrowserWindow({
+      if (marketWindow && !marketWindow.isDestroyed()) {
+        marketWindow.focus();
+        return;
+      }
+      marketWindow = new BrowserWindow({
         width: 900,
         height: 700,
         resizable: true,
@@ -230,12 +235,15 @@ function createFunctionMap(appManager) {
           enableRemoteModule: false
         }
       });
-      win.setMenuBarVisibility(true);
-      win.loadFile(path.join(__dirname, '../renderer/plugin-market.html'));
+      marketWindow.setMenuBarVisibility(true);
+      marketWindow.loadFile(path.join(__dirname, '../renderer/plugin-market.html'));
       const mainConfig = configManager.getConfig('main')
       if (mainConfig && mainConfig.pluginMarket.debug) {
-        win.webContents.openDevTools();
+        marketWindow.webContents.openDevTools();
       }
+      marketWindow.on('closed', () => {
+        marketWindow = null;
+      });
     },
     
     // custom shortcuts

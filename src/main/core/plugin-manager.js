@@ -396,6 +396,12 @@ class PluginManager {
    * get running plugin
    */
   async getProcess(pluginName, forceNew = false) {
+    if (this.processes.has(pluginName)) {
+      const info = this.processes.get(pluginName);
+      if (!info.window || info.window.isDestroyed()) {
+        this.processes.delete(pluginName);
+      }
+    }
     if (!forceNew && this.processes.has(pluginName)) {
       const info = this.processes.get(pluginName);
       if (info.status === 'idle' && info.window && !info.window.isDestroyed()) {
@@ -547,10 +553,8 @@ class PluginManager {
       }
       return true;
     } else {
-      // If process doesn't exist, try to create it (for dependent plugins)
       const pluginInfo = this.plugins.get(pluginName);
       if (pluginInfo && pluginInfo.startupMode === 'dependent') {
-        // Return false to let IPC layer handle process creation
         return false;
       }
       return false;
