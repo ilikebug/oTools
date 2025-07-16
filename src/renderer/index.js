@@ -464,17 +464,6 @@ class oToolsApp {
       <span>${plugin.shortName || plugin.name}</span>
       <div class="plugin-config-dropdown">
         <i class="fas fa-ellipsis-v"></i>
-        <div class="dropdown-content">
-          <div class="dropdown-item" data-action="configure" data-plugin="${plugin.name}">
-            <i class="fas fa-cog"></i> Configure
-          </div>
-          <div class="dropdown-item" data-action="show" data-plugin="${plugin.name}">
-            <i class="fas fa-eye"></i> Show Window
-          </div>
-          <div class="dropdown-item" data-action="uninstall" data-plugin="${plugin.name}">
-            <i class="fas fa-trash"></i> Uninstall
-          </div>
-        </div>
       </div>
     `;
 
@@ -486,19 +475,69 @@ class oToolsApp {
 
     const dropdown = actionBtn.querySelector('.plugin-config-dropdown');
     if (dropdown) {
-      dropdown.addEventListener('click', (e) => {
-        e.stopPropagation(); 
-      });
-
-      const dropdownItems = dropdown.querySelectorAll('.dropdown-item');
-      dropdownItems.forEach(item => {
-        item.addEventListener('click', (e) => {
-          e.stopPropagation();
-          const action = item.dataset.action;
-          const pluginName = item.dataset.plugin;
-          this.handlePluginAction(action, pluginName);
+      let menu = null;
+      let closeMenuHandler = null;
+      const showMenu = () => {
+        if (menu) return;
+        let existingMenu = document.getElementById('global-plugin-dropdown-menu');
+        if (existingMenu) existingMenu.remove();
+        menu = document.createElement('div');
+        menu.className = 'dropdown-content';
+        menu.id = 'global-plugin-dropdown-menu';
+        menu.style.position = 'absolute';
+        menu.style.zIndex = '99999';
+        menu.innerHTML = `
+          <div class="dropdown-item" data-action="configure" data-plugin="${plugin.name}">
+            <i class="fas fa-cog"></i> Configure
+          </div>
+          <div class="dropdown-item" data-action="show" data-plugin="${plugin.name}">
+            <i class="fas fa-eye"></i> Show Window
+          </div>
+          <div class="dropdown-item" data-action="uninstall" data-plugin="${plugin.name}">
+            <i class="fas fa-trash"></i> Uninstall
+          </div>
+        `;
+        document.body.appendChild(menu);
+        
+        const rect = dropdown.getBoundingClientRect();
+        const menuHeight = menu.offsetHeight || 120;
+        const spaceBelow = window.innerHeight - rect.bottom;
+        const spaceAbove = rect.top;
+        let top = 0;
+        if (spaceBelow < menuHeight && spaceAbove > menuHeight) {
+          top = rect.top + window.scrollY - menuHeight - 2;
+        } else {
+          top = rect.bottom + window.scrollY + 2;
+        }
+        menu.style.top = `${top}px`;
+        menu.style.left = `${rect.left + window.scrollX - menu.offsetWidth + dropdown.offsetWidth}px`;
+        menu.style.opacity = '1';
+        menu.style.visibility = 'visible';
+        menu.style.transform = 'none';
+        menu.querySelectorAll('.dropdown-item').forEach(item => {
+          item.addEventListener('click', (evt) => {
+            evt.stopPropagation();
+            const action = item.dataset.action;
+            const pluginName = item.dataset.plugin;
+            this.handlePluginAction(action, pluginName);
+            if (menu) menu.remove();
+            if (closeMenuHandler) document.removeEventListener('mousemove', closeMenuHandler);
+            menu = null;
+          });
         });
-      });
+        
+        closeMenuHandler = (evt) => {
+          const inDropdown = dropdown.contains(evt.target);
+          const inMenu = menu && menu.contains(evt.target);
+          if (!inDropdown && !inMenu) {
+            if (menu) menu.remove();
+            menu = null;
+            document.removeEventListener('mousemove', closeMenuHandler);
+          }
+        };
+        document.addEventListener('mousemove', closeMenuHandler);
+      };
+      dropdown.addEventListener('mouseenter', showMenu);
     }
     
     container.appendChild(actionBtn);
