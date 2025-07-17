@@ -682,6 +682,7 @@ class PluginManager {
     try {
       const info = await this.getProcess(pluginName);
       info.status = 'busy';
+      this.showPluginWindow(pluginName);
       info.window.webContents.send('plugin-execute', { action, args });
       info.status = 'idle';
       return { success: true };
