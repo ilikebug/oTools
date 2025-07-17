@@ -3,8 +3,10 @@ const path = require('node:path');
 const fs = require('fs');
 const chokidar = require('chokidar');
 const logger = require('../utils/logger');
-const { GetPluginPath, forceMoveWindowToCurrentDisplay, moveWindowToCursor } = require('../comm');
-const { BrowserWindow } = require('electron');
+const { GetPluginPath } = require('../comm');
+const { screen, BrowserWindow } = require('electron');
+const WindowStateKeeper = require('electron-window-state');
+const Positioner = require('electron-positioner');
 
 
 class PluginManager {
@@ -456,25 +458,24 @@ class PluginManager {
     const htmlPath = isUrl ? htmlEntry : path.join(pluginPath, htmlEntry);
     const pluginPreloadPath = path.join(pluginPath, meta.preload ? meta.preload : 'preload.js');
     
-    const defaultWidth = 900;
-    const defaultHeight = 600;
-    const winWidth = meta.ui.width || defaultWidth;
-    const winHeight = meta.ui.height || defaultHeight;
-    const winTitle = meta.ui.title || meta.shortName || meta.name || 'Plugin';
-    let winFrame = true
-    if (meta.ui.frame != undefined) {
-      winFrame = meta.ui.frame;
-    }
+    // Use window-state to record and restore window state, with unique key per plugin
+    let mainWindowState = WindowStateKeeper({
+      defaultWidth: meta.ui.width || 900,
+      defaultHeight: meta.ui.height || 600,
+      file: `window-state-${pluginName}.json`
+    });
 
     const win = new BrowserWindow({
-      width: winWidth,
-      height: winHeight,
-      title: winTitle,
+      x: mainWindowState.x,
+      y: mainWindowState.y,
+      width: mainWindowState.width,
+      height: mainWindowState.height,
+      title: meta.ui.title || meta.shortName || meta.name || 'Plugin',
       show: false,
       alwaysOnTop: true,
       skipTaskbar: true,
       resizable: false,
-      frame: winFrame,
+      frame: meta.ui.frame !== undefined ? meta.ui.frame : true,
       webPreferences: {
         sandbox: false, 
         preload: path.join(__dirname, 'plugin-preload.js'),
@@ -483,6 +484,9 @@ class PluginManager {
         additionalArguments: [`--plugin-preload-path=${pluginPreloadPath}`]
       }
     });
+
+    // Manage window with window-state
+    mainWindowState.manage(win);
 
     if (meta.debug) {
       win.webContents.openDevTools();
@@ -500,6 +504,22 @@ class PluginManager {
     const info = { window: win, status: 'idle', meta };
     this.processes.set(pluginName, info);
 
+    // Use electron-positioner to center the window on the screen where the mouse is
+    win.once('ready-to-show', () => {
+      const mouse = screen.getCursorScreenPoint();
+      const display = screen.getDisplayNearestPoint(mouse);
+      // Move window to the target screen first
+      win.setBounds({
+        x: display.bounds.x,
+        y: display.bounds.y,
+        width: win.getBounds().width,
+        height: win.getBounds().height
+      });
+      const positioner = new Positioner(win);
+      positioner.move('center');
+      // Do NOT show or focus here
+    });
+
     win.on('show', () => {
       win.focus();
     });
@@ -510,10 +530,8 @@ class PluginManager {
         const startupMode = pluginInfo?.startupMode || 'independent';
         
         if (startupMode === 'dependent') {
-          // For dependent plugins, just hide the window
           win.hide();
         } else {
-          // For independent plugins, close the window
           win.close();
         }
       });
@@ -574,11 +592,44 @@ class PluginManager {
     const processInfo = this.processes.get(pluginName);
     if (processInfo && processInfo.window && !processInfo.window.isDestroyed()) {
       const pluginInfo = this.plugins.get(pluginName);
-      if (pluginInfo && pluginInfo.popupAtCursor) {
-        moveWindowToCursor(processInfo.window, 'right');
-      } else {
-        forceMoveWindowToCurrentDisplay(processInfo.window);
+      const mouse = screen.getCursorScreenPoint();
+      const display = screen.getDisplayNearestPoint(mouse);
+
+      // Always use plugin config width/height if available, fallback to default
+      let width = 900;
+      let height = 600;
+      if (pluginInfo && pluginInfo.ui) {
+        if (typeof pluginInfo.ui.width === 'number') width = pluginInfo.ui.width;
+        if (typeof pluginInfo.ui.height === 'number') height = pluginInfo.ui.height;
       }
+
+      let x, y;
+      if (pluginInfo && pluginInfo.popupAtCursor) {
+        // Popup at cursor right side
+        x = mouse.x + 10; // 10px right of cursor
+        y = mouse.y - Math.floor(height / 2);
+        
+        if (x + width > display.bounds.x + display.bounds.width) {
+          x = display.bounds.x + display.bounds.width - width;
+        }
+        if (y < display.bounds.y) y = display.bounds.y;
+        if (y + height > display.bounds.y + display.bounds.height) {
+          y = display.bounds.y + display.bounds.height - height;
+        }
+      } else {
+        // Center in current screen
+        x = display.bounds.x + Math.floor((display.bounds.width - width) / 2);
+        y = display.bounds.y + Math.floor((display.bounds.height - height) / 2);
+      }
+
+      processInfo.window.setBounds({
+        x,
+        y,
+        width,
+        height
+      });
+      processInfo.window.show();
+      processInfo.window.focus();
       return true;
     } else {
       const pluginInfo = this.plugins.get(pluginName);
@@ -632,13 +683,6 @@ class PluginManager {
       const info = await this.getProcess(pluginName);
       info.status = 'busy';
       info.window.webContents.send('plugin-execute', { action, args });
-      
-      // All plugins should show window when executed
-      if (info.window && !info.window.isVisible()) {
-        // Move to current display before showing
-        forceMoveWindowToCurrentDisplay(info.window);
-      }
-      
       info.status = 'idle';
       return { success: true };
     } catch (error) {

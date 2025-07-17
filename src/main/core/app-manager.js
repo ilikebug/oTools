@@ -2,7 +2,6 @@ const KeyboardManager = require('./keyboard-manager')
 const logger = require('../utils/logger');
 const consts = require('../comm')
 const { setupIPC } = require('../ipc')
-const { forceMoveWindowToCurrentDisplay } = require('../comm');
 const MacTools = require('../utils/mac-tools');
 
 /**
@@ -187,21 +186,6 @@ class AppManager {
   mainWindowIsDestroyed() {
     return this.mainWindow && !this.mainWindow.isDestroyed()
   }
-
-  /**
-   * hide main main window
-   */
-  mainWindowHide() {
-    this.mainWindow.hide()
-  }
-
-  /**
-   * show main window
-   */
-  mainWindowShow() {
-    forceMoveWindowToCurrentDisplay(this.mainWindow);
-  }
-
 }
 
 module.exports = { AppManager }; 

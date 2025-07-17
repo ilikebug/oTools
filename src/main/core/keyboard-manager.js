@@ -1,6 +1,6 @@
 const { globalShortcut } = require('electron');
 const logger = require('../utils/logger');
-const { forceMoveWindowToCurrentDisplay } = require('../comm');
+const { screen } = require('electron');
 
 class KeyboardManager {
   constructor() {
@@ -69,7 +69,16 @@ class KeyboardManager {
           if (this.mainWindow.isVisible()) {
             this.mainWindow.hide();
           } else {
-            forceMoveWindowToCurrentDisplay(this.mainWindow);
+            // Center main window on the screen where the mouse is
+            const mouse = screen.getCursorScreenPoint();
+            const display = screen.getDisplayNearestPoint(mouse);
+            const width = this.mainWindow.getBounds().width;
+            const height = this.mainWindow.getBounds().height;
+            const x = display.bounds.x + Math.floor((display.bounds.width - width) / 2);
+            const y = display.bounds.y + Math.floor((display.bounds.height - height) / 2);
+            this.mainWindow.setBounds({ x, y, width, height });
+            this.mainWindow.show();
+            this.mainWindow.focus();
           }
         }  
       }, 'main');

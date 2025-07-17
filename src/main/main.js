@@ -3,10 +3,11 @@ const path = require('node:path');
 const Store = require('electron-store');
 const logger = require('./utils/logger');
 const { AppManager } = require('./core');
-const { forceMoveWindowToCurrentDisplay } = require('./comm');
 const ConfigManager = require('./core/config-manager');
 const { setAutoStart } = require('./utils/auto-start');
 const PluginManager = require('./core/plugin-manager')
+const WindowStateKeeper = require('electron-window-state');
+const Positioner = require('electron-positioner');
 
 
 if (require('electron-squirrel-startup')) {
@@ -22,10 +23,18 @@ let store;
  * Create main window
  */
 const createWindow = (conf) => {
+  // 使用 window-state 记录和恢复主窗口状态
+  let mainWindowState = WindowStateKeeper({
+    defaultWidth: conf && conf.window && conf.window.width ? conf.window.width : 420,
+    defaultHeight: conf && conf.window && conf.window.height ? conf.window.height : 380,
+  });
+
   mainWindow = new BrowserWindow({
-    width: conf ? conf.window.width: 420,
-    height: conf ? conf.window.height: 380,
-    center: true,
+    x: mainWindowState.x,
+    y: mainWindowState.y,
+    width: mainWindowState.width,
+    height: mainWindowState.height,
+    center: false,
     resizable: false,
     frame: false,
     transparent: true,
@@ -40,20 +49,31 @@ const createWindow = (conf) => {
     show: false
   });
 
+  mainWindowState.manage(mainWindow);
+
   if (mainWindow && !mainWindow.isDestroyed()) {
-    // Set window level to ensure it appears above other applications
     mainWindow.setAlwaysOnTop(true, 'screen-saver');
     mainWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
   }
 
-  // Load main interface
   mainWindow.loadFile(path.join(__dirname, '../renderer/index.html'));
   
-  // Window event handling
   mainWindow.once('ready-to-show', () => {
     if (mainWindow && !mainWindow.isDestroyed()) {
-      // Move window to current display center before showing
-      forceMoveWindowToCurrentDisplay(mainWindow);
+      // Use positioner to center the window on the screen where the mouse is
+      const { screen } = require('electron');
+      const mouse = screen.getCursorScreenPoint();
+      const display = screen.getDisplayNearestPoint(mouse);
+      mainWindow.setBounds({
+        x: display.bounds.x,
+        y: display.bounds.y,
+        width: mainWindow.getBounds().width,
+        height: mainWindow.getBounds().height
+      });
+      const positioner = new Positioner(mainWindow);
+      positioner.move('center');
+      mainWindow.show();
+      mainWindow.focus();
     }
   });
 
@@ -63,7 +83,6 @@ const createWindow = (conf) => {
     }
   });
 
-  // Open dev tools in development mode
   if (conf.app.debug) {
     mainWindow.webContents.openDevTools();
   }
