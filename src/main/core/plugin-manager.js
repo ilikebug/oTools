@@ -523,6 +523,7 @@ class PluginManager {
     });
 
     win.on('show', () => {
+      win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
       win.focus();
     });
     

@@ -87,6 +87,7 @@ const createWindow = (conf) => {
 
   mainWindow.on('show', () => {
     if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
       mainWindow.focus();
     }
   });
