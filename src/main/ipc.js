@@ -468,6 +468,7 @@ function createFunctionMap(appManager) {
     showWindow: async (event) => {
       const win = BrowserWindow.fromWebContents(event.sender);
       if (win) {
+        win.setAlwaysOnTop(true, 'screen-saver');
         win.show();
         return { success: true, message: 'Window shown' };
       }

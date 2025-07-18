@@ -72,6 +72,7 @@ const createWindow = (conf) => {
       });
       const positioner = new Positioner(mainWindow);
       positioner.move('center');
+      mainWindow.setAlwaysOnTop(true, 'screen-saver');
       mainWindow.show();
       mainWindow.focus();
     }

@@ -628,6 +628,7 @@ class PluginManager {
         width,
         height
       });
+      processInfo.window.setAlwaysOnTop(true, 'screen-saver');
       processInfo.window.show();
       processInfo.window.focus();
       return true;
