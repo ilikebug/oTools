@@ -478,6 +478,7 @@ class PluginManager {
       skipTaskbar: true,
       resizable: false,
       frame: meta.ui.frame !== undefined ? meta.ui.frame : true,
+      type: 'popup',
       webPreferences: {
         sandbox: false, 
         preload: path.join(__dirname, 'plugin-preload.js'),
@@ -490,13 +491,12 @@ class PluginManager {
     // Manage window with window-state
     mainWindowState.manage(win);
 
+    win.setAlwaysOnTop(true, 'screen-saver');
+    win.setVisibleOnAllWorkspaces(true, {visibleOnFullScreen: true});
+
     if (meta.debug) {
       win.webContents.openDevTools();
     }
-    
-    // Set window level to ensure it appears above other applications
-    win.setAlwaysOnTop(true, 'screen-saver');
-    win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
     
     if (isUrl) {
       await win.loadURL(htmlPath);
@@ -631,7 +631,6 @@ class PluginManager {
         width,
         height
       });
-      processInfo.window.setAlwaysOnTop(true, 'screen-saver');
       processInfo.window.show();
       processInfo.window.focus();
       return true;

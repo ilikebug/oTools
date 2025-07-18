@@ -79,7 +79,6 @@ class KeyboardManager {
             const x = display.bounds.x + Math.floor((display.bounds.width - width) / 2);
             const y = display.bounds.y + Math.floor((display.bounds.height - height) / 2);
             this.mainWindow.setBounds({ x, y, width, height });
-            this.mainWindow.setAlwaysOnTop(true, 'screen-saver');
             this.mainWindow.show();
             this.mainWindow.focus();
           }

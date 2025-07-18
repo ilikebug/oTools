@@ -41,6 +41,8 @@ const createWindow = (conf) => {
     transparent: true,
     alwaysOnTop: true,
     skipTaskbar: true,
+    visibleOnFullScreen: true,
+    type: 'popup',
     webPreferences: {
       preload: path.join(__dirname, '../renderer/preload.js'),
       nodeIntegration: false,
@@ -52,10 +54,8 @@ const createWindow = (conf) => {
 
   mainWindowState.manage(mainWindow);
 
-  if (mainWindow && !mainWindow.isDestroyed()) {
-    mainWindow.setAlwaysOnTop(true, 'screen-saver');
-    mainWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
-  }
+  mainWindow.setAlwaysOnTop(true, 'screen-saver');
+  mainWindow.setVisibleOnAllWorkspaces(true, {visibleOnFullScreen: true});
 
   mainWindow.loadFile(path.join(__dirname, '../renderer/index.html'));
   
@@ -73,7 +73,6 @@ const createWindow = (conf) => {
       });
       const positioner = new Positioner(mainWindow);
       positioner.move('center');
-      mainWindow.setAlwaysOnTop(true, 'screen-saver');
       mainWindow.show();
       mainWindow.focus();
     }
@@ -83,6 +82,12 @@ const createWindow = (conf) => {
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.hide();
       switchToPreviousApp();
+    }
+  });
+
+  mainWindow.on('show', () => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.focus();
     }
   });
 
