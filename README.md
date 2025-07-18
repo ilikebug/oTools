@@ -289,3 +289,44 @@ A: 日志文件位于用户目录下 oTools/logs/otools.log。/ Log file is loca
 
 ### Q: 插件市场无法访问？ / Plugin market not accessible?
 A: 检查网络连接，或配置 GitHub Token 以提升访问速率。/ Check your network connection, or configure a GitHub Token to improve access speed. 
+
+### Q: macOS 下无法自动切换前台应用或 AppleScript 控制其他 App？ / Why can't oTools switch to the previous app or control other apps via AppleScript on macOS?
+A: 
+macOS 对自动化（Apple Events/Automation）权限有严格限制，未签名的 App 默认无法获得自动化权限，导致相关功能（如自动切换前台 App、AppleScript 控制其他 App）无法使用。
+macOS has strict restrictions on Automation (Apple Events/Automation) permissions. Unsigned apps cannot obtain automation permissions by default, so features like switching to the previous app or controlling other apps via AppleScript may not work.
+
+**解决办法 / Solution:**
+1. **本地自签名 App / Locally sign the app**
+   
+   关闭 oTools 后，在终端执行（假设你的 App 路径为 /Applications/oTools.app）：
+   After closing oTools, run in terminal (assuming your app path is /Applications/oTools.app):
+   ```sh
+   codesign --deep --force --sign - /Applications/oTools.app
+   ```
+   - `-` 代表 ad-hoc 签名，不需要开发者证书，仅用于本地测试。
+   - '-' means ad-hoc signature, no developer certificate required, for local testing only.
+   - 签名后重新打开 oTools，首次触发自动化操作时，macOS 会弹窗请求权限，请选择“允许”。
+   - After signing, reopen oTools. When triggering automation for the first time, macOS will prompt for permission. Please choose "Allow".
+
+2. **重置自动化权限 / Reset Automation Permissions**
+   
+   如果没有弹窗，或授权后依然无效，可以重置 AppleEvents 权限：
+   If no prompt appears or permission still doesn't work, reset AppleEvents permissions:
+   ```sh
+   tccutil reset AppleEvents
+   ```
+   然后重新运行 oTools 并再次触发自动化操作，等待弹窗授权。
+   Then rerun oTools and trigger automation again to get the prompt.
+
+3. **检查系统设置 / Check System Settings**
+   
+   前往“系统设置 > 隐私与安全 > 自动化”，确保 oTools 已获得对应 App（如 System Events）的自动化权限。
+   Go to "System Settings > Privacy & Security > Automation" and make sure oTools is allowed to control the required apps (such as System Events).
+
+**说明 / Note:**
+- 由于 macOS 安全策略，未签名的开源 App 只能通过本地自签名方式获得自动化权限。
+- Because of macOS security policy, unsigned open source apps can only obtain automation permissions via local ad-hoc signing.
+- 分发给其他用户时，也需要他们自行签名。
+- Other users also need to sign the app themselves after downloading.
+- 相关限制为 macOS 系统安全策略，非 oTools 项目本身问题。
+- This is a macOS system security limitation, not an oTools project issue. 

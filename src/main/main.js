@@ -8,6 +8,7 @@ const { setAutoStart } = require('./utils/auto-start');
 const PluginManager = require('./core/plugin-manager')
 const WindowStateKeeper = require('electron-window-state');
 const Positioner = require('electron-positioner');
+const { switchToPreviousApp } = require('./utils/mac-windows');
 
 
 if (require('electron-squirrel-startup')) {
@@ -81,6 +82,7 @@ const createWindow = (conf) => {
   mainWindow.on('blur', () => {
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.hide();
+      switchToPreviousApp();
     }
   });
 

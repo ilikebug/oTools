@@ -152,13 +152,20 @@ class Logger {
   consoleOutput(logEntry) {
     const { timestamp, level, message, data } = logEntry;
     const timeStr = new Date(timestamp).toLocaleTimeString();
-    
-    let output = `[${timeStr}] [${level}] ${message}`;
-    
+    // 彩色输出
+    const colorMap = {
+      'ERROR': '\x1b[31m', // 红色
+      'WARN': '\x1b[33m',  // 黄色
+      'INFO': '\x1b[32m',  // 绿色
+      'DEBUG': '\x1b[36m'  // 青色
+    };
+    const resetColor = '\x1b[0m';
+    const color = colorMap[level] || '';
+    let output = `${color}[${timeStr}] [${level}] ${message}`;
     if (data) {
       output += ` | ${JSON.stringify(data)}`;
     }
-    
+    output += resetColor;
     switch (level) {
       case 'ERROR':
         console.error(output);
@@ -191,11 +198,15 @@ class Logger {
       // File logging is disabled or failed, just return silently
       return;
     }
-    
     try {
-      const logLine = JSON.stringify(logEntry) + '\n';
+      const { timestamp, level, message, data } = logEntry;
+      const timeStr = new Date(timestamp).toLocaleTimeString();
+      let logLine = `[${timeStr}] [${level}] ${message}`;
+      if (data) {
+        logLine += ` | ${JSON.stringify(data)}`;
+      }
+      logLine += '\n';
       this.fileStream.write(logLine);
-      
       // Check file size and rotate if necessary
       this.rotateLogFileIfNeeded();
     } catch (error) {

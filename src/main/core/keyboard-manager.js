@@ -1,6 +1,7 @@
 const { globalShortcut } = require('electron');
 const logger = require('../utils/logger');
 const { screen } = require('electron');
+const { switchToPreviousApp } = require('../utils/mac-windows');
 
 class KeyboardManager {
   constructor() {
@@ -68,6 +69,7 @@ class KeyboardManager {
         if (this.mainWindow) {
           if (this.mainWindow.isVisible()) {
             this.mainWindow.hide();
+            switchToPreviousApp();
           } else {
             // Center main window on the screen where the mouse is
             const mouse = screen.getCursorScreenPoint();

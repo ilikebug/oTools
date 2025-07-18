@@ -7,6 +7,8 @@ const { GetPluginPath } = require('../comm');
 const { screen, BrowserWindow } = require('electron');
 const WindowStateKeeper = require('electron-window-state');
 const Positioner = require('electron-positioner');
+const { switchToPreviousApp } = require('../utils/mac-windows');
+
 
 
 class PluginManager {
@@ -531,6 +533,7 @@ class PluginManager {
         
         if (startupMode === 'dependent') {
           win.hide();
+          switchToPreviousApp();
         } else {
           win.close();
         }
@@ -649,6 +652,7 @@ class PluginManager {
     if (processInfo && processInfo.window && !processInfo.window.isDestroyed()) {
       if (processInfo.window.isVisible()) {
         processInfo.window.hide();
+        switchToPreviousApp();
         return true;
       }
     }
