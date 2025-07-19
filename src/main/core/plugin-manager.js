@@ -543,6 +543,7 @@ class PluginManager {
     
     win.on('closed', () => {
       this.processes.delete(pluginName);
+      switchToPreviousApp();
     });
 
     win.on('close', (event) => {
