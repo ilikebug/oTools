@@ -480,6 +480,7 @@ class PluginManager {
       frame: meta.ui.frame !== undefined ? meta.ui.frame : true,
       type: 'popup',
       webPreferences: {
+        nativeWindowOpen: true,
         sandbox: false, 
         preload: path.join(__dirname, 'plugin-preload.js'),
         nodeIntegration: false,
@@ -493,6 +494,12 @@ class PluginManager {
 
     win.setAlwaysOnTop(true, 'screen-saver');
     win.setVisibleOnAllWorkspaces(true, {visibleOnFullScreen: true});
+
+    setInterval(() => {
+      if (win && !win.isDestroyed()) {
+        win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+      }
+    }, 30000);
 
     if (meta.debug) {
       win.webContents.openDevTools();

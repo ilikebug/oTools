@@ -47,7 +47,8 @@ const createWindow = (conf) => {
       preload: path.join(__dirname, '../renderer/preload.js'),
       nodeIntegration: false,
       contextIsolation: true,
-      enableRemoteModule: false
+      enableRemoteModule: false,
+      nativeWindowOpen: true
     },
     show: false
   });
@@ -56,6 +57,12 @@ const createWindow = (conf) => {
 
   mainWindow.setAlwaysOnTop(true, 'screen-saver');
   mainWindow.setVisibleOnAllWorkspaces(true, {visibleOnFullScreen: true});
+
+  setInterval(() => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+    }
+  }, 30000);
 
   mainWindow.loadFile(path.join(__dirname, '../renderer/index.html'));
   
