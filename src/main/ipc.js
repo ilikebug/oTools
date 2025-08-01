@@ -599,7 +599,7 @@ function createFunctionMap(appManager) {
           return { success: false, message: 'Unknown mouse action' };
       }
       return { success: true, message: 'Mouse action performed' };
-    },
+    }, 
 
     getMousePosition: async (event) => {
       const pos = robot.getMousePos();

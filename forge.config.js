@@ -79,7 +79,7 @@ module.exports = {
       [FuseV1Options.EnableNodeOptionsEnvironmentVariable]: false, // Disable in production
       [FuseV1Options.EnableNodeCliInspectArguments]: false, // Disable in production
       [FuseV1Options.EnableEmbeddedAsarIntegrityValidation]: true,
-      [FuseV1Options.OnlyLoadAppFromAsar]: true,
+      [FuseV1Options.OnlyLoadAppFromAsar]: false, // Allow native modules to be unpacked
     }),
   ],
   // Add hooks for build optimization
