@@ -67,12 +67,11 @@ class MacTools {
         result = this.cleanOcrText(result);
         return result;
       } catch (fallbackError) {
-        logger.error('Both OCR engines failed:', {
-          primaryError: error.message,
+        logger.error('OCR engine failed:', {
           fallbackError: fallbackError.message
         });
         fs.unlinkSync(tempFile);
-        throw new Error('OCR recognition failed - both engines failed');
+        throw new Error('OCR recognition failed - engine failed');
       }
     } catch (error) {
       logger.error('OCR recognition failed:', error);

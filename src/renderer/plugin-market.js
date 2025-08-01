@@ -17,7 +17,7 @@
 
   function getPluginIconUrl(plugin) {
     if (plugin.icon) {
-      if (/^https?:/.test(plugin.icon)) return plugin.icon;
+      if (/^https?:/.test(plugin.icon)) {return plugin.icon;}
       return `https://raw.githubusercontent.com/ilikebug/oTools-Plugins/main/${plugin.folder}/${plugin.icon}`;
     }
     return `https://raw.githubusercontent.com/ilikebug/oTools-Plugins/main/${plugin.folder}/icon.png`;
@@ -72,12 +72,12 @@
       if (descDiv) {
         descDiv.addEventListener('mouseenter', function(e) {
           const fullDesc = descDiv.getAttribute('data-full-desc') || '';
-          if (fullDesc.length < 1) return;
+          if (fullDesc.length < 1) {return;}
           descTooltip.textContent = fullDesc;
           descTooltip.style.display = 'block';
           
           const rect = descDiv.getBoundingClientRect();
-          let top = rect.bottom + 6;
+          const top = rect.bottom + 6;
           let left = rect.left;
           
           if (left + descTooltip.offsetWidth > window.innerWidth) {

@@ -9,7 +9,11 @@
     "package": "electron-forge package",
     "make": "electron-forge make",
     "publish": "electron-forge publish",
-    "lint": "echo \"No linting configured\""
+    "lint": "eslint src/ --fix",
+    "lint:check": "eslint src/",
+    "prebuild": "npm run lint:check",
+    "clean": "rm -rf out/",
+    "build": "npm run clean && npm run make"
   },
   "keywords": [
     "electron",

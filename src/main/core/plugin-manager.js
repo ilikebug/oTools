@@ -26,6 +26,7 @@ class PluginManager {
     this.maxProcesses = null;
 
     this.configManager = null
+    this.appManager = null; // Reference to app manager for enhanced window management
     this.cleanupTimer = null; // Timer for periodic cleanup
   }
 
@@ -33,7 +34,7 @@ class PluginManager {
    * Start a timer to periodically clean up unused references
    */
   startCleanupTimer() {
-    if (this.cleanupTimer) return;
+    if (this.cleanupTimer) {return;}
     this.cleanupTimer = setInterval(() => {
       // Clean up destroyed window references
       for (const [name, info] of this.processes) {
@@ -56,6 +57,7 @@ class PluginManager {
   async initialize(options = {}) {
     try {
       this.configManager = options.configManager;
+      this.appManager = options.appManager; // Store app manager reference
       const mainConfig = this.configManager.getConfig('main')
       this.maxProcesses = mainConfig.plugins.maxProcesses;
       this.customDirs = mainConfig.plugins.pluginDirs;
@@ -450,10 +452,10 @@ class PluginManager {
   async createProcess(pluginName) {
     // Use the plugin's actual directory from the loaded plugin info
     const pluginInfo = this.plugins.get(pluginName);
-    if (!pluginInfo) throw new Error(`Plugin info not found for: ${pluginName}`);
+    if (!pluginInfo) {throw new Error(`Plugin info not found for: ${pluginName}`);}
     const pluginPath = pluginInfo.dir;
     const metaPath = path.join(pluginPath, 'plugin.json');
-    if (!fs.existsSync(metaPath)) throw new Error(`Plugin configuration file does not exist: ${metaPath}`);
+    if (!fs.existsSync(metaPath)) {throw new Error(`Plugin configuration file does not exist: ${metaPath}`);}
     const meta = JSON.parse(fs.readFileSync(metaPath, 'utf-8'));
     const htmlEntry = meta.ui && meta.ui.html ? meta.ui.html : 'index.html';
     const isUrl = /^https?:\/\//.test(htmlEntry);
@@ -461,7 +463,7 @@ class PluginManager {
     const pluginPreloadPath = path.join(pluginPath, meta.preload ? meta.preload : 'preload.js');
     
     // Use window-state to record and restore window state, with unique key per plugin
-    let mainWindowState = WindowStateKeeper({
+    const mainWindowState = WindowStateKeeper({
       defaultWidth: meta.ui.width || 900,
       defaultHeight: meta.ui.height || 600,
       file: `window-state-${pluginName}.json`
@@ -492,14 +494,9 @@ class PluginManager {
     // Manage window with window-state
     mainWindowState.manage(win);
 
+    // Set plugin window properties once (no need for periodic updates)
     win.setAlwaysOnTop(true, 'screen-saver');
     win.setVisibleOnAllWorkspaces(true, {visibleOnFullScreen: true});
-
-    setInterval(() => {
-      if (win && !win.isDestroyed()) {
-        win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
-      }
-    }, 30000);
 
     if (meta.debug) {
       win.webContents.openDevTools();
@@ -530,7 +527,7 @@ class PluginManager {
     });
 
     win.on('show', () => {
-      win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+      // Only focus, no need to reset properties every time
       win.focus();
     });
     
@@ -598,12 +595,60 @@ class PluginManager {
   }
 
   /**
-   * Show plugin window if it exists and is hidden
+   * Check if window display needs enhancement (fast detection)
    */
-  showPluginWindow(pluginName) {
-    const processInfo = this.processes.get(pluginName);
-    if (processInfo && processInfo.window && !processInfo.window.isDestroyed()) {
-      const pluginInfo = this.plugins.get(pluginName);
+  async checkIfNeedsEnhancement() {
+    try {
+      // 快速检查：使用 Electron 原生 API 预检
+      const displays = screen.getAllDisplays();
+      let hasFullscreenLikeDisplay = false;
+      
+      for (const display of displays) {
+        // 检查是否有显示器的工作区明显小于显示区（可能有全屏应用）
+        const workAreaRatio = (display.workArea.width * display.workArea.height) / 
+                             (display.bounds.width * display.bounds.height);
+        
+        if (workAreaRatio < 0.9) { // 工作区小于90%可能有全屏应用
+          hasFullscreenLikeDisplay = true;
+          break;
+        }
+      }
+      
+      if (!hasFullscreenLikeDisplay) {
+        return false; // 快速判断：无需增强
+      }
+      
+      // 进一步检查：使用增强管理器的缓存检测
+      const enhancedWindowManager = this.appManager?.getComponent('enhancedWindowManager');
+      if (enhancedWindowManager) {
+        // 使用缓存的全屏检测结果（避免 AppleScript 延时）
+        const now = Date.now();
+        const cacheAge = now - (enhancedWindowManager.lastFullscreenCheck || 0);
+        
+        // 如果缓存新鲜且显示有全屏应用，则需要增强
+        if (cacheAge < 10000 && enhancedWindowManager.fullscreenAppCache === true) {
+          return true;
+        }
+        
+        // 如果缓存过旧，进行一次快速检测（但不阻塞）
+        if (cacheAge > 10000) {
+          // 异步更新缓存，不等待结果
+          enhancedWindowManager.detectFullscreenApp().catch(() => {});
+        }
+      }
+      
+      return false; // 默认不需要增强，优先快速显示
+    } catch (error) {
+      logger.warn('Failed to check enhancement needs:', error);
+      return false; // 出错时使用快速路径
+    }
+  }
+
+  /**
+   * Quick show plugin window (original logic, no delays)
+   */
+  showPluginWindowQuick(pluginName, processInfo, pluginInfo) {
+    try {
       const mouse = screen.getCursorScreenPoint();
       const display = screen.getDisplayNearestPoint(mouse);
 
@@ -611,8 +656,8 @@ class PluginManager {
       let width = 900;
       let height = 600;
       if (pluginInfo && pluginInfo.ui) {
-        if (typeof pluginInfo.ui.width === 'number') width = pluginInfo.ui.width;
-        if (typeof pluginInfo.ui.height === 'number') height = pluginInfo.ui.height;
+        if (typeof pluginInfo.ui.width === 'number') {width = pluginInfo.ui.width;}
+        if (typeof pluginInfo.ui.height === 'number') {height = pluginInfo.ui.height;}
       }
 
       let x, y;
@@ -624,7 +669,7 @@ class PluginManager {
         if (x + width > display.bounds.x + display.bounds.width) {
           x = display.bounds.x + display.bounds.width - width;
         }
-        if (y < display.bounds.y) y = display.bounds.y;
+        if (y < display.bounds.y) {y = display.bounds.y;}
         if (y + height > display.bounds.y + display.bounds.height) {
           y = display.bounds.y + display.bounds.height - height;
         }
@@ -643,6 +688,45 @@ class PluginManager {
       processInfo.window.show();
       processInfo.window.focus();
       return true;
+    } catch (error) {
+      logger.warn(`Quick show window failed for ${pluginName}:`, error);
+      return false;
+    }
+  }
+
+  /**
+   * Show plugin window if it exists and is hidden
+   */
+  async showPluginWindow(pluginName) {
+    const processInfo = this.processes.get(pluginName);
+    if (processInfo && processInfo.window && !processInfo.window.isDestroyed()) {
+      const pluginInfo = this.plugins.get(pluginName);
+      
+      // 智能选择显示策略
+      const needsEnhancement = await this.checkIfNeedsEnhancement();
+      
+      if (needsEnhancement) {
+        // 使用增强管理器（全屏环境或特殊情况）
+        const enhancedWindowManager = this.appManager?.getComponent('enhancedWindowManager');
+        if (enhancedWindowManager) {
+          try {
+            logger.info(`Using enhanced method for ${pluginName} (fullscreen environment detected)`);
+            enhancedWindowManager.registerWindow(pluginName, processInfo.window, {
+              forceTopLevel: 'modal-panel',
+              checkVisibility: true,
+              autoRecover: true
+            });
+            
+            const result = await enhancedWindowManager.forceShowWindow(pluginName);
+            if (result) {return result;}
+          } catch (error) {
+            logger.warn(`Enhanced window manager failed for ${pluginName}, using fallback:`, error);
+          }
+        }
+      }
+      
+      // 使用快速显示（默认路径）
+      return this.showPluginWindowQuick(pluginName, processInfo, pluginInfo);
     } else {
       const pluginInfo = this.plugins.get(pluginName);
       if (pluginInfo && pluginInfo.startupMode === 'dependent') {
@@ -695,7 +779,10 @@ class PluginManager {
     try {
       const info = await this.getProcess(pluginName);
       info.status = 'busy';
-      this.showPluginWindow(pluginName);
+      
+      // Ensure window is shown before sending execute command
+      await this.showPluginWindow(pluginName);
+      
       info.window.webContents.send('plugin-execute', { action, args });
       info.status = 'idle';
       return { success: true };

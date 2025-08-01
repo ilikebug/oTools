@@ -25,7 +25,7 @@ class oToolsApp {
   }
 
   _formatShortcutForDisplay(shortcut) {
-    if (!shortcut) return '';
+    if (!shortcut) {return '';}
     return shortcut.split('+').map(key => {
       const keyMap = {
         'CONTROL': 'Ctrl',
@@ -47,20 +47,20 @@ class oToolsApp {
       return;
     }
     let lastValue = input.value;
-    let pressedKeys = new Set();
+    const pressedKeys = new Set();
     let keydownListener;
     let keyupListener;
     let finished = false;
 
     keydownListener = (e) => {
-      if (finished) return;
+      if (finished) {return;}
       e.preventDefault();
       const key = this._normalizeKey(e).toUpperCase();
       pressedKeys.add(key);
       input.value = this._formatShortcutForDisplay(this._getShortcutString(pressedKeys));
     };
     keyupListener = (e) => {
-      if (finished) return;
+      if (finished) {return;}
       finished = true;
       if (pressedKeys.size > 0) {
         if (this._isValidShortcut(pressedKeys)) {
@@ -70,7 +70,7 @@ class oToolsApp {
           window.otools.getConfig('main').then(config => {
             let obj = config;
             for (let i = 0; i < configPath.length - 1; i++) {
-              if (!obj[configPath[i]]) obj[configPath[i]] = {};
+              if (!obj[configPath[i]]) {obj[configPath[i]] = {};}
               obj = obj[configPath[i]];
             }
             obj[configPath[configPath.length - 1]] = shortcut;
@@ -103,7 +103,7 @@ class oToolsApp {
     input.addEventListener('blur', () => {
       document.removeEventListener('keydown', keydownListener);
       document.removeEventListener('keyup', keyupListener);
-      if (input.value === 'Press shortcut...') input.value = lastValue;
+      if (input.value === 'Press shortcut...') {input.value = lastValue;}
     });
   }
 
@@ -129,17 +129,17 @@ class oToolsApp {
       'PageUp': 'PAGEUP',
       'PageDown': 'PAGEDOWN'
     };
-    if (keyMap[e.key]) return keyMap[e.key];
-    if (keyMap[e.code]) return keyMap[e.code];
-    if (/^F\d{1,2}$/i.test(e.key)) return e.key.toUpperCase();
-    if (e.code && e.code.startsWith('Key')) return e.code.slice(3).toUpperCase();
-    if (e.code && e.code.startsWith('Digit')) return e.code.slice(5);
-    if (e.key.length === 1) return e.key.toUpperCase();
+    if (keyMap[e.key]) {return keyMap[e.key];}
+    if (keyMap[e.code]) {return keyMap[e.code];}
+    if (/^F\d{1,2}$/i.test(e.key)) {return e.key.toUpperCase();}
+    if (e.code && e.code.startsWith('Key')) {return e.code.slice(3).toUpperCase();}
+    if (e.code && e.code.startsWith('Digit')) {return e.code.slice(5);}
+    if (e.key.length === 1) {return e.key.toUpperCase();}
     return e.key.toUpperCase();
   }
 
   _isValidShortcut(keys) {
-    if (!keys || keys.size === 0) return false;
+    if (!keys || keys.size === 0) {return false;}
     const arr = Array.from(keys);
     const modifiers = ['CTRL', 'META', 'ALT', 'SHIFT'];
     const hasModifier = arr.some(k => modifiers.includes(k));
@@ -232,7 +232,7 @@ class oToolsApp {
           const input = document.getElementById('githubTokenInput');
           if (input) {
             const token = input.value.trim();
-            let config = await window.otools.getConfig('main') || {};
+            const config = await window.otools.getConfig('main') || {};
             config.githubToken = token;
             await window.otools.setConfig('main', config);
             alert('GitHub Token saved!');
@@ -478,9 +478,9 @@ class oToolsApp {
       let menu = null;
       let closeMenuHandler = null;
       const showMenu = () => {
-        if (menu) return;
-        let existingMenu = document.getElementById('global-plugin-dropdown-menu');
-        if (existingMenu) existingMenu.remove();
+        if (menu) {return;}
+        const existingMenu = document.getElementById('global-plugin-dropdown-menu');
+        if (existingMenu) {existingMenu.remove();}
         menu = document.createElement('div');
         menu.className = 'dropdown-content';
         menu.id = 'global-plugin-dropdown-menu';
@@ -520,8 +520,8 @@ class oToolsApp {
             const action = item.dataset.action;
             const pluginName = item.dataset.plugin;
             this.handlePluginAction(action, pluginName);
-            if (menu) menu.remove();
-            if (closeMenuHandler) document.removeEventListener('mousemove', closeMenuHandler);
+            if (menu) {menu.remove();}
+            if (closeMenuHandler) {document.removeEventListener('mousemove', closeMenuHandler);}
             menu = null;
           });
         });
@@ -530,7 +530,7 @@ class oToolsApp {
           const inDropdown = dropdown.contains(evt.target);
           const inMenu = menu && menu.contains(evt.target);
           if (!inDropdown && !inMenu) {
-            if (menu) menu.remove();
+            if (menu) {menu.remove();}
             menu = null;
             document.removeEventListener('mousemove', closeMenuHandler);
           }
@@ -561,20 +561,22 @@ class oToolsApp {
         case 'configure':
           this.showPluginConfigDialog(pluginName);
           break;
-        case 'show':
+        case 'show': {
           const showResult = await window.otools.showPluginWindow(pluginName);
           if (!showResult.success) {
             console.error(showResult.message)
             this.showNotification(showResult.message, 'warning')
           }
           break;
-        case 'uninstall':
+        }
+        case 'uninstall': {
           const uninstallResult = await window.otools.uninstallPlugin(pluginName);
           if (!uninstallResult.success) {
             console.error(uninstallResult.message)
             this.showNotification(uninstallResult.message, 'warning')
           }
           break;
+        }
         default:
           console.warn('Unknown plugin action:', action);
       }
@@ -751,9 +753,9 @@ class oToolsApp {
     const hours = Math.floor(minutes / 60);
     const days = Math.floor(hours / 24);
     
-    if (days > 0) return `${days} days ${hours % 24} hours`;
-    if (hours > 0) return `${hours} hours ${minutes % 60} minutes`;
-    if (minutes > 0) return `${minutes} minutes ${seconds % 60} seconds`;
+    if (days > 0) {return `${days} days ${hours % 24} hours`;}
+    if (hours > 0) {return `${hours} hours ${minutes % 60} minutes`;}
+    if (minutes > 0) {return `${minutes} minutes ${seconds % 60} seconds`;}
     return `${seconds} seconds`;
   }
 
@@ -795,7 +797,7 @@ class oToolsApp {
 
   renderSearchResults(matchedPlugins) {
     const actionGrid = document.querySelector('.action-grid');
-    if (!actionGrid) return;
+    if (!actionGrid) {return;}
     
     actionGrid.innerHTML = '';
     actionGrid.classList.add('large-set');
@@ -921,7 +923,7 @@ class oToolsApp {
     const panel = document.getElementById(panelId);
     if (panel) {
       panel.style.display = 'none';
-      if (this.currentPanel === panelId) this.currentPanel = null;
+      if (this.currentPanel === panelId) {this.currentPanel = null;}
     }
   }
 
@@ -943,9 +945,9 @@ class oToolsApp {
   showNotification(message, type = 'info') {
     try {
       let title = 'Notification';
-      if (type === 'success') title = 'Success';
-      if (type === 'error') title = 'Error';
-      if (type === 'warning') title = 'Warning';
+      if (type === 'success') {title = 'Success';}
+      if (type === 'error') {title = 'Error';}
+      if (type === 'warning') {title = 'Warning';}
       window.otools.showSystemNotification({ title, body: message });
     } catch (error) {
       console.error('Failed to show system notification:', error);
@@ -965,13 +967,13 @@ class oToolsApp {
     async loadSettingsFromConfig() {
     try {
       const config = await window.otools.getConfig('main');
-      if (!config) return;
+      if (!config) {return;}
       // Auto start
       const autoStart = document.getElementById('autoStart');
-      if (autoStart) autoStart.checked = !!config.app?.autoStart;
+      if (autoStart) {autoStart.checked = !!config.app?.autoStart;}
       // Auto load plugins
       const autoLoadPlugins = document.getElementById('autoLoadPlugins');
-      if (autoLoadPlugins) autoLoadPlugins.checked = !!config.plugins?.autoLoad;
+      if (autoLoadPlugins) {autoLoadPlugins.checked = !!config.plugins?.autoLoad;}
 
       // GitHub Token
       const githubTokenInput = document.getElementById('githubTokenInput');
@@ -986,8 +988,8 @@ class oToolsApp {
           // Format for display
           const isMac = /mac/i.test(navigator.userAgent);
           const displayShortcut = shortcut.split('+').map(k => {
-            if (k === 'Meta') return isMac ? 'Command' : 'Win';
-            if (k === 'Alt') return isMac ? 'Option' : 'Alt';
+            if (k === 'Meta') {return isMac ? 'Command' : 'Win';}
+            if (k === 'Alt') {return isMac ? 'Option' : 'Alt';}
             return k;
           }).join('+');
           toggleShortcut.value = displayShortcut;
@@ -1072,7 +1074,7 @@ class oToolsApp {
 
   renderCustomShortcuts(shortcuts) {
     const container = document.getElementById('customShortcutsList');
-    if (!container) return;
+    if (!container) {return;}
 
     container.innerHTML = '';
     
@@ -1107,8 +1109,8 @@ class oToolsApp {
     if (shortcut.accelerator) {
       const isMac = /mac/i.test(navigator.userAgent);
       const displayShortcut = shortcut.accelerator.split('+').map(k => {
-        if (k === 'Meta') return isMac ? 'Command' : 'Win';
-        if (k === 'Alt') return isMac ? 'Option' : 'Alt';
+        if (k === 'Meta') {return isMac ? 'Command' : 'Win';}
+        if (k === 'Alt') {return isMac ? 'Option' : 'Alt';}
         return k;
       }).join('+');
       div.querySelector('.shortcut-input').value = displayShortcut;
@@ -1126,7 +1128,7 @@ class oToolsApp {
         option.textContent = plugin.shortName || plugin.name;
         selectElement.appendChild(option);
       });
-      if (valueToSet) selectElement.value = valueToSet;
+      if (valueToSet) {selectElement.value = valueToSet;}
     } catch (error) {
       console.error('Failed to load plugin names:', error);
     }
@@ -1146,7 +1148,7 @@ class oToolsApp {
 
   bindShortcutItemEvents() {
     const container = document.getElementById('customShortcutsList');
-    if (!container) return;
+    if (!container) {return;}
 
     // Plugin select change
     container.addEventListener('change', (e) => {
@@ -1173,7 +1175,7 @@ class oToolsApp {
 
   addCustomShortcut() {
     const container = document.getElementById('customShortcutsList');
-    if (!container) return;
+    if (!container) {return;}
 
     const shortcuts = Array.from(container.children).map((item, index) => ({
       pluginName: item.querySelector('.plugin-select').value,
@@ -1189,7 +1191,7 @@ class oToolsApp {
 
   removeCustomShortcut(index) {
     const container = document.getElementById('customShortcutsList');
-    if (!container) return;
+    if (!container) {return;}
 
     const shortcuts = Array.from(container.children).map((item, i) => ({
       pluginName: item.querySelector('.plugin-select').value,
@@ -1204,33 +1206,33 @@ class oToolsApp {
 
   getShortcutValue(inputElement) {
     const value = inputElement.value;
-    if (!value || value === 'Press shortcut...') return '';
+    if (!value || value === 'Press shortcut...') {return '';}
     
     const isMac = /mac/i.test(navigator.userAgent);
     return value.split('+').map(k => {
-      if (k === 'Command' && isMac) return 'Meta';
-      if (k === 'Win' && !isMac) return 'Meta';
-      if (k === 'Option' && isMac) return 'Alt';
+      if (k === 'Command' && isMac) {return 'Meta';}
+      if (k === 'Win' && !isMac) {return 'Meta';}
+      if (k === 'Option' && isMac) {return 'Alt';}
       return k;
     }).join('+');
   }
 
   captureCustomShortcutInput(inputElement) {
     const lastValue = inputElement.value;
-    let pressedKeys = new Set();
+    const pressedKeys = new Set();
     let keydownListener;
     let keyupListener;
     let finished = false;
 
     keydownListener = (e) => {
-      if (finished) return;
+      if (finished) {return;}
       e.preventDefault();
       const key = this._normalizeKey(e).toUpperCase();
       pressedKeys.add(key);
       inputElement.value = this._formatShortcutForDisplay(this._getShortcutString(pressedKeys));
     };
     keyupListener = (e) => {
-      if (finished) return;
+      if (finished) {return;}
       finished = true;
       if (pressedKeys.size > 0) {
         if (this._isValidShortcut(pressedKeys)) {
@@ -1251,7 +1253,7 @@ class oToolsApp {
     const blurHandler = () => {
       document.removeEventListener('keydown', keydownListener);
       document.removeEventListener('keyup', keyupListener);
-      if (inputElement.value === 'Press shortcut...') inputElement.value = lastValue;
+      if (inputElement.value === 'Press shortcut...') {inputElement.value = lastValue;}
       inputElement.removeEventListener('blur', blurHandler);
     };
     inputElement.value = 'Press shortcut...';
@@ -1265,7 +1267,7 @@ class oToolsApp {
   async updateCustomShortcuts() {
     try {
       const container = document.getElementById('customShortcutsList');
-      if (!container) return;
+      if (!container) {return;}
 
       const shortcuts = Array.from(container.children).map(item => ({
         pluginName: item.querySelector('.plugin-select').value,

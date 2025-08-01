@@ -42,7 +42,7 @@ class Logger {
       this.maxFileSize = options.maxFileSize || this.maxFileSize;
       this.maxFiles = options.maxFiles || this.maxFiles;
       this.enableConsole = options.enableConsole !== false;
-      this.enableFile = options.enableFile || false;
+      this.enableFile = options.enableFile !== undefined ? options.enableFile : false;
       this.enableRemote = options.enableRemote || false;
       
       if (this.enableFile && this.logFile) {
@@ -245,9 +245,14 @@ class Logger {
   createNewLogFile() {
     try {
       if (!this.currentLogFile) {
-        console.warn('No log file path specified, skipping file logging');
-        this.enableFile = false;
-        return;
+        // Try to set currentLogFile if not already set
+        if (this.logFile && this.logDir) {
+          this.currentLogFile = path.join(this.logDir, this.logFile);
+        } else {
+          console.warn('No log file path specified, skipping file logging');
+          this.enableFile = false;
+          return;
+        }
       }
       
       const logDir = path.dirname(this.currentLogFile);

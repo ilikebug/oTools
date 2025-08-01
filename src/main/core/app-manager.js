@@ -3,6 +3,8 @@ const logger = require('../utils/logger');
 const consts = require('../comm')
 const { setupIPC } = require('../ipc')
 const MacTools = require('../utils/mac-tools');
+const EnhancedWindowManager = require('../utils/enhanced-window-manager');
+const { screen } = require('electron');
 
 /**
  * Application Manager - Unify all core components
@@ -13,6 +15,7 @@ class AppManager {
     this.pluginManager = null;
     this.keyboardManager = null;
     this.macTools = null;
+    this.enhancedWindowManager = null;
   
     this.startTime = null;
     this.appStatus = {
@@ -60,6 +63,10 @@ class AppManager {
       
       // Initialize plugin manager
       this.pluginManager = options.pluginManager
+      // Set app manager reference in plugin manager for enhanced window management
+      if (this.pluginManager && typeof this.pluginManager.initialize === 'function') {
+        this.pluginManager.appManager = this;
+      }
       this.registerComponent('pluginManager', this.pluginManager);
 
       // Initialize keyboard manager
@@ -84,6 +91,10 @@ class AppManager {
       this.macTools = new MacTools()
       await this.macTools.initialize();
       this.registerComponent('macTools', this.macTools);
+
+      // init enhanced window manager
+      this.enhancedWindowManager = new EnhancedWindowManager();
+      this.registerComponent('enhancedWindowManager', this.enhancedWindowManager);
       
       // Auto-start dependent plugins after IPC is ready
       if (this.pluginManager && 
@@ -115,6 +126,8 @@ class AppManager {
       const destroyOrder = [
         'pluginManager',
         'keyboardManager',
+        'enhancedWindowManager',
+        'macTools',
         'configManager',
         'logger'
       ];
@@ -181,10 +194,10 @@ class AppManager {
   }
 
   /**
-   * Check main window status
+   * Check if main window is destroyed
    */
   mainWindowIsDestroyed() {
-    return this.mainWindow && !this.mainWindow.isDestroyed()
+    return !this.mainWindow || this.mainWindow.isDestroyed()
   }
  
    /**
@@ -194,11 +207,78 @@ class AppManager {
      this.mainWindow.hide()
    }
 
+      /**
+   * show main window (intelligent enhancement selection)
+   */
+   async mainWindowShow() {
+     if (!this.mainWindow || this.mainWindow.isDestroyed()) {
+       logger.warn('Main window is not available');
+       return false;
+     }
+
+     // 智能选择显示策略（与插件窗口逻辑统一）
+     const needsEnhancement = await this.checkIfMainWindowNeedsEnhancement();
+     
+     if (needsEnhancement && this.enhancedWindowManager) {
+       try {
+         logger.info('Using enhanced method for main window (fullscreen environment detected)');
+         
+         // Register main window with enhanced window manager if not already registered
+         this.enhancedWindowManager.registerWindow('main', this.mainWindow, {
+           forceTopLevel: 'modal-panel',
+           checkVisibility: true,
+           autoRecover: true
+         });
+         
+         // Use enhanced window manager to force show the window
+         const result = await this.enhancedWindowManager.forceShowWindow('main');
+         if (result) {return result;}
+       } catch (error) {
+         logger.warn('Enhanced window manager failed for main window, using fallback:', error);
+       }
+     }
+     
+     // 快速显示主窗口（默认路径）
+     return this.showMainWindowQuick();
+   }
+
    /**
-    * show main window
-    */
-   mainWindowShow() {
-     forceMoveWindowToCurrentDisplay(this.mainWindow);
+   * Check if main window display needs enhancement
+   */
+   async checkIfMainWindowNeedsEnhancement() {
+     try {
+       // 复用插件管理器的环境检测逻辑
+       if (this.pluginManager && typeof this.pluginManager.checkIfNeedsEnhancement === 'function') {
+         return await this.pluginManager.checkIfNeedsEnhancement();
+       }
+       return false;
+     } catch (error) {
+       logger.warn('Failed to check main window enhancement needs:', error);
+       return false;
+     }
+   }
+
+   /**
+   * Quick show main window (original logic, no delays)
+   */
+   showMainWindowQuick() {
+     try {
+       // Center main window on the screen where the mouse is (same as keyboard shortcut)
+       const mouse = screen.getCursorScreenPoint();
+       const display = screen.getDisplayNearestPoint(mouse);
+       const width = this.mainWindow.getBounds().width;
+       const height = this.mainWindow.getBounds().height;
+       const x = display.bounds.x + Math.floor((display.bounds.width - width) / 2);
+       const y = display.bounds.y + Math.floor((display.bounds.height - height) / 2);
+       
+       this.mainWindow.setBounds({ x, y, width, height });
+       this.mainWindow.show();
+       this.mainWindow.focus();
+       return true;
+     } catch (error) {
+       logger.error('Failed to show main window:', error);
+       return false;
+     }
    }
 }
 

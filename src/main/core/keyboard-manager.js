@@ -71,24 +71,24 @@ class KeyboardManager {
             this.mainWindow.hide();
             switchToPreviousApp();
           } else {
-            // Center main window on the screen where the mouse is
-            const mouse = screen.getCursorScreenPoint();
-            const display = screen.getDisplayNearestPoint(mouse);
-            const width = this.mainWindow.getBounds().width;
-            const height = this.mainWindow.getBounds().height;
-            const x = display.bounds.x + Math.floor((display.bounds.width - width) / 2);
-            const y = display.bounds.y + Math.floor((display.bounds.height - height) / 2);
-            this.mainWindow.setBounds({ x, y, width, height });
-            this.mainWindow.show();
-            this.mainWindow.focus();
+            // 使用统一的显示方法（支持智能增强）
+            if (this.appManager && typeof this.appManager.mainWindowShow === 'function') {
+              this.appManager.mainWindowShow().catch(error => {
+                logger.warn('Enhanced main window show failed, using fallback:', error);
+                this.showMainWindowFallback();
+              });
+            } else {
+              // 如果没有 appManager，使用 fallback
+              this.showMainWindowFallback();
+            }
           }
-        }  
+        }
       }, 'main');
     }
     
     // Plugin shortcuts
     for (const [pluginName, plugin] of Object.entries(pluginMap)) {
-      if (pluginName === '__main__') continue;
+      if (pluginName === '__main__') {continue;}
       const pluginConfig = this.configManager.getConfig(`plugin:${pluginName}`);
       if (pluginConfig?.shortcut && typeof plugin.onHotkey === 'function') {
         this.registerShortcut(pluginConfig.shortcut, () => {
@@ -130,7 +130,10 @@ class KeyboardManager {
     for (const shortcut of shortcuts) {
       if (shortcut.accelerator && shortcut.pluginName) {
         this.registerShortcut(shortcut.accelerator, () => {
-          this.handleCustomShortcut(shortcut.pluginName);
+          // Handle custom shortcut asynchronously but don't block the callback
+          this.handleCustomShortcut(shortcut.pluginName).catch(error => {
+            logger.error(`Custom shortcut execution failed for ${shortcut.pluginName}:`, error);
+          });
         }, `custom_${shortcut.pluginName}`);
       }
     }
@@ -149,6 +152,23 @@ class KeyboardManager {
     
     for (const accelerator of shortcutsToRemove) {
       this.unregisterShortcut(accelerator);
+    }
+  }
+
+  /**
+   * Fallback method to show main window using original logic
+   */
+  showMainWindowFallback() {
+    if (this.mainWindow && !this.mainWindow.isDestroyed()) {
+      const mouse = screen.getCursorScreenPoint();
+      const display = screen.getDisplayNearestPoint(mouse);
+      const width = this.mainWindow.getBounds().width;
+      const height = this.mainWindow.getBounds().height;
+      const x = display.bounds.x + Math.floor((display.bounds.width - width) / 2);
+      const y = display.bounds.y + Math.floor((display.bounds.height - height) / 2);
+      this.mainWindow.setBounds({ x, y, width, height });
+      this.mainWindow.show();
+      this.mainWindow.focus();
     }
   }
 
@@ -203,8 +223,10 @@ class KeyboardManager {
           }
         }
       } else {
-        // Show window
-        pluginManager.showPluginWindow(pluginName);
+        // Show window (non-blocking with error handling)
+        pluginManager.showPluginWindow(pluginName).catch(error => {
+          logger.error(`Failed to show plugin window ${pluginName}:`, error);
+        });
       }
     } catch (error) {
       logger.error(`Error executing custom shortcut for ${pluginName}: ${error.message}`);

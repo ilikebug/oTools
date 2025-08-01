@@ -25,7 +25,7 @@ let store;
  */
 const createWindow = (conf) => {
   // 使用 window-state 记录和恢复主窗口状态
-  let mainWindowState = WindowStateKeeper({
+  const mainWindowState = WindowStateKeeper({
     defaultWidth: conf && conf.window && conf.window.width ? conf.window.width : 420,
     defaultHeight: conf && conf.window && conf.window.height ? conf.window.height : 380,
   });
@@ -55,14 +55,9 @@ const createWindow = (conf) => {
 
   mainWindowState.manage(mainWindow);
 
+  // Set window properties once (no need for periodic updates)
   mainWindow.setAlwaysOnTop(true, 'screen-saver');
   mainWindow.setVisibleOnAllWorkspaces(true, {visibleOnFullScreen: true});
-
-  setInterval(() => {
-    if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
-    }
-  }, 30000);
 
   mainWindow.loadFile(path.join(__dirname, '../renderer/index.html'));
   
@@ -94,7 +89,7 @@ const createWindow = (conf) => {
 
   mainWindow.on('show', () => {
     if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+      // Only focus, no need to reset properties every time
       mainWindow.focus();
     }
   });
@@ -147,6 +142,16 @@ async function initializeApp() {
         store: store
       }
     );
+
+    // Register main window with enhanced window manager for fullscreen app support
+    const enhancedWindowManager = appManager.getComponent('enhancedWindowManager');
+    if (enhancedWindowManager && mainWindow) {
+      enhancedWindowManager.registerWindow('main', mainWindow, {
+        forceTopLevel: 'modal-panel',
+        checkVisibility: true,
+        autoRecover: true
+      });
+    }
 
     logger.info('Application started');
     

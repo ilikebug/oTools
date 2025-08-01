@@ -99,7 +99,7 @@ function createFunctionMap(appManager) {
           throw new Error(`Failed to create plugin process: ${error.message}`);
         }
       }
-      const result = pluginManager.showPluginWindow(pluginName);
+      const result = await pluginManager.showPluginWindow(pluginName);
       if (result) {
         return {
           success: true,
@@ -172,7 +172,7 @@ function createFunctionMap(appManager) {
       async function downloadFile(url, dest) {
         return new Promise((resolve, reject) => {
           https.get(url, { headers }, (res) => {
-            if (res.statusCode !== 200) return reject(new Error('Download failed: ' + url));
+            if (res.statusCode !== 200) {return reject(new Error('Download failed: ' + url));}
             const fileStream = fs.createWriteStream(dest);
             res.pipe(fileStream);
             fileStream.on('finish', () => fileStream.close(resolve));
@@ -182,7 +182,7 @@ function createFunctionMap(appManager) {
       }
   
       async function downloadDir(apiUrl, localDir) {
-        if (!fs.existsSync(localDir)) fs.mkdirSync(localDir, { recursive: true });
+        if (!fs.existsSync(localDir)) {fs.mkdirSync(localDir, { recursive: true });}
         const list = await fetchJson(apiUrl);
         for (const item of list) {
           if (item.type === 'file') {
@@ -456,13 +456,17 @@ function createFunctionMap(appManager) {
     },
     
     maximizeWindow: async (event) => {
-      if (win.isMaximized()) {
-        win.unmaximize();
-        return { success: true, message: 'Window unmaximized' };
-      } else {
-        win.maximize();
-        return { success: true, message: 'Window maximized' };
+      const win = BrowserWindow.fromWebContents(event.sender);
+      if (win) {
+        if (win.isMaximized()) {
+          win.unmaximize();
+          return { success: true, message: 'Window unmaximized' };
+        } else {
+          win.maximize();
+          return { success: true, message: 'Window maximized' };
+        }
       }
+      return { success: false, message: 'Window not found' };
     },
 
     showWindow: async (event) => {
@@ -496,7 +500,7 @@ function createFunctionMap(appManager) {
         const value = await db.get(key);
         return { success: true, value };
       } catch (e) {
-        if (e.notFound) return { success: true, value: null };
+        if (e.notFound) {return { success: true, value: null };}
         throw e;
       }
     },
@@ -655,7 +659,7 @@ function createFunctionMap(appManager) {
         const configManager = appManager.getComponent('configManager');
         const mainConfig = configManager.getConfig('main');
         mainConfig.plugins = mainConfig.plugins || {};
-        if (!mainConfig.plugins.pluginDirs) mainConfig.plugins.pluginDirs = [];
+        if (!mainConfig.plugins.pluginDirs) {mainConfig.plugins.pluginDirs = [];}
         
         // Get the actual plugin directories that were added
         const customDirs = pluginManager.getCustomPluginDirs();
