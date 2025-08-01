@@ -12,7 +12,7 @@ export default [
     },
     rules: {
       "no-unused-vars": ["warn", { argsIgnorePattern: "^_" }],
-      "no-console": "off", // 主进程需要 console
+      "no-console": "off", // Main process needs console
       "prefer-const": "warn",
       "no-var": "error",
       "no-undef": "error",
@@ -29,7 +29,7 @@ export default [
     },
     rules: {
       "no-unused-vars": ["warn", { argsIgnorePattern: "^_" }],
-      "no-console": "warn", // 渲染进程尽量减少 console
+      "no-console": "warn", // Minimize console usage in renderer process
       "prefer-const": "warn",
       "no-var": "error",
       "no-undef": "error",

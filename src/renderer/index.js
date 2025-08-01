@@ -417,7 +417,7 @@ class oToolsApp {
       }
     });
     
-    // 初始更新UI
+    // Initial UI update
     this.updatePaginationUI(0, totalPages);
   }
 
@@ -787,7 +787,7 @@ class oToolsApp {
       return;
     }
     
-    // 如果搜索结果很多，使用分页显示
+          // Use pagination for many search results
     if (matchedPlugins.length > 20) {
       this.renderSearchResults(matchedPlugins);
     } else {
@@ -802,19 +802,19 @@ class oToolsApp {
     actionGrid.innerHTML = '';
     actionGrid.classList.add('large-set');
     
-    // 移除之前的分页容器
+    // Remove previous pagination container
     const existingPagination = document.querySelector('.pagination-container');
     if (existingPagination) {
       existingPagination.remove();
     }
     
-    // 移除之前的搜索结果信息
+    // Remove previous search result info
     const existingSearchInfo = document.querySelector('.search-results-info');
     if (existingSearchInfo) {
       existingSearchInfo.remove();
     }
     
-    // 添加搜索结果信息
+    // Add search result info
     const searchInfo = document.createElement('div');
     searchInfo.className = 'search-results-info';
     searchInfo.innerHTML = `
@@ -825,19 +825,19 @@ class oToolsApp {
     `;
     actionGrid.parentNode.insertBefore(searchInfo, actionGrid);
     
-    // 添加分页容器
+    // Add pagination container
     const paginationContainer = document.createElement('div');
     paginationContainer.className = 'pagination-container';
     actionGrid.parentNode.appendChild(paginationContainer);
     
-    // 分页配置
+    // Pagination configuration
     const itemsPerPage = 24;
     const totalPages = Math.ceil(matchedPlugins.length / itemsPerPage);
     
-    // 创建分页控件
+    // Create pagination controls
     this.createSearchPaginationControls(paginationContainer, totalPages, itemsPerPage, matchedPlugins);
     
-    // 初始显示第一页
+    // Initially display first page
     this.showSearchPage(0, itemsPerPage, actionGrid, matchedPlugins);
   }
 
@@ -858,7 +858,7 @@ class oToolsApp {
       </div>
     `;
     
-    // 绑定分页事件
+    // Bind pagination events
     this.bindSearchPaginationEvents(totalPages, itemsPerPage, matchedPlugins);
   }
 
@@ -884,7 +884,7 @@ class oToolsApp {
       }
     });
     
-    // 初始更新UI
+    // Initial UI update
     this.updatePaginationUI(0, totalPages);
   }
 

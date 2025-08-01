@@ -216,7 +216,7 @@ class AppManager {
        return false;
      }
 
-     // 智能选择显示策略（与插件窗口逻辑统一）
+     // Intelligently select display strategy (unified with plugin window logic)
      const needsEnhancement = await this.checkIfMainWindowNeedsEnhancement();
      
      if (needsEnhancement && this.enhancedWindowManager) {
@@ -238,7 +238,7 @@ class AppManager {
        }
      }
      
-     // 快速显示主窗口（默认路径）
+     // Quick show main window (default path)
      return this.showMainWindowQuick();
    }
 
@@ -247,7 +247,7 @@ class AppManager {
    */
    async checkIfMainWindowNeedsEnhancement() {
      try {
-       // 复用插件管理器的环境检测逻辑
+       // Reuse plugin manager's environment detection logic
        if (this.pluginManager && typeof this.pluginManager.checkIfNeedsEnhancement === 'function') {
          return await this.pluginManager.checkIfNeedsEnhancement();
        }

@@ -599,48 +599,48 @@ class PluginManager {
    */
   async checkIfNeedsEnhancement() {
     try {
-      // 快速检查：使用 Electron 原生 API 预检
+      // Quick check: Use Electron native API for pre-detection
       const displays = screen.getAllDisplays();
       let hasFullscreenLikeDisplay = false;
       
       for (const display of displays) {
-        // 检查是否有显示器的工作区明显小于显示区（可能有全屏应用）
+        // Check if work area is significantly smaller than display area (may have fullscreen app)
         const workAreaRatio = (display.workArea.width * display.workArea.height) / 
                              (display.bounds.width * display.bounds.height);
         
-        if (workAreaRatio < 0.9) { // 工作区小于90%可能有全屏应用
+        if (workAreaRatio < 0.9) { // Work area less than 90% may have fullscreen app
           hasFullscreenLikeDisplay = true;
           break;
         }
       }
       
       if (!hasFullscreenLikeDisplay) {
-        return false; // 快速判断：无需增强
+        return false; // Quick decision: no enhancement needed
       }
       
-      // 进一步检查：使用增强管理器的缓存检测
+      // Further check: Use enhanced manager's cached detection
       const enhancedWindowManager = this.appManager?.getComponent('enhancedWindowManager');
       if (enhancedWindowManager) {
-        // 使用缓存的全屏检测结果（避免 AppleScript 延时）
+        // Use cached fullscreen detection results (avoid AppleScript delay)
         const now = Date.now();
         const cacheAge = now - (enhancedWindowManager.lastFullscreenCheck || 0);
         
-        // 如果缓存新鲜且显示有全屏应用，则需要增强
+        // If cache is fresh and shows fullscreen app, enhancement is needed
         if (cacheAge < 10000 && enhancedWindowManager.fullscreenAppCache === true) {
           return true;
         }
         
-        // 如果缓存过旧，进行一次快速检测（但不阻塞）
+        // If cache is old, perform quick detection (but don't block)
         if (cacheAge > 10000) {
-          // 异步更新缓存，不等待结果
+          // Asynchronously update cache, don't wait for result
           enhancedWindowManager.detectFullscreenApp().catch(() => {});
         }
       }
       
-      return false; // 默认不需要增强，优先快速显示
+      return false; // Default no enhancement needed, prioritize quick display
     } catch (error) {
       logger.warn('Failed to check enhancement needs:', error);
-      return false; // 出错时使用快速路径
+      return false; // Use quick path on error
     }
   }
 
@@ -702,11 +702,11 @@ class PluginManager {
     if (processInfo && processInfo.window && !processInfo.window.isDestroyed()) {
       const pluginInfo = this.plugins.get(pluginName);
       
-      // 智能选择显示策略
+      // Intelligently select display strategy
       const needsEnhancement = await this.checkIfNeedsEnhancement();
       
       if (needsEnhancement) {
-        // 使用增强管理器（全屏环境或特殊情况）
+        // Use enhanced manager (fullscreen environment or special cases)
         const enhancedWindowManager = this.appManager?.getComponent('enhancedWindowManager');
         if (enhancedWindowManager) {
           try {
@@ -725,7 +725,7 @@ class PluginManager {
         }
       }
       
-      // 使用快速显示（默认路径）
+      // Use quick display (default path)
       return this.showPluginWindowQuick(pluginName, processInfo, pluginInfo);
     } else {
       const pluginInfo = this.plugins.get(pluginName);

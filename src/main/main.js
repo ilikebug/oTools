@@ -24,7 +24,7 @@ let store;
  * Create main window
  */
 const createWindow = (conf) => {
-  // 使用 window-state 记录和恢复主窗口状态
+  // Use window-state to record and restore main window state
   const mainWindowState = WindowStateKeeper({
     defaultWidth: conf && conf.window && conf.window.width ? conf.window.width : 420,
     defaultHeight: conf && conf.window && conf.window.height ? conf.window.height : 380,

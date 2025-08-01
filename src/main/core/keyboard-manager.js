@@ -71,14 +71,14 @@ class KeyboardManager {
             this.mainWindow.hide();
             switchToPreviousApp();
           } else {
-            // 使用统一的显示方法（支持智能增强）
+            // Use unified display method (supports intelligent enhancement)
             if (this.appManager && typeof this.appManager.mainWindowShow === 'function') {
               this.appManager.mainWindowShow().catch(error => {
                 logger.warn('Enhanced main window show failed, using fallback:', error);
                 this.showMainWindowFallback();
               });
             } else {
-              // 如果没有 appManager，使用 fallback
+              // Use fallback if no appManager
               this.showMainWindowFallback();
             }
           }

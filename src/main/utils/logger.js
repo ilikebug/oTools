@@ -152,12 +152,12 @@ class Logger {
   consoleOutput(logEntry) {
     const { timestamp, level, message, data } = logEntry;
     const timeStr = new Date(timestamp).toLocaleTimeString();
-    // 彩色输出
+          // Colored output
     const colorMap = {
-      'ERROR': '\x1b[31m', // 红色
-      'WARN': '\x1b[33m',  // 黄色
-      'INFO': '\x1b[32m',  // 绿色
-      'DEBUG': '\x1b[36m'  // 青色
+      'ERROR': '\x1b[31m', // Red
+      'WARN': '\x1b[33m',  // Yellow
+      'INFO': '\x1b[32m',  // Green
+      'DEBUG': '\x1b[36m'  // Cyan
     };
     const resetColor = '\x1b[0m';
     const color = colorMap[level] || '';

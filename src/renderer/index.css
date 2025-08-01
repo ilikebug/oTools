@@ -785,7 +785,7 @@ body {
   align-items: center;
   gap: 18px;
   position: relative;
-  height: 220px; /* 固定高度，保证卡片一致 */
+  height: 220px; /* Fixed height for consistent cards */
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
